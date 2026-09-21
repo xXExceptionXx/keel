@@ -130,6 +130,11 @@ case "$role" in
       *) deny "Architekt braucht 'Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde | epic-bewertung | epic-retrospektive'" ;;
     esac
     ;;
+  compliance)
+    [ -n "$task" ] || deny "Compliance braucht die Zeile 'Aufgabe: <ID>' im Prompt"
+    [ "$($FM get "$tasks/$task.md" compliance 2>/dev/null || true)" = "pruefen" ] || deny "Compliance darf nicht starten: Aufgabe hat nicht compliance: pruefen"
+    [ -f "$proj/.keel/work/compliance/$task.scan.md" ] || deny "Compliance: Scan-Datei fehlt"
+    ;;
   auditor|coach)
     datum="$(prompt_field "$prompt" "Datum")"
     [ -n "$datum" ] || deny "$role braucht die Zeile 'Datum: YYYY-MM-DD' im Prompt"

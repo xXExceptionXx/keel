@@ -41,7 +41,10 @@ Die Plan-Datei ist `.keel/work/plans/$ARGUMENTS.md`, ihre Vorhaben-ID steht unte
    a. Status `geplant`: starte `keel:tester` mit `Aufgabe: <ID>`. Erwartet danach: `tests-bereit`.
    a2. Status `testeinspruch`, `budget-erschoepft` oder `neuschnitt` schon beim Start der Schleife: Neuschnitt, siehe unten. Status `review`: weiter bei c.
    b. Status `tests-bereit` oder `nacharbeit`: starte `keel:entwickler` mit `Aufgabe: <ID>`. Lies danach den Status:
-      - `fertig-gemeldet`: erhöhe `review_runde` um 1, setze `status=review`, starte `keel:reviewer` mit `Aufgabe: <ID>` und `Vorhaben: $ARGUMENTS`.
+      - `fertig-gemeldet`: lies `compliance` in der Aufgabe (der Hook hat den Scan geschrieben).
+        - `vorlage`: eine neue Abhängigkeit oder Ähnliches, das laut Befugnissen der Mensch entscheidet. Schreibe die Vorlage aus `.keel/work/compliance/<ID>.scan.md` (Optionen: 1. Abhängigkeit annehmen, 2. ohne sie lösen, 3. Aufgabe zurückstellen), Plan-Status `blockiert`, committe, brich ab.
+        - `pruefen`: starte `keel:compliance` mit `Aufgabe: <ID>`. Danach lies `compliance` neu: `frei` weiter; `auflagen` setze `status=nacharbeit` (der Entwickler liest die Auflagen in `.keel/work/compliance/<ID>.md`) und zurück zu b; `vorlage` wie oben mit der Frage aus der Compliance-Datei.
+        - `frei`: erhöhe `review_runde` um 1, setze `status=review`, starte `keel:reviewer` mit `Aufgabe: <ID>` und `Vorhaben: $ARGUMENTS`.
       - `testeinspruch` oder `budget-erschoepft`: Neuschnitt, siehe unten.
    c. Nach dem Reviewer lies `status` in `.keel/work/reviews/<ID>-r<runde>.md`:
       - `bestanden`: Prüftor laufen lassen. Grün: `git add -A && git commit -m "<ID>: <englische Kurzfassung der Änderung>" -m "Keel-Task: <ID>"` (Commit-Nachrichten auf Englisch, der Titel der Aufgabe bleibt in der Datei deutsch), dann `status=fertig` in der Aufgaben-Datei und `.keel/` nachcommitten. Rot: das ist ein Fehler im System, brich ab und melde es.

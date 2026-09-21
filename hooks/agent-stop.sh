@@ -160,6 +160,12 @@ case "$role" in
         ;;
     esac
     ;;
+  compliance)
+    rep="$proj/.keel/work/compliance/$ref.md"
+    $FM validate "$rep" --type compliance --status frei,auflagen,vorlage --require aufgabe,datum 2>/tmp/keel-stop-err \
+      || block_stop "Compliance-Datei fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err)"
+    [ "$($FM get "$tasks/$ref.md" compliance 2>/dev/null || true)" = "$($FM get "$rep" status)" ] || block_stop "Setze compliance=<ergebnis> in der Aufgaben-Datei, gleich dem Status der Compliance-Datei"
+    ;;
   coach)
     rep="$proj/.keel/work/coach/$ref.md"
     $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>/tmp/keel-stop-err \
@@ -192,6 +198,16 @@ case "$role" in
       diff_lines="$(cd "$proj" && git diff --numstat HEAD -- . "${excl[@]}" | awk '{s+=$1+$2} END {print s+0}')"
       max_diff="$($CFG "$proj" budget.diff_lines 300)"
       [ "$diff_lines" -le "$max_diff" ] || block_stop "Diff hat $diff_lines Zeilen, erlaubt sind $max_diff. Setze status: budget-erschoepft und beschreibe den Stand, der Planer schneidet neu."
+      # Compliance scan: secrets block, new dependencies and personal data are recorded for the Lead
+      rc=0; scan="$(python3 "$PLUGIN_ROOT/scripts/compliance_scan.py" "$proj" 2>&1)" || rc=$?
+      mkdir -p "$proj/.keel/work/compliance"
+      printf -- '---\ntyp: compliance-scan\naufgabe: %s\ndatum: %s\nergebnis: %s\n---\n\n```\n%s\n```\n' "$ref" "$(date +%F)" "$(printf '%s' "$scan" | head -1 | sed -E 's/^compliance: ([a-z]+).*/\1/')" "$scan" > "$proj/.keel/work/compliance/$ref.scan.md"
+      case $rc in
+        5) block_stop "Compliance: Secret oder privater Schlüssel im Diff. Entferne ihn, nutze Umgebungsvariablen. $(printf '%s' "$scan" | grep -F '[block]' | head -3 | tr '\n' ' ')" ;;
+        4) $FM set "$tasks/$ref.md" compliance=vorlage ;;
+        3) $FM set "$tasks/$ref.md" compliance=pruefen ;;
+        0) $FM set "$tasks/$ref.md" compliance=frei ;;
+      esac
     else
       $FM validate "$tasks/$ref.md" --nonempty begruendung 2>/dev/null || block_stop "Testeinspruch braucht das Feld 'begruendung'."
     fi

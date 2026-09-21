@@ -10,7 +10,7 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 
 ```
 .claude-plugin/   Manifest und Marketplace
-agents/           Rollen: po, architekt, planer, tester, entwickler, reviewer, auditor, coach
+agents/           Rollen: po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
 scripts/          frontmatter.py, config.py, gate.sh, init.sh
@@ -29,6 +29,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:vorhaben <name> [<backlog-id>]` | Lead | Ein Vorhaben: PO schreibt die Problemstellung aus dem Backlog-Element, Architekt bewertet, Abstimmung, dann Aufgabenzyklus bis zur Abnahme durch den PO und Integration |
 | `/keel:epic <name> <backlog-id>` | Lead | Ein großes Thema: PO-Skizze, Epic-Bewertung des Architekten nach Reichweite, Leitentscheidungen als ADR oder Vorlage, dann das erste Vorhaben |
 | `/keel:architektur bestand\|woche` | Architekt | Bestandsaufnahme eines bestehenden Projekts oder wöchentliche Drift-Runde |
+| Compliance | Hook und Rolle | Scan beim Beenden jedes Entwicklers: Secrets blockieren, neue Abhängigkeiten werden Vorlage, personenbezogene Daten ruft die Compliance-Rolle mit DSGVO-Ermessen |
 | `/keel:tagesabschluss` | Lead | Übergabenotiz aus Artefakten, gesamte Testsuite, Commit, Tag `day-<Datum>` |
 | `/keel:audit` | Auditor | Prüfbericht über den Diff seit dem letzten Tag; `/keel:audit woche` prüft den Gesamtstand |
 | `/keel:inbox` | Mensch | Offene Vorlagen, Pläne zur Abnahme, Blockaden, letzter Prüfbericht |
@@ -70,4 +71,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Compliance als Agent für personenbezogene Daten, Basisregel-Pakete pro Sprache, ein Wrapper für unbeaufsichtigte Läufe über Nutzungslimits hinweg.
+Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Basisregel-Pakete pro Sprache, ein Wrapper für unbeaufsichtigte Läufe über Nutzungslimits hinweg, die Supervisor-Rolle.

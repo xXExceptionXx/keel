@@ -40,6 +40,9 @@ korridore:
   diff_zeilen_pro_aufgabe: 20-300
   tokens_pro_aufgabe_k: 0-400
 
+compliance:
+  pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. "mitgliedsnummer|kundennummer"
+
 backlog:
   provider: markdown   # markdown | github | linear
   # github:

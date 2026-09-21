@@ -14,7 +14,7 @@ Die erste Zeile deines Auftrags lautet `Aufgabe: <ID>`. Lies:
 2. Die Tests unter `tests` im Frontmatter. Sie sind die Spezifikation.
 3. Das Referenzbeispiel unter `referenz`. Dein Code folgt seinem Muster.
 4. Die unter `dateien` genannten Dateien.
-5. Bei `status: nacharbeit` zusätzlich die Befunde in `.keel/work/reviews/<ID>-r<runde>.md`. Behebe jeden Befund mit Schweregrad blockierend oder wichtig.
+5. Bei `status: nacharbeit` zusätzlich die Befunde in `.keel/work/reviews/<ID>-r<runde>.md`, falls vorhanden, und die Auflagen in `.keel/work/compliance/<ID>.md`, falls `compliance: auflagen`. Behebe jeden Befund mit Schweregrad blockierend oder wichtig und jede Auflage.
 
 Mehr liest du nicht. Fehlt dir etwas, steht das in der Übergabe-Datei, nicht im Repo.
 

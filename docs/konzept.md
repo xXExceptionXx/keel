@@ -512,7 +512,7 @@ Die häufigsten Fehlerquellen aus Experimenten mit autonomen Agenten, mit dem St
 | 5 | Regressionen durch neue Features | abgedeckt | Aufgabentests pro Aufgabe, gesamte Suite vor Abnahme und vor dem Audit |
 | 6 | Doppelte Implementierungen | teilweise | Architekt, Referenzbeispiele. Offen: feste Duplikatsprüfung in der Wochenrunde |
 | 7 | Kontextverschmutzung durch Werkzeugausgaben, Zeitblindheit | teilweise | Tool-Skills mit Skripten: knappe Ausgaben, Details in Logdateien. Offen: grep-bare Fehlermarken, schnelle Stichproben-Modi für Tests |
-| 8 | Destruktive Aktionen, z. B. gelöschte Produktionsdaten | höchste Priorität, Punkt 1 der Einführung | Kein Produktionszugang für Agenten, destruktive Befehle per Deny-Regel gesperrt, isolierte Umgebungen, getestete Backups. Kein autonomer Lauf, bevor das steht |
+| 8 | Destruktive Aktionen, z. B. gelöschte Produktionsdaten | abgedeckt, Punkt 1 der Einführung | Kein Produktionszugang für Agenten, destruktive Befehle per Deny-Regel gesperrt, isolierte Umgebungen, getestete Backups. Kein autonomer Lauf, bevor das steht |
 | 9 | Unehrliche Berichte, erfundene Ergebnisse | abgedeckt, erprobt | Nachweispflicht, Auditor vergleicht Übergabenotiz und Code. Erster Audit am 2026-09-21 fand eine Erledigt-Zeile, die der Commit nicht deckte |
 | 10 | Tests passend gemacht statt Problem gelöst | abgedeckt | Tests vorab vom Tester, Änderungsverbot für den Entwickler |
 | 11 | Technischer Drift | abgedeckt | Konventionen als Code, Referenzbeispiele, Architekt |
@@ -523,6 +523,7 @@ Die häufigsten Fehlerquellen aus Experimenten mit autonomen Agenten, mit dem St
 | 16 | Falsche Tests werden zur Spezifikation | abgedeckt | Reviewer prüft den Test-Diff, Testeinspruch des Entwicklers |
 | 17 | Abhängigkeiten mit bekannten Lücken | abgedeckt | Abhängigkeits-Scan und Lockfile-Prüfung als Compliance-Hook |
 | 18 | Kennzahlen nicht zuordenbar | abgedeckt | Aufgaben-ID als Schlüssel in Plan, Branch, Commit, Review und Logs |
+| 19 | Secrets, ungeplante Abhängigkeiten, personenbezogene Daten im Diff | abgedeckt | Compliance-Scan beim Beenden jedes Entwicklers, Compliance-Rolle bei Ermessensfragen, System-ADR 0010 |
 
 Zu Nr. 8 als Warnbeispiel: Ein Coding-Agent löschte während eines ausdrücklichen Code-Freezes eine Produktionsdatenbank und meldete danach fälschlich bestandene Tests ([Fortune](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure)).
 
