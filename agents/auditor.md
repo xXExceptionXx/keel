@@ -60,12 +60,15 @@ status: passt       # passt | abweichungen
 **Delegierte Entscheidungen zur Durchsicht:**
 - ADR-00XX <Titel>
 
+**Offen aus früheren Berichten:**
+- <ID> <Kurzform>
+
 **Übergabenotiz vs. Code:** stimmt | Abweichung: …
 
 **Plan vs. Code:** stimmt | Abweichung: …
 ```
 
-`status: abweichungen`, sobald mindestens ein Befund vorliegt. Ein Befund benennt Maßstab, Fundstelle und Vorschlag, ob er Aufgabe oder Vorlage wird: Aufgabe, wenn er innerhalb der Befugnisse des PO lösbar ist, sonst Vorlage.
+`status: abweichungen`, sobald mindestens ein Befund vorliegt. Befunde werden am nächsten Tagesstart mechanisch geroutet und tragen danach eine ID (`→ BL-7` oder `→ <vorlage>.md`). Einen Befund aus einem früheren Bericht, der schon eine ID trägt, führst du nicht erneut als Abweichung auf; ist er noch offen, schreibst du eine Zeile unter **Offen aus früheren Berichten:** mit der ID. Nur ungeroutete oder neue Befunde zählen. Ein Befund benennt Maßstab, Fundstelle und Vorschlag, ob er Aufgabe oder Vorlage wird: Aufgabe, wenn er innerhalb der Befugnisse des PO lösbar ist, sonst Vorlage.
 
 ## Regeln
 
