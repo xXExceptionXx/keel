@@ -5,6 +5,12 @@ payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 proj="$(project_dir)"
 [ -f "$proj/.keel/config.yaml" ] || exit 0
-out="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$proj" 2>/dev/null)" && exit 0
-jq -n --arg msg "keel: Ein Briefing mit dem Supervisor ist nötig, bevor der Lead arbeitet. Starte /keel:briefing; keel-Rollen außer dem Supervisor sind bis dahin gesperrt. $out" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$msg}}'
+out="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$proj" 2>/dev/null)"; rc=$?
+[ "$rc" -eq 0 ] && [ "$out" = "nichts fällig" ] && exit 0
+if [ "$rc" -ne 0 ]; then
+  msg="keel: Fälligkeiten stehen aus, keel-Rollen sind bis dahin gesperrt. Starte /keel:start, es arbeitet sie in Reihenfolge ab. $out"
+else
+  msg="keel: Hinweise ohne Sperre. $out"
+fi
+jq -n --arg msg "$msg" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$msg}}'
 exit 0

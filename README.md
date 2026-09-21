@@ -21,6 +21,15 @@ docs/             Konzept und System-ADRs
 
 Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen.
 
+## Im Alltag zwei Befehle
+
+| Befehl | Was passiert |
+| --- | --- |
+| `/keel:start` | Liest, was fällig ist, und tut es in Reihenfolge: vergessener Tagesabschluss, Audit, Coach, Architektur-Runde, dann das Briefing mit dem Supervisor, falls eines aussteht. Sonst Tagesstart und das nächste Vorhaben. |
+| `/keel:stop` | Tagesabschluss mit Übergabenotiz und Tag, Audit, ein Satz zu morgen. |
+
+Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
+
 ## Tagesrhythmus
 
 | Befehl | Wer | Was |
@@ -39,7 +48,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:coach` | Coach | Lernschleife: Hypothesen prüfen, Umfeld, Justierungen als Vorlagen; monatlich oder bei Korridorverletzung |
 | `/keel:backlog <befehl>` | PO, Auditor | Backlog über die Schnittstelle: next, show, list, propose, status, link; Anbieter Markdown oder GitHub Issues |
 
-Vorlagen entscheidet tagsüber der Supervisor innerhalb seiner Stufe; richtungsweisende reichen bis zum Menschen und werden im Morgen-Briefing entschieden. Unbeaufsichtigte Läufe: `scripts/keel-run.sh <projekt> "/keel:vorhaben <name>"` wartet Nutzungslimits ab und meldet sich, wenn ein Briefing nötig ist. Der Supervisor läuft auf Opus; nach `claude update` auf 2.1.251 oder neuer kann in `agents/supervisor.md` `model: claude-fable-5-1` stehen.
+Vorlagen entscheidet tagsüber der Supervisor innerhalb seiner Stufe; richtungsweisende reichen bis zum Menschen und werden im Morgen-Briefing entschieden. Unbeaufsichtigte Läufe: `scripts/keel-run.sh <projekt> "/keel:vorhaben <name>"` wartet Nutzungslimits ab und meldet sich, wenn ein Briefing nötig ist. Der Supervisor läuft auf Fable (Claude Code ab 2.1.251).
 
 ## Ein Vorhaben durchführen
 

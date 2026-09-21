@@ -22,9 +22,14 @@ if [ -f "$sd_early/pending-$role" ]; then
   fi
 fi
 
-# Briefing gate: while a Supervisor briefing is due, only the Supervisor may run.
-if [ "$role" != "supervisor" ]; then
-  reasons="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$(project_dir)" 2>/dev/null)" || deny "Briefing mit dem Supervisor nötig, bevor Rollen arbeiten: /keel:briefing. $reasons"
+# Due gate: while something hard is due, only the roles that satisfy it may run.
+due_json="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$(project_dir)" --json 2>/dev/null || true)"
+if [ -n "$due_json" ] && [ "$(printf '%s' "$due_json" | jq -r '.hart')" = "true" ]; then
+  allowed="$(printf '%s' "$due_json" | jq -r '[.faellig[] | select(.hart) | .art | if . == "briefing" then "supervisor" elif . == "audit" then "auditor" elif . == "coach" then "coach" elif . == "architektur" then "architekt" elif . == "tagesabschluss" then "entwickler reviewer" else "" end] | join(" ")')"
+  case " $allowed " in
+    *" $role "*) ;;
+    *) deny "Fällig, bevor Rollen arbeiten: $(printf '%s' "$due_json" | jq -r '[.faellig[] | select(.hart) | .art + " (" + .grund + ")"] | join("; ")'). Starte /keel:start, es arbeitet die Fälligkeiten in Reihenfolge ab." ;;
+  esac
 fi
 
 prompt="$(field '.tool_input.prompt')"

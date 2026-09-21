@@ -662,6 +662,10 @@ Erster Coach-Lauf und Kennzahlen am 2026-09-21, nach einem Tag Betrieb im Beispi
 - Die Kennzahlen lassen sich vollständig aus Artefakten ableiten; keine Rolle meldet etwas. Zwei Korridore waren am ersten Tag verletzt: „Vorlagen pro Woche“ bei 0, weil der Mensch als PO direkt entschieden hat, und „Audit-Abweichungen pro Bericht“ bei 8, weil der erste Audit Aufbauarbeit prüfte. Beides sind Startphänomene, keine Systemfehler; der Coach soll das erkennen.
 - Der GitHub-Adapter arbeitet mit Labels `keel:<status>` und schließt Issues bei erledigt oder verworfen. Das Löschen von Issues gibt es nicht, das Skript kennt keinen solchen Befehl.
 
+## Zwei Befehle
+
+Ergänzt am 2026-09-22. Ich merke mir keine Befehle: `/keel:start` liest, was fällig ist, holt Versäumtes nach, wird zum Briefing, wenn eines aussteht, und arbeitet sonst am nächsten Vorhaben; `/keel:stop` schließt den Tag mit Übergabenotiz, Tag und Audit ab. Fälligkeiten wie Coach und Architektur-Runde entstehen aus dem Zustand, mit Schwellen für genug Betrieb, und ein Hook erzwingt sie. Siehe System-ADR 0012.
+
 ## Supervisor und Morgen-Briefing
 
 Ergänzt am 2026-09-22. Die rechte Hand aus dem Zweck-Abschnitt ist nicht der PO, sondern eine eigene Rolle mit Gesamtbild: Roadmap, Epics, ADR-Historie, Leitlinien und meine früheren Entscheidungen. Tagsüber entscheidet der Supervisor jede Vorlage innerhalb seiner Stufe, damit die Arbeit weiterläuft, und stuft Richtungsfragen als solche ein. Morgens legt er mir in einer eigenen, interaktiven Session vor, was er entschieden hat, hilft beim Kippen, entscheidet mit mir die richtungsweisenden Vorlagen und hält Leitlinien fest, die künftig dieselbe Frage ohne Vorlage beantworten. Ein Gate sperrt alle Rollen, bis das Briefing stattgefunden hat. Die Befugnisse haben damit drei Stufen. Siehe System-ADR 0011.

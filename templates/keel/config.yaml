@@ -43,6 +43,13 @@ korridore:
   diff_zeilen_pro_aufgabe: 20-300
   tokens_pro_aufgabe_k: 0-400
 
+# Fälligkeiten, die /keel:start abarbeitet und die ein Hook bis dahin erzwingt. Nur bei genug Betrieb.
+faelligkeiten:
+  coach_tage: 30               # frühestens nach so vielen Tagen …
+  coach_min_rollenlaeufe: 40   # … und nur, wenn seitdem so viele Rollenläufe stattfanden
+  architektur_tage: 7
+  architektur_min_commits: 10
+
 compliance:
   pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. "mitgliedsnummer|kundennummer"
 
