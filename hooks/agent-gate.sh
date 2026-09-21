@@ -9,6 +9,19 @@ type="$(field '.tool_input.subagent_type')"
 role="$(keel_role "$type")"
 [ -z "$role" ] && exit 0
 
+# keel roles run sequentially and in the foreground: the Lead must see the result before it continues,
+# and the reference parking below relies on one start at a time.
+if [ "$(field '.tool_input.run_in_background')" = "true" ]; then
+  deny "keel-Rollen laufen im Vordergrund und nacheinander. Starte '$type' erneut mit run_in_background: false."
+fi
+sd_early="$(state_dir)"
+if [ -f "$sd_early/pending-$role" ]; then
+  age=$(( $(date +%s) - $(stat -f %m "$sd_early/pending-$role" 2>/dev/null || stat -c %Y "$sd_early/pending-$role") ))
+  if [ "$age" -lt 600 ]; then
+    deny "Rolle '$role' wurde vor $age Sekunden bereits gestartet und läuft noch. keel arbeitet sequenziell; warte auf ihr Ergebnis."
+  fi
+fi
+
 prompt="$(field '.tool_input.prompt')"
 task="$(prompt_field "$prompt" "Aufgabe")"
 plan="$(prompt_field "$prompt" "Vorhaben")"

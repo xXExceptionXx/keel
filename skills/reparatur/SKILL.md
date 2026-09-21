@@ -40,7 +40,7 @@ Der Prüftor-Befehl aus `.keel/config.yaml` ist grün. Kleinste Änderung, die d
 <Die letzten 20 Zeilen der Prüftor-Ausgabe, wörtlich>
 ```
 
-**2. Entwickler.** Starte `keel:entwickler` mit `Aufgabe: <ID>`. Danach muss der Status `fertig-gemeldet` sein. Ist er `budget-erschoepft`: schreibe eine Vorlage nach `.keel/decisions/pending/<Datum>-reparatur.md` nach dem Format in `.keel/decisions/VORLAGE.md` mit den Optionen „manuell reparieren“ und „letzten Commit zurücknehmen“, committe `.keel/` und brich ab.
+**2. Entwickler.** Starte `keel:entwickler` mit `Aufgabe: <ID>` und `run_in_background: false`. Danach muss der Status `fertig-gemeldet` sein. Ist er `budget-erschoepft`: schreibe eine Vorlage nach `.keel/decisions/pending/<Datum>-reparatur.md` nach dem Format in `.keel/decisions/VORLAGE.md` mit den Optionen „manuell reparieren“ und „letzten Commit zurücknehmen“, committe `.keel/` und brich ab.
 
 **3. Reviewer.** Setze `review_runde=1` und `status=review`, starte `keel:reviewer` mit `Aufgabe: <ID>` und `Vorhaben: R`. Bei `bestanden`: `git add -A && git commit -m "<ID>: make the start check pass" -m "Keel-Task: <ID>"`, dann `status=fertig` und `git add .keel && git commit -m "<ID>: mark done"`. Dann zurück auf den gemerkten Branch, `git merge --no-ff <fix_prefix><ID> -m "Integrate <ID>: repair start check"`, Prüftor dort grün, `git branch -d <fix_prefix><ID>`. War der Branch gepusht, auch `git push origin --delete <fix_prefix><ID>`. Commit-Nachrichten auf Englisch. Eine Reparatur braucht keine Abnahme durch den PO; der Reviewer ist das Tor. Bei `befunde`: einmal `status=nacharbeit`, zurück zu Schritt 2; danach wie bei Budget eine Vorlage.
 

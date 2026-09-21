@@ -10,7 +10,7 @@ Werkzeuge, die du benutzt:
 - Frontmatter lesen: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" dump <datei>` oder `get <datei> <feld>`
 - Frontmatter setzen: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set <datei> feld=wert`
 - Prüftor: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/gate.sh" "$PWD" <label>`
-- Rollen: das Agent-Werkzeug mit `subagent_type` `keel:tester`, `keel:planer`, `keel:entwickler`, `keel:reviewer`. Die erste Zeile des Prompts ist immer `Aufgabe: <ID>` oder `Vorhaben: <name>`, die zweite `Vorhaben: <name>` bei Aufgaben. Mehr Prompt braucht keine Rolle, alles Weitere steht in den Dateien.
+- Rollen: das Agent-Werkzeug mit `subagent_type` `keel:tester`, `keel:planer`, `keel:entwickler`, `keel:reviewer`, immer mit `run_in_background: false`; du wartest auf das Ergebnis, bevor du weitermachst. Ein Hook lehnt Hintergrundstarts ab. Die erste Zeile des Prompts ist immer `Aufgabe: <ID>` oder `Vorhaben: <name>`, die zweite `Vorhaben: <name>` bei Aufgaben. Mehr Prompt braucht keine Rolle, alles Weitere steht in den Dateien.
 
 ## Kontextschutz
 
