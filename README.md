@@ -42,7 +42,7 @@ Der Mensch (oder später der Product Owner) schreibt die Problemstellung mit Akz
 /keel:vorhaben <name>
 ```
 
-Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
+Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `vorhaben/<name>`; am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf: Merge nach `main`, Abnahmetests in die Regressionssuite, Branch weg. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
 
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>/`.
 
@@ -65,4 +65,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Scheibe 2 von 4: ein vollständiger Aufgabenzyklus läuft. Erster Testlauf am 2026-09-21 im Beispielprojekt: 3 Aufgaben, 3 Reviews in Runde 1 bestanden, 1 berechtigter Testeinspruch, Abnahme grün. Tagesrhythmus (Auditor, Vorlagen, Startcheck) und Lernschleife (Kennzahlen, Coach, Backlog-Adapter) folgen.
+Scheibe 3 von 4: Tagesrhythmus komplett. Erprobt im Beispielprojekt am 2026-09-21: drei Vorhaben abgenommen und integriert, davon eines vollständig auf einem `vorhaben/`-Branch mit Merge nach Abnahme; Audit mit Befunden, Reparatur nach simuliertem Defekt, Neuschnitt nach Testeinspruch. Offen ist die Lernschleife: Kennzahlen, Coach, Backlog-Adapter.

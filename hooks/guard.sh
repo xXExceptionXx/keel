@@ -19,9 +19,14 @@ deny() {
   exit 0
 }
 
-# Git history and remote rewrites
-if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]-f\b|--force|[[:space:]]:[^[:space:]]|--delete)'; then
-  deny "force push, branch deletion on the remote or ref rewrite is not allowed"
+# Git history and remote rewrites. Deleting a merged keel branch (vorhaben/*, reparatur/*) on the remote is allowed.
+if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]-f\b|--force)'; then
+  deny "force push is not allowed"
+fi
+if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)'; then
+  if ! printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)(vorhaben|reparatur)/[A-Za-z0-9._-]+[[:space:]]*$'; then
+    deny "deleting remote branches is only allowed for merged vorhaben/* and reparatur/* branches"
+  fi
 fi
 if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+(branch[[:space:]]+.*-D\b|reset[[:space:]]+--hard|filter-branch|reflog[[:space:]]+expire|gc[[:space:]]+--prune)'; then
   deny "destructive git operation is not allowed; use git stash or git restore"
