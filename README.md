@@ -15,7 +15,7 @@ skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
 scripts/          frontmatter.py, config.py, gate.sh, init.sh
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
-templates/settings/  Deny-Regeln für .claude/settings.json
+templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept und System-ADRs
 ```
 

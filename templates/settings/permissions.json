@@ -1,5 +1,11 @@
 {
   "permissions": {
+    "allow": [
+      "Read(~/.keel-metrics/**)",
+      "Read(~/.claude/plugins/**)",
+      "WebSearch",
+      "WebFetch"
+    ],
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push -f*)",

@@ -41,10 +41,10 @@ link_skills() {
 
 merge_settings() {
   local settings="$PROJECT/.claude/settings.json"
-  local deny="$PLUGIN_ROOT/templates/settings/deny.json"
+  local deny="$PLUGIN_ROOT/templates/settings/permissions.json"
   [ -f "$settings" ] || echo '{}' > "$settings"
   python3 "$PLUGIN_ROOT/scripts/merge_settings.py" "$settings" "$deny"
-  created+=(".claude/settings.json (deny rules merged)")
+  created+=(".claude/settings.json (allow and deny rules merged)")
 }
 
 add_import() {
