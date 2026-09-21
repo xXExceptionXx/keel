@@ -10,7 +10,7 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 
 ```
 .claude-plugin/   Manifest und Marketplace
-agents/           Rollen: po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
+agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
 scripts/          frontmatter.py, config.py, gate.sh, init.sh
@@ -25,6 +25,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 
 | Befehl | Wer | Was |
 | --- | --- | --- |
+| `/keel:briefing` | Supervisor, mit dir | Morgen-Briefing in eigener Session: Supervisor-Entscheidungen des Vortags bestätigen oder kippen, richtungsweisende Vorlagen entscheiden, Leitlinien festhalten. Solange es aussteht, sperrt ein Gate alle Rollen |
 | `/keel:tagesstart` | Lead | Startcheck, bei Rot Reparaturaufgabe; Übergabenotiz des Vortags in Kurzform; Inbox; Vorhaben mit Status; Empfehlung |
 | `/keel:vorhaben <name> [<backlog-id>]` | Lead | Ein Vorhaben: PO schreibt die Problemstellung aus dem Backlog-Element, Architekt bewertet, Abstimmung, dann Aufgabenzyklus bis zur Abnahme durch den PO und Integration |
 | `/keel:epic <name> <backlog-id>` | Lead | Ein großes Thema: PO-Skizze, Epic-Bewertung des Architekten nach Reichweite, Leitentscheidungen als ADR oder Vorlage, dann das erste Vorhaben |
@@ -38,7 +39,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:coach` | Coach | Lernschleife: Hypothesen prüfen, Umfeld, Justierungen als Vorlagen; monatlich oder bei Korridorverletzung |
 | `/keel:backlog <befehl>` | PO, Auditor | Backlog über die Schnittstelle: next, show, list, propose, status, link; Anbieter Markdown oder GitHub Issues |
 
-Der Mensch entscheidet Vorlagen unter `.keel/decisions/pending/`, nimmt Pläne mit `status: abgenommen` ab und hebt Blockaden auf. Alles andere läuft ohne ihn.
+Vorlagen entscheidet tagsüber der Supervisor innerhalb seiner Stufe; richtungsweisende reichen bis zum Menschen und werden im Morgen-Briefing entschieden. Unbeaufsichtigte Läufe: `scripts/keel-run.sh <projekt> "/keel:vorhaben <name>"` wartet Nutzungslimits ab und meldet sich, wenn ein Briefing nötig ist. Der Supervisor läuft auf Opus; nach `claude update` auf 2.1.251 oder neuer kann in `agents/supervisor.md` `model: claude-fable-5-1` stehen.
 
 ## Ein Vorhaben durchführen
 
@@ -71,4 +72,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Basisregel-Pakete pro Sprache, ein Wrapper für unbeaufsichtigte Läufe über Nutzungslimits hinweg, die Supervisor-Rolle.
+Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Basisregel-Pakete pro Sprache, Einsatz in einem bestehenden Projekt mit Bestandsaufnahme.

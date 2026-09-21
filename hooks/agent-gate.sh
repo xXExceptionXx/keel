@@ -22,6 +22,11 @@ if [ -f "$sd_early/pending-$role" ]; then
   fi
 fi
 
+# Briefing gate: while a Supervisor briefing is due, only the Supervisor may run.
+if [ "$role" != "supervisor" ]; then
+  reasons="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$(project_dir)" 2>/dev/null)" || deny "Briefing mit dem Supervisor nötig, bevor Rollen arbeiten: /keel:briefing. $reasons"
+fi
+
 prompt="$(field '.tool_input.prompt')"
 task="$(prompt_field "$prompt" "Aufgabe")"
 plan="$(prompt_field "$prompt" "Vorhaben")"
@@ -134,6 +139,16 @@ case "$role" in
     [ -n "$task" ] || deny "Compliance braucht die Zeile 'Aufgabe: <ID>' im Prompt"
     [ "$($FM get "$tasks/$task.md" compliance 2>/dev/null || true)" = "pruefen" ] || deny "Compliance darf nicht starten: Aufgabe hat nicht compliance: pruefen"
     [ -f "$proj/.keel/work/compliance/$task.scan.md" ] || deny "Compliance: Scan-Datei fehlt"
+    ;;
+  supervisor)
+    anlass="$(prompt_field "$prompt" "Anlass")"
+    [ "$anlass" = "entscheiden" ] || deny "Supervisor braucht 'Anlass: entscheiden'"
+    vfile="$({ printf '%s' "$prompt" | grep -oE '^Vorlage:[[:space:]]*[^[:space:]]+' || true; } | head -1 | sed -E 's/^Vorlage:[[:space:]]*//')"
+    [ -n "$vfile" ] || deny "Supervisor braucht 'Vorlage: <pfad>'"
+    [ -f "$proj/$vfile" ] || deny "Supervisor: Vorlage $vfile existiert nicht"
+    $FM validate "$proj/$vfile" --type vorlage --status offen 2>/tmp/keel-gate-err || deny "Supervisor: $(cat /tmp/keel-gate-err)"
+    [ -z "$($FM get "$proj/$vfile" eskaliert 2>/dev/null || true)" ] || deny "Supervisor: Vorlage ist bereits an den Menschen eskaliert"
+    task="$vfile"
     ;;
   auditor|coach)
     datum="$(prompt_field "$prompt" "Datum")"

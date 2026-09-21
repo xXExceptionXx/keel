@@ -160,6 +160,22 @@ case "$role" in
         ;;
     esac
     ;;
+  supervisor)
+    vname="$(basename "$ref")"
+    done_f="$proj/.keel/decisions/done/$vname"; pend_f="$proj/.keel/decisions/pending/$vname"
+    if [ -f "$done_f" ]; then
+      $FM validate "$done_f" --type vorlage --status entschieden --nonempty entscheidung,entschieden 2>/tmp/keel-stop-err || block_stop "Entschiedene Vorlage unvollständig: $(cat /tmp/keel-stop-err)"
+      [ "$($FM get "$done_f" entscheider)" = "Supervisor" ] || block_stop "Setze entscheider=Supervisor in der Vorlage"
+      [ "$($FM get "$done_f" vorgelegt 2>/dev/null || true)" = "offen" ] || block_stop "Setze vorgelegt=offen, damit das Briefing die Entscheidung zeigt"
+      grep -q "Warum nicht der Mensch" "$done_f" || block_stop "Abschnitt '## Entscheidung des Supervisors' mit 'Warum nicht der Mensch:' fehlt"
+      grep -rlq "^vorlage: $vname" "$proj/.keel/adr/" 2>/dev/null || block_stop "Kein ADR mit 'vorlage: $vname' unter .keel/adr/ gefunden"
+    elif [ -f "$pend_f" ]; then
+      [ "$($FM get "$pend_f" eskaliert 2>/dev/null || true)" = "Supervisor" ] || block_stop "Vorlage weder entschieden (nach done/ verschoben) noch eskaliert (eskaliert=Supervisor, richtungsweisend=<Grund>)"
+      $FM validate "$pend_f" --nonempty richtungsweisend,eskaliert_am 2>/dev/null || block_stop "Eskalation braucht richtungsweisend=<Grund> und eskaliert_am=<Datum>"
+    else
+      block_stop "Vorlage $vname weder unter pending/ noch unter done/"
+    fi
+    ;;
   compliance)
     rep="$proj/.keel/work/compliance/$ref.md"
     $FM validate "$rep" --type compliance --status frei,auflagen,vorlage --require aufgabe,datum 2>/tmp/keel-stop-err \

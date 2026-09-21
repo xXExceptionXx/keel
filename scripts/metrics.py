@@ -25,6 +25,9 @@ DEFAULT_CORRIDORS = {
     "vorlagen_pro_woche": "2-5",
     "entscheidungsdauer_tage": "0-2",
     "gekippte_delegierte_adrs_prozent": "0-10",
+    "gekippte_supervisor_entscheidungen_prozent": "0-15",
+    "eskalationsquote_prozent": "10-40",
+    "einwaende_supervisor": "1-10",
     "review_runden_pro_aufgabe": "1-2",
     "ruecklaufquote_review_prozent": "0-30",
     "neuschnitt_quote_prozent": "0-20",
@@ -168,6 +171,19 @@ def main():
     kippt = [a for a in delegated if str(a.get("status", "")).startswith(("Rejected", "Superseded"))]
     gekippt_prozent = round(100 * len(kippt) / len(delegated)) if delegated else None
 
+    # ---- supervisor
+    sup = [a for a in adrs if a.get("entscheider") == "Supervisor"]
+    sup_kippt = [a for a in sup if str(a.get("status", "")).startswith(("Rejected", "Superseded"))]
+    sup_gekippt_prozent = round(100 * len(sup_kippt) / len(sup)) if sup else None
+    eskaliert = [d for d in all_dec if d.get("eskaliert") == "Supervisor"]
+    sup_entschieden = [d for d in all_dec if d.get("entscheider") == "Supervisor"]
+    eskalationsquote = round(100 * len(eskaliert) / (len(eskaliert) + len(sup_entschieden))) if (eskaliert or sup_entschieden) else None
+    einwaende = 0
+    if adr_dir.exists():
+        for p in adr_dir.glob("[0-9]*.md"):
+            if "## Einwand des Supervisors" in p.read_text(encoding="utf-8"):
+                einwaende += 1
+
     # ---- audits
     audit_dir = project / ".keel" / "work" / "audit"
     audits = []
@@ -183,6 +199,9 @@ def main():
         ("Meine Aufmerksamkeit", "vorlagen_pro_woche", "Vorlagen pro Woche", vorlagen_pro_woche),
         ("Meine Aufmerksamkeit", "entscheidungsdauer_tage", "Zeit bis zur Entscheidung (Tage)", entscheidungsdauer),
         ("PO-Kalibrierung", "gekippte_delegierte_adrs_prozent", "Gekippte delegierte ADRs (%)", gekippt_prozent),
+        ("Supervisor", "gekippte_supervisor_entscheidungen_prozent", "Gekippte Supervisor-Entscheidungen (%)", sup_gekippt_prozent),
+        ("Supervisor", "eskalationsquote_prozent", "Eskalationsquote an den Menschen (%)", eskalationsquote),
+        ("Supervisor", "einwaende_supervisor", "Einwände des Supervisors gegen Entscheidungen des Menschen", einwaende),
         ("Planung", "diff_zeilen_pro_aufgabe", "Diff-Zeilen pro Aufgabe (Ø)", diff_avg),
         ("Planung", "neuschnitt_quote_prozent", "Neu geschnittene Aufgaben (%)", round(100 * len(neuschnitt) / len(tasks)) if tasks else None),
         ("Umsetzung", "review_runden_pro_aufgabe", "Review-Runden pro Aufgabe (Ø)", review_rounds),

@@ -13,12 +13,12 @@ Du bist der Lead im keel-System. `$ARGUMENTS` ist `<name> <backlog-id>` beim ers
 
 **3. Leitentscheidungen.** Status `bewertet` oder `leitentscheidungen-offen`: starte `keel:po` mit `Anlass: epic-abstimmung`, `Epic: <name>`. Danach:
    - `aktiv`: weiter mit 4.
-   - `leitentscheidungen-offen`: committe `.keel/`, melde die Vorlagen unter `.keel/decisions/pending/` mit Titel und brich ab. Der Mensch entscheidet über `/keel:inbox` und ruft `/keel:epic <name>` erneut auf; der PO überführt die Entscheidungen dann in ADRs.
+   - `leitentscheidungen-offen`: Für jede Vorlage unter `.keel/decisions/pending/` mit `epic-<name>` im Namen und ohne `eskaliert`: starte `keel:supervisor` mit `Anlass: entscheiden`, `Vorlage: <pfad>`. Sind danach alle entschieden (unter `done/`), starte `keel:po` erneut mit `Anlass: epic-abstimmung` und lies den Status neu. Bleibt mindestens eine eskaliert: committe `.keel/`, melde sie mit Titel und brich ab mit „Briefing nötig: /keel:briefing“. Nach dem Briefing ruft der Mensch `/keel:epic <name>` erneut auf.
 
 **4. Erstes Vorhaben.** Status `aktiv` und kein Vorhaben der Liste hat eine Plan-Datei: nimm das erste Vorhaben der Liste (Spalte Name) und starte `keel:po` mit `Anlass: problemstellung`, `Vorhaben: <plan-name>`, `Epic: <name>`, `Backlog: <backlog-id des Epics oder des Vorhabens-Elements>`. Committe `.keel/` und melde: „Epic <name> aktiv, erstes Vorhaben <plan-name> als Problemstellung geschrieben; weiter mit `/keel:vorhaben <plan-name>`.“
 
 **5. Nächstes Vorhaben.** Status `aktiv` und das zuletzt begonnene Vorhaben ist `integriert`: wie 4 mit dem nächsten Vorhaben der Liste, dessen Abhängigkeiten integriert sind. Sind alle integriert: starte `keel:po` mit `Anlass: epic-abnahme`, `Epic: <name>`, committe und melde das Ergebnis.
 
-**6. Kurskorrektur.** Status `kurskorrektur`: schreibe eine Vorlage nach `.keel/decisions/pending/<Datum>-epic-<name>-kurskorrektur.md` aus dem jüngsten Eintrag unter `## Retrospektiven` (Optionen: 1. Leitentscheidung ändern und betroffene Vorhaben neu schneiden, 2. bei der Leitentscheidung bleiben und das Vorhaben nacharbeiten, 3. Epic stoppen), committe, brich ab. Nach der Entscheidung setzt der Mensch den Status auf `aktiv`.
+**6. Kurskorrektur.** Status `kurskorrektur`: schreibe eine Vorlage nach `.keel/decisions/pending/<Datum>-epic-<name>-kurskorrektur.md` aus dem jüngsten Eintrag unter `## Retrospektiven` (Optionen: 1. Leitentscheidung ändern und betroffene Vorhaben neu schneiden, 2. bei der Leitentscheidung bleiben und das Vorhaben nacharbeiten, 3. Epic stoppen), committe, brich ab mit „Briefing nötig“. Kurskorrekturen sind richtungsweisend und gehen nicht an den Supervisor; nach dem Briefing setzt der Mensch den Status auf `aktiv`.
 
 Abschluss in höchstens fünf Zeilen: Epic, Status, Zahl der Vorhaben und Leitentscheidungen, offene Vorlagen, nächster Befehl.

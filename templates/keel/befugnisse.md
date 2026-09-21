@@ -12,14 +12,28 @@ Maßstab ist die Umkehrbarkeit. Leicht Umkehrbares entscheidet der PO, schwer Um
 - Abnahme eines Vorhabens gegen den Abnahmenachweis
 - Dokumentiert als ADR mit Status _Accepted (delegiert)_
 
-## Vorlage an mich
+## Der Supervisor entscheidet
 
-Der PO liest diese Liste wörtlich. Was hier nicht steht, entscheidet er. Deshalb konkret:
+Vorlagen des PO, des Lead oder aus Prüfbefunden, die nicht in der Stufe des Menschen liegen. Er entscheidet aus Roadmap, Epics, ADRs, Leitlinien und meinen früheren Entscheidungen; jede Entscheidung erscheint im nächsten Briefing und kann gekippt werden. Typisch:
 
-- Jede Änderung an einem **exportierten** Typ, einer exportierten Funktion oder einem Barrel eines Features, das schon abgenommen ist. Ergänzen zählt als Ändern: ein neues Pflichtfeld, ein neues Literal in einer Zustands- oder Schrittmenge, ein neuer Parameter.
+- Zuschnitt und Reihenfolge innerhalb eines Epics, Neuschnitt oder Verwerfen einer Aufgabe nach zwei Runden
+- Schnittstellenänderungen an Features, die noch kein externer Aufrufer nutzt, und Leitentscheidungen eines Epics ohne Außenwirkung
+- Kompromisse zwischen PO und Architekt, wenn beide Positionen dokumentiert sind
+- Neue Entwicklungsabhängigkeiten ohne Laufzeitwirkung
+- Auflagen der Compliance-Rolle umsetzen lassen, wenn keine neue Rechtsgrundlage nötig ist
+
+Ist er unsicher, wie ich entscheiden würde, reicht er weiter.
+
+## Vorlage an mich (richtungsweisend)
+
+Der PO und der Supervisor lesen diese Liste wörtlich. Was hier steht, entscheidet niemand außer mir:
+
+- Zielbild, Nicht-Ziele, Rangfolge der Qualitätsmerkmale, diese Befugnisse, die Reihenfolge der Roadmap
+- Kurskorrekturen an Leitentscheidungen eines Epics
+- Jede Änderung an einem **exportierten** Typ, einer exportierten Funktion oder einem Barrel eines Features, das schon **externe Aufrufer** hat. Ergänzen zählt als Ändern: ein neues Pflichtfeld, ein neues Literal in einer Zustands- oder Schrittmenge, ein neuer Parameter.
 - Datenmodell: neue Tabellen, neue Spalten, geänderte Beziehungen, Migrationen
 - Architekturgrenzen: neue Schicht, neues Feature-Verzeichnis, neue Abhängigkeitsrichtung zwischen Features
-- Neue Laufzeit- oder Entwicklungsabhängigkeit
+- Neue Laufzeitabhängigkeit, externe Dienste, Kosten, Verträge
 - Alles, was Beträge, Rundung oder Berechnungsergebnisse verändert
 - Personenbezogene Daten: neue Felder, neue Verarbeitung, neue Empfänger
 - Verhalten, das Nutzer sehen und das nicht in der Problemstellung stand

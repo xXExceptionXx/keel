@@ -30,6 +30,9 @@ korridore:
   vorlagen_pro_woche: 2-5
   entscheidungsdauer_tage: 0-2
   gekippte_delegierte_adrs_prozent: 0-10
+  gekippte_supervisor_entscheidungen_prozent: 0-15
+  eskalationsquote_prozent: 10-40
+  einwaende_supervisor: 1-10       # zu niedrig heißt: redet nach dem Mund
   review_runden_pro_aufgabe: 1-2
   ruecklaufquote_review_prozent: 0-30
   neuschnitt_quote_prozent: 0-20
