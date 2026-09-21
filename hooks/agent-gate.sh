@@ -43,8 +43,30 @@ case "$role" in
     ;;
   po)
     anlass="$(prompt_field "$prompt" "Anlass")"
+    epic="$(prompt_field "$prompt" "Epic")"
+    epics="$proj/.keel/work/epics"
+    case "$anlass" in
+      epic-skizze)
+        [ -n "$epic" ] && [ -n "$(prompt_field "$prompt" "Backlog")" ] || deny "PO (epic-skizze) braucht 'Epic: <name>' und 'Backlog: <id>'"
+        [ ! -f "$epics/$epic.md" ] || deny "PO (epic-skizze): Epic existiert schon"
+        plan="epic:$epic"
+        ;;
+      epic-abstimmung)
+        [ -n "$epic" ] || deny "PO (epic-abstimmung) braucht 'Epic: <name>'"
+        $FM validate "$epics/$epic.md" --type epic --status bewertet,leitentscheidungen-offen 2>/tmp/keel-gate-err \
+          || deny "PO (epic-abstimmung) darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Architekt mit Epic-Bewertung."
+        plan="epic:$epic"
+        ;;
+      epic-abnahme)
+        [ -n "$epic" ] || deny "PO (epic-abnahme) braucht 'Epic: <name>'"
+        $FM validate "$epics/$epic.md" --type epic --status aktiv 2>/tmp/keel-gate-err \
+          || deny "PO (epic-abnahme) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        plan="epic:$epic"
+        ;;
+    esac
     [ -n "$plan" ] || deny "PO braucht die Zeile 'Vorhaben: <name>' im Prompt"
     case "$anlass" in
+      epic-skizze|epic-abstimmung|epic-abnahme) ;;
       problemstellung)
         [ -n "$(prompt_field "$prompt" "Backlog")" ] || deny "PO (problemstellung) braucht die Zeile 'Backlog: <id>'"
         [ ! -f "$plans/$plan.md" ] || $FM validate "$plans/$plan.md" --type plan --status entwurf 2>/tmp/keel-gate-err \
@@ -65,13 +87,29 @@ case "$role" in
           || deny "PO (abnahme) darf nicht starten: $(cat /tmp/keel-gate-err)"
         [ -f "$proj/.keel/work/acceptance/$plan.md" ] || deny "PO (abnahme): Abnahmenachweis fehlt"
         ;;
-      *) deny "PO braucht 'Anlass: problemstellung | abstimmung | klaerung | abnahme'" ;;
+      *) deny "PO braucht 'Anlass: problemstellung | abstimmung | klaerung | abnahme | epic-skizze | epic-abstimmung | epic-abnahme'" ;;
     esac
     task="$plan"
     ;;
   architekt)
     anlass="$(prompt_field "$prompt" "Anlass")"
+    epic="$(prompt_field "$prompt" "Epic")"
+    epics="$proj/.keel/work/epics"
     case "$anlass" in
+      epic-bewertung)
+        [ -n "$epic" ] || deny "Architekt (epic-bewertung) braucht 'Epic: <name>'"
+        $FM validate "$epics/$epic.md" --type epic --status skizze 2>/tmp/keel-gate-err \
+          || deny "Architekt (epic-bewertung) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        task="epic:$epic"
+        ;;
+      epic-retrospektive)
+        [ -n "$epic" ] && [ -n "$plan" ] || deny "Architekt (epic-retrospektive) braucht 'Epic: <name>' und 'Vorhaben: <name>'"
+        $FM validate "$epics/$epic.md" --type epic --status aktiv 2>/tmp/keel-gate-err \
+          || deny "Architekt (epic-retrospektive) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        $FM validate "$plans/$plan.md" --type plan --status integriert 2>/tmp/keel-gate-err \
+          || deny "Architekt (epic-retrospektive): Vorhaben nicht integriert: $(cat /tmp/keel-gate-err)"
+        task="epic:$epic"
+        ;;
       bewertung)
         [ -n "$plan" ] || deny "Architekt (bewertung) braucht 'Vorhaben: <name>'"
         $FM validate "$plans/$plan.md" --type plan --status entwurf 2>/tmp/keel-gate-err \
@@ -89,7 +127,7 @@ case "$role" in
         [ -n "$datum" ] || deny "Architekt ($anlass) braucht 'Datum: YYYY-MM-DD'"
         task="$anlass:$datum"
         ;;
-      *) deny "Architekt braucht 'Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde'" ;;
+      *) deny "Architekt braucht 'Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde | epic-bewertung | epic-retrospektive'" ;;
     esac
     ;;
   auditor|coach)

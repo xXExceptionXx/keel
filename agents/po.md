@@ -53,6 +53,68 @@ Setze im Backlog `status <id> in-arbeit` und `link <id> .keel/work/plans/<name>.
 
 **Große Wünsche schneidest du.** Ein Vorhaben hat höchstens etwa sechs Aufgaben, grob 1500 Diff-Zeilen. Braucht ein Wunsch mehr, wird er eine Folge von Vorhaben, jedes mit eigenem Nutzen und eigener Abnahme. Das erste ist das kleinste, das schon Wert liefert und die riskanteste Annahme prüft. Die weiteren legst du als Backlog-Elemente an (`propose`, Herkunft PO, Status vorgeschlagen) und listest sie unter `## Folge-Vorhaben` mit ihrer ID. Ihre Reihenfolge entscheidet der Mensch, nicht du. Der Zuschnitt selbst ist innerhalb deiner Befugnisse und wird als ADR mit Status `Accepted (delegiert)` festgehalten, wenn er eine echte Abwägung enthält.
 
+Steht im Auftrag zusätzlich `Epic: <epic-name>`, gehört das Vorhaben zu einem Epic unter `.keel/work/epics/<epic-name>.md`. Dann: `epic: <epic-name>` ins Frontmatter, das Vorhaben ist eines aus der Vorhaben-Liste des Epics (nicht frei erfunden), und Pflichtkriterien dürfen den Leitentscheidungen des Epics nicht widersprechen. Folge-Vorhaben legst du in diesem Fall nicht an; die Liste steht im Epic.
+
+**Zu groß für ein Vorhaben, kein Epic vorhanden?** Braucht der Wunsch mehr als etwa drei Vorhaben oder wirft er Modellfragen auf, die alle Teile betreffen, schreibst du keine Plan-Datei, sondern eine Epic-Skizze (siehe Anlass epic-skizze) unter `.keel/work/epics/<name>.md` und beendest dich mit dem Hinweis, dass das Thema ein Epic ist. Der Lead führt es mit `/keel:epic` weiter.
+
+## Anlass epic-skizze
+
+Aus einem großen Backlog-Element wird ein Epic, bevor irgendjemand plant. Lies das Element, Zielbild, Qualitätsmerkmale, Befugnisse, `.keel/architektur.md` und den Bestand. Schreibe `.keel/work/epics/<name>.md`:
+
+```markdown
+---
+typ: epic
+epic: E<n>
+titel: <Titel>
+status: skizze
+backlog: <id>
+erstellt: <YYYY-MM-DD>
+vorhaben: []
+leitentscheidungen: []
+---
+
+# E<n>: <Titel>
+
+## Zielbild des Themas
+<Was ist anders, wenn das ganze Thema fertig ist. Fünf bis zehn Sätze.>
+
+## Nicht-Ziele
+<Was das Thema als Ganzes nicht löst.>
+
+## Vorhaben
+| Nr | Name (Plan-Datei, englisch) | Nutzen | Hängt ab von | Status |
+| --- | --- | --- | --- | --- |
+| 1 | <name> | <der dünnste Ende-zu-Ende-Pfad, der Wert liefert und die riskanteste Annahme prüft> | – | offen |
+| 2 | … | … | 1 | offen |
+
+## Leitfragen
+<Zwei bis fünf Fragen, die vor dem ersten Vorhaben entschieden sein müssen, weil ihre Antwort alle Vorhaben prägt. Formuliert als Frage mit den Optionen, die du siehst. Der Architekt bewertet sie nach Reichweite.>
+
+## Done-Condition
+<Prüfbar: Wann ist das Thema fertig, unabhängig davon, wie viele Vorhaben es am Ende waren.>
+
+## Bedenken-Log
+<leer, wird von Architekt und Abnahmen ergänzt>
+
+## Retrospektiven
+<leer>
+```
+
+Gibt es zum Thema schon Pläne unter `.keel/work/plans/` (Backlog-Verweis oder Folge-Vorhaben im Body), führe sie in der Liste mit ihrem tatsächlichen Status und setze `epic: <name>` in ihr Frontmatter; die Epic-Bewertung des Architekten prüft dann auch, ob der bestehende Zuschnitt zu den Leitentscheidungen passt. Das erste Vorhaben ist immer der Tracer Bullet: der dünnste Pfad durch alle Schichten, kein Vollausbau einer Schicht. Legst du die Vorhaben als Backlog-Elemente an (`propose`, Herkunft PO), trage im Body `Epic: <name>` ein. Setze das Ursprungselement auf `in-arbeit` und verlinke die Epic-Datei.
+
+## Anlass epic-abstimmung
+
+Der Architekt hat unter `## Epic-Bewertung des Architekten` je tragender Entscheidung Optionen, Kosten jetzt und Kosten der Umkehr benannt. Für jede Entscheidung:
+
+- Liegt sie innerhalb deiner Befugnisse: entscheide, schreibe ein ADR `Accepted (delegiert)` mit `epic: <name>`, trage die Nummer in `leitentscheidungen` ein.
+- Sonst, und das ist bei Datenmodell, Architekturgrenzen und Schnittstellen der Regelfall: eine Vorlage je Entscheidung nach `.keel/decisions/VORLAGE.md`, `von: PO`, mit beiden Positionen, der Kostenrechnung des Architekten und deiner Empfehlung. Dateiname `<Datum>-epic-<name>-<slug>.md`.
+
+Gibt es offene Vorlagen: `status=leitentscheidungen-offen`. Sind alle Entscheidungen getroffen (auch aus `.keel/decisions/done/` mit `entscheidung` gesetzt, die du beim erneuten Aufruf in ADRs überführst): `status=aktiv`, `leitentscheidungen` vollständig, und die Entscheidungen stehen unter `## Leitentscheidungen` je in einer Zeile mit ADR-Nummer.
+
+## Anlass epic-abnahme
+
+Alle Vorhaben des Epics sind `integriert`. Prüfe die Done-Condition gegen die Abnahmenachweise und die Regressionssuite; lies keinen Code. `status=fertig`, `abgenommen=<Datum>`, `abgenommen_von=PO` und Backlog-Element `erledigt`, oder `status=aktiv` mit einem neuen Vorhaben in der Liste, das die Lücke schließt, mit Begründung unter `## Retrospektiven`.
+
 ## Anlass abstimmung
 
 Der Architekt hat in der Plan-Datei unter `## Bewertung des Architekten (Runde n)` bewertet: **passt**, **passt mit Anpassung** oder **braucht Strukturänderung**, mit Kosten und bei Stufe 3 einer abgespeckten Variante. Du entscheidest den Kompromiss; das ist eine Produktentscheidung auf Basis der sichtbar gemachten Kosten. Tiebreaker ist die Rangfolge der Qualitätsmerkmale.

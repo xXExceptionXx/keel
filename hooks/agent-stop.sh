@@ -55,6 +55,34 @@ case "$role" in
     fi
     ;;
   po)
+    case "$ref" in
+      epic:*)
+        ep="$proj/.keel/work/epics/${ref#epic:}.md"
+        $FM validate "$ep" --type epic --status skizze,bewertet,leitentscheidungen-offen,aktiv,fertig --require epic,titel,backlog 2>/tmp/keel-stop-err \
+          || block_stop "Epic-Datei fehlt oder unvollständig: $(cat /tmp/keel-stop-err)"
+        st="$($FM get "$ep" status)"
+        case "$st" in
+          skizze)
+            for sec in "## Zielbild des Themas" "## Vorhaben" "## Leitfragen" "## Done-Condition"; do
+              grep -q "^$sec" "$ep" || block_stop "Epic-Abschnitt fehlt: $sec"
+            done
+            [ -n "$($FM get "$ep" vorhaben 2>/dev/null || true)" ] || block_stop "Epic: Frontmatter 'vorhaben' ist leer; trage die Plan-Namen der Vorhaben in Reihenfolge ein"
+            ;;
+          bewertet) block_stop "Epic-Abstimmung nicht abgeschlossen: setze status=aktiv (alle Leitentscheidungen als ADR) oder status=leitentscheidungen-offen (Vorlagen geschrieben)" ;;
+          leitentscheidungen-offen)
+            ls "$proj/.keel/decisions/pending/"*epic-"${ref#epic:}"* >/dev/null 2>&1 || block_stop "status leitentscheidungen-offen ohne Vorlage unter .keel/decisions/pending/*epic-${ref#epic:}*"
+            ;;
+          aktiv)
+            [ -n "$($FM get "$ep" leitentscheidungen 2>/dev/null || true)" ] || block_stop "status aktiv verlangt Leitentscheidungen als ADR-Nummern im Frontmatter"
+            grep -q "^## Leitentscheidungen" "$ep" || block_stop "Abschnitt '## Leitentscheidungen' fehlt"
+            ;;
+          fertig)
+            $FM validate "$ep" --nonempty abgenommen,abgenommen_von 2>/dev/null || block_stop "Epic-Abnahme braucht abgenommen=<Datum> und abgenommen_von=PO"
+            ;;
+        esac
+        finish "ok"
+        ;;
+    esac
     planfile="$plans/$ref.md"
     if [ -f "$planfile" ]; then
       st="$($FM get "$planfile" status)"
@@ -95,6 +123,20 @@ case "$role" in
     ;;
   architekt)
     case "$ref" in
+      epic:*)
+        ep="$proj/.keel/work/epics/${ref#epic:}.md"
+        st="$($FM get "$ep" status)"
+        if [ "$st" = "bewertet" ]; then
+          grep -q "^## Epic-Bewertung des Architekten" "$ep" || block_stop "Abschnitt '## Epic-Bewertung des Architekten' fehlt"
+          grep -q "Tragende Entscheidungen" "$ep" || block_stop "Epic-Bewertung ohne 'Tragende Entscheidungen'"
+        elif [ "$st" = "aktiv" ] || [ "$st" = "kurskorrektur" ]; then
+          grep -q "^## Retrospektiven" "$ep" || block_stop "Abschnitt '## Retrospektiven' fehlt"
+          [ "$st" = "kurskorrektur" ] && { grep -qi "kurskorrektur:" "$ep" || block_stop "status kurskorrektur ohne Eintrag 'kurskorrektur: …' in den Retrospektiven"; }
+        else
+          block_stop "Epic-Status '$st' nach Architekt unerwartet; erlaubt: bewertet (Epic-Bewertung) oder aktiv|kurskorrektur (Retrospektive)"
+        fi
+        finish "ok"
+        ;;
       bestandsaufnahme:*|wochenrunde:*)
         modus="${ref%%:*}"; datum="${ref#*:}"
         [ "$modus" = "bestandsaufnahme" ] && rep="$proj/.keel/work/architektur/bestand-$datum.md" || rep="$proj/.keel/work/architektur/woche-$datum.md"

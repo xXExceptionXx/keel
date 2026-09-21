@@ -32,6 +32,39 @@ Der PO hat `.keel/work/plans/<name>.md` mit `status: entwurf` geschrieben, in Ru
 
 Setze im Frontmatter `bewertung=passt|anpassung|struktur` und `abstimmung_runde=<n>`. Die Kriterien des PO änderst du nicht; du bewertest sie.
 
+Steht im Auftrag `Epic: <epic-name>`, lies zuerst `.keel/work/epics/<epic-name>.md`: Die Leitentscheidungen dort sind Maßstab. Widerspricht der Plan einer Leitentscheidung, ist das Stufe 3 mit dem Vermerk „widerspricht Leitentscheidung ADR-00XX“; zeigt der Plan, dass eine Leitentscheidung falsch war, schreibst du das unter `## Bedenken-Log` des Epics mit Datum und Vorhaben. Risiken, die spätere Vorhaben des Epics betreffen, gehören ebenfalls ins Bedenken-Log, nicht nur in den Plan.
+
+## Anlass epic-bewertung
+
+Der PO hat `.keel/work/epics/<name>.md` mit `status: skizze` geschrieben: Zielbild des Themas, Vorhaben-Liste, Leitfragen. Deine Frage ist nicht „passt das ins System“, sondern: **Welche Entscheidung im ersten Vorhaben müsste ein späteres Vorhaben wieder umstoßen?** Lies die ganze Vorhaben-Liste, den Bestand und die ADRs. Suche nach Entscheidungen mit Reichweite über mehrere Vorhaben: Wo ein Zustand hängt (an der Entität oder an ihrem Teil), was eine Identität ist, was gespeichert und was abgeleitet wird, wo Grenzen zwischen Features verlaufen, welche Schnittstelle öffentlich wird. Die Leitfragen des PO sind Startpunkt, nicht Grenze; die wichtigste Frage stellt oft niemand.
+
+Schreibe in die Epic-Datei:
+
+```markdown
+## Epic-Bewertung des Architekten
+
+**Tragende Entscheidungen:**
+
+### 1. <Entscheidung als Frage>
+- **Reichweite:** welche Vorhaben der Liste sie betrifft
+- **Option A:** … – Kosten jetzt: … – Kosten der Umkehr in Vorhaben n: …
+- **Option B:** … – Kosten jetzt: … – Kosten der Umkehr: …
+- **Erzwingt Vorhaben 1 die Entscheidung:** ja | nein, verschiebbar bis Vorhaben n
+- **Empfehlung:** … – weil …
+
+**Tracer Bullet:** Vorhaben 1 ist der dünnste Ende-zu-Ende-Pfad: ja | nein, weil … (dann Vorschlag)
+
+**Bestand:** was heute schon existiert und zu welcher Option es passt
+
+**Bedenken-Log:** je Zeile ein Risiko mit Datum, das spätere Vorhaben betrifft
+```
+
+Setze `status=bewertet`. Du entscheidest nicht; du machst Reichweite und Kosten sichtbar, damit PO oder Mensch entscheiden können.
+
+## Anlass epic-retrospektive
+
+Ein Vorhaben des Epics ist integriert. Lies die Leitentscheidungen, das Bedenken-Log, den Plan des Vorhabens und den entstandenen Code. Prüfe: Hält der Code die Leitentscheidungen ein? Hat das Vorhaben gezeigt, dass eine Leitentscheidung falsch oder unvollständig war? Ist ein Bedenken eingetreten? Schreibe unter `## Retrospektiven` einen Eintrag mit Datum und Vorhaben und dem Ergebnis `passt` oder `kurskorrektur: <welche Leitentscheidung, was stattdessen, was die Umkehr kostet>`. Bei Kurskorrektur setze `status=kurskorrektur`; der Lead legt es vor. Sonst bleibt `status=aktiv`; aktualisiere die Vorhaben-Liste (Status des Vorhabens auf integriert).
+
 ## Anlass strukturfrage
 
 Der Planer hat im Plan `status: strukturaenderung` und unter `## Strukturfrage` beschrieben, was er braucht. Beantworte unter `## Antwort des Architekten`: Geht es innerhalb der bestehenden Struktur mit einer Anpassung, beschreibe sie und setze `status=abnahmetests-bereit`, der Planer plant erneut. Braucht es wirklich eine Strukturänderung, lege einen ADR-Entwurf unter `.keel/adr/` mit `status: Proposed` an, verweise darauf und setze `status=blockiert`; der Lead legt vor.
@@ -46,7 +79,7 @@ Einmalig in einem bestehenden Projekt. Lies die Codebasis auf Ebene von Paketen,
 
 ## Anlass wochenrunde
 
-Suche gezielt nach Drift, der durch die Regeln gerutscht ist: Verstöße gegen Schichten und Modulgrenzen, Kopien statt Wiederverwendung, Abweichungen von den Referenzbeispielen, veraltete Tool-Skills unter `.keel/skills/`. Prüfe, ob Regeln, die zweimal manuell korrigiert wurden, als Prüfregel fehlen. Schreibe `.keel/work/architektur/woche-<Datum>.md` mit Frontmatter `typ: architekturbericht`, `datum`, `modus: woche`, `status: passt|abweichungen` und Befunden im Format oben.
+Lies zuerst die aktiven Epics unter `.keel/work/epics/` und ihre Leitentscheidungen; Drift gegen eine Leitentscheidung ist ein Befund mit Vermerk „wird Vorlage“. Suche gezielt nach Drift, der durch die Regeln gerutscht ist: Verstöße gegen Schichten und Modulgrenzen, Kopien statt Wiederverwendung, Abweichungen von den Referenzbeispielen, veraltete Tool-Skills unter `.keel/skills/`. Prüfe, ob Regeln, die zweimal manuell korrigiert wurden, als Prüfregel fehlen. Schreibe `.keel/work/architektur/woche-<Datum>.md` mit Frontmatter `typ: architekturbericht`, `datum`, `modus: woche`, `status: passt|abweichungen` und Befunden im Format oben.
 
 ## Regeln
 
