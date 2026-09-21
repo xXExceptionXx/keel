@@ -617,7 +617,7 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 - [x] Sicherheit zuerst: Deny-Regeln und Guard-Hook (2026-09-21). Offen pro Projekt: isolierte Umgebung, Backup getestet
 - [ ] Zielbild, Qualitätsmerkmale mit Rangfolge, Befugnisse und ein erstes Backlog schriftlich festhalten
 - [x] Backlog-Skript mit Markdown- und GitHub-Adapter, beide erprobt (2026-09-21). Linear erst bei Bedarf
-- [x] Plugin-Repo `keel` angelegt: Rollen Planer, Tester, Entwickler, Reviewer; Lead als Skill; PO vorerst der Mensch (2026-09-21)
+- [x] Plugin-Repo `keel` angelegt: alle Rollen des Konzepts als Agents, Lead als Skill (2026-09-21). PO und Architekt mit Abstimmung nachgezogen, Epic-Ebene ergänzt (System-ADRs 0008, 0009)
 - [x] Frontmatter-Schema und Prüf-Hooks an Start und Stop jeder Rolle, siehe System-ADR 0001 (2026-09-21)
 - [x] Budget-Hook (Werkzeugaufrufe, Diff-Zeilen, Zeit) und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Branch pro Vorhaben und Reparatur, siehe System-ADR 0003
 - [ ] Basisregeln pro genutzter Sprache als Pakete anlegen
@@ -660,6 +660,10 @@ Erster Coach-Lauf und Kennzahlen am 2026-09-21, nach einem Tag Betrieb im Beispi
 
 - Die Kennzahlen lassen sich vollständig aus Artefakten ableiten; keine Rolle meldet etwas. Zwei Korridore waren am ersten Tag verletzt: „Vorlagen pro Woche“ bei 0, weil der Mensch als PO direkt entschieden hat, und „Audit-Abweichungen pro Bericht“ bei 8, weil der erste Audit Aufbauarbeit prüfte. Beides sind Startphänomene, keine Systemfehler; der Coach soll das erkennen.
 - Der GitHub-Adapter arbeitet mit Labels `keel:<status>` und schließt Issues bei erledigt oder verworfen. Das Löschen von Issues gibt es nicht, das Skript kennt keinen solchen Befehl.
+
+## Epic-Ebene
+
+Ergänzt am 2026-09-21 nach dem Szenario „Freigabe-Pipeline“ und einer Recherche zu Dach-Artefakten in Anthropic-Harnesses, Cursor, Spec Kit, Kiro und BMAD. Große Themen bekommen vor dem ersten Vorhaben ein Epic: Zielbild des Themas, Vorhaben-Liste, Leitfragen, Done-Condition. Der Architekt bewertet Leitentscheidungen nach Reichweite, also danach, welche Entscheidung im ersten Vorhaben ein späteres wieder umstoßen müsste. Leitentscheidungen werden ADR, außerhalb der Befugnisse des PO als Vorlage an mich, bevor eine Zeile Code entsteht. Nach jeder Integration prüft der Architekt in einer Retrospektive gegen die Leitentscheidungen; eine Kurskorrektur wird eine Vorlage, bevor das nächste Vorhaben geplant wird. Das erste Vorhaben ist immer der dünnste Ende-zu-Ende-Pfad. Siehe System-ADR 0009 und `docs/system.md`.
 
 ## Referenzen
 

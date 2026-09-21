@@ -10,6 +10,7 @@ Sammle:
 1. **Vorlagen:** alle Dateien unter `.keel/decisions/pending/`. Je Vorlage: Titel, von, Datum. Für jede gib zusätzlich die Zeilen **Empfehlung** und **Warum ich nicht selbst entscheide** aus dem Body wörtlich wieder; das ist die einzige Ausnahme von der Frontmatter-Regel, weil der Mensch damit in einer Minute entscheiden soll.
 2. **Zur Abnahme:** Pläne unter `.keel/work/plans/` mit Status `abnahme-bereit` oder `abnahme-rot`, mit Pfad des Abnahmenachweises unter `.keel/work/acceptance/`.
 2b. **Abnahmen durch den PO (delegiert, letzte 7 Tage):** Pläne mit `abgenommen_von: PO`; du kannst jede kippen, indem du `status: nacharbeit` mit einem Abschnitt `## Nacharbeit` setzt.
+2c. **Epics:** Dateien unter `.keel/work/epics/`: Titel, Status, Zahl der Vorhaben integriert/gesamt aus der Tabelle. Status `leitentscheidungen-offen` oder `kurskorrektur` fett; die zugehörigen Vorlagen stehen unter 1.
 3. **Blockiert:** Pläne mit Status `blockiert` oder `strukturaenderung`, Aufgaben mit Status `neuschnitt`, `testeinspruch`, `budget-erschoepft`, `reparatur`.
 4. **Letzter Prüfbericht:** neueste Datei unter `.keel/work/audit/`, Status und Datum.
 5. **Backlog-Vorschläge:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/backlog.py" list --status vorgeschlagen`, je Element ID, Titel, Herkunft. Der Mensch setzt sie mit `status <id> bereit` oder `verworfen`.
