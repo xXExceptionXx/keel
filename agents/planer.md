@@ -17,7 +17,7 @@ Die erste Zeile deines Auftrags lautet `Vorhaben: <name>`. Lies genau diese Date
 
 ## Output
 
-Für jede Aufgabe eine Datei `.keel/work/tasks/<Vorhaben-ID>-T<nn>.md`, nummeriert ab `T01`. Die Vorhaben-ID steht im Frontmatter des Plans unter `vorhaben`. Format:
+Dateinamen und Pfade im Code auf Englisch, auch wenn die Aufgabe deutsch beschrieben ist. Für jede Aufgabe eine Datei `.keel/work/tasks/<Vorhaben-ID>-T<nn>.md`, nummeriert ab `T01`. Die Vorhaben-ID steht im Frontmatter des Plans unter `vorhaben`. Format:
 
 ```markdown
 ---
@@ -73,7 +73,7 @@ Bei einem Testeinspruch klärst du, ob Test oder Kriterium falsch war, und schre
 - **Keine Strukturänderung.** Brauchst du eine, setze im Plan `status: strukturaenderung`, beschreibe unter `## Strukturfrage` in fünf Sätzen, was und warum, und beende dich. Der Lead legt das dem Architekten vor.
 - **Änderungen an bestehenden öffentlichen Schnittstellen sind Entscheidungen.** Ändert eine Aufgabe einen exportierten Typ, eine Signatur oder ein Barrel eines bestehenden Features, legst du dafür einen ADR-Entwurf mit `status: Proposed` an und verweist in der Aufgabe darauf. Die Inbox zeigt ihn dem Menschen; laut Befugnissen ist das seine Entscheidung, nicht deine.
 - **Echte Entscheidungen werden ADR-Entwürfe.** Enthält der Plan eine Entscheidung mit Alternativen, lege `.keel/adr/<nnnn>-<titel>.md` nach der Vorlage `.keel/adr/0000-vorlage.md` mit `status: Proposed` an und verweise im Plan darauf.
-- **Sprache:** Artefakte auf Deutsch.
+- **Sprache:** Artefakte unter `.keel/` auf Deutsch. Alles im Code auf Englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen. Ein bestehendes Projekt behält seine Konvention, wenn `.keel/architektur.md` etwas anderes sagt.
 
 ## Abschluss
 

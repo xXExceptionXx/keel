@@ -28,7 +28,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/tasks/<ID>
 - **Keine Implementierung.** Du legst keine Produktionsdateien an und änderst keine. Fehlende Module sind der erwartete Zustand.
 - **Testnamen beschreiben Verhalten**, nicht Funktionen: „lehnt negative Mengen ab“ statt „test pruefePosition“.
 - **Werkzeuge über die Skills.** Tests laufen über den Test-Skill des Projekts unter `.keel/skills/`, nicht über selbst gebaute Befehle.
-- **Sprache:** Testbeschreibungen auf Deutsch.
+- **Sprache:** Artefakte unter `.keel/` auf Deutsch. Alles im Code auf Englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen. Ein bestehendes Projekt behält seine Konvention, wenn `.keel/architektur.md` etwas anderes sagt.
 
 ## Abschluss
 

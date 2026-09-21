@@ -24,8 +24,12 @@ if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]-f\b|--forc
   deny "force push is not allowed"
 fi
 if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)'; then
-  if ! printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)(vorhaben|reparatur)/[A-Za-z0-9._-]+[[:space:]]*$'; then
-    deny "deleting remote branches is only allowed for merged vorhaben/* and reparatur/* branches"
+  cwd="$(printf '%s' "$payload" | jq -r '.cwd // empty')"; [ -z "$cwd" ] && cwd="$(pwd)"
+  cfg="$(dirname "${BASH_SOURCE[0]}")/../scripts/config.py"
+  fp="$(python3 "$cfg" "$cwd" git.feature_prefix feature/)"; xp="$(python3 "$cfg" "$cwd" git.fix_prefix fix/)"
+  esc() { printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g'; }
+  if ! printf '%s' "$cmd" | grep -Eq "git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+[[:space:]]*\$"; then
+    deny "deleting remote branches is only allowed for merged $fp* and $xp* branches"
   fi
 fi
 if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+(branch[[:space:]]+.*-D\b|reset[[:space:]]+--hard|filter-branch|reflog[[:space:]]+expire|gc[[:space:]]+--prune)'; then

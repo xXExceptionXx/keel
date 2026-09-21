@@ -1,4 +1,19 @@
 # keel-Projektkonfiguration. Anbieterwahl ist ein Projekt-ADR.
+git:
+  base_branch: main        # Basis für Vorhaben-Branches und Ziel der Integration, z. B. develop oder staging.
+                           # Der Weg von dort nach main bleibt ein manueller Schritt.
+  feature_prefix: feature/ # Branch pro Vorhaben: <feature_prefix><name>
+  fix_prefix: fix/         # Branch pro Reparatur: <fix_prefix><ID>
+
+test:
+  command: npm test --silent       # Prüftor pro Aufgabe; Abnahmetests ausgenommen
+  acceptance: npm test --silent    # Abnahmetests eines Vorhabens
+
+budget:
+  tool_calls: 60
+  diff_lines: 300
+  minutes: 30
+
 backlog:
   provider: markdown   # markdown | github | linear
   # github:

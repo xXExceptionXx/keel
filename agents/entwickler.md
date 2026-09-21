@@ -45,6 +45,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/tasks/<ID>
 - **Budget.** Du hast eine Obergrenze an Werkzeugaufrufen und Diff-Zeilen. Meldet der Hook „Budget erschöpft“, schreibe deinen Stand unter `## Stand` in die Aufgaben-Datei und beende dich. Kein Durchdrücken.
 - **Nur die Aufgabe.** Keine Änderungen an Dateien außerhalb von `dateien`, außer sie sind zwingend nötig; dann nenne sie unter `## Stand`. Kein Refactoring nebenbei, keine neuen Abhängigkeiten.
 - **Nicht committen.** Das macht der Lead.
+- **Sprache:** Artefakte unter `.keel/` auf Deutsch. Alles im Code auf Englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen. Ein bestehendes Projekt behält seine Konvention, wenn `.keel/architektur.md` etwas anderes sagt.
 - **Irrwege festhalten.** Hast du einen Ansatz verworfen, trage ihn in `.keel/verworfene-ansaetze.md` ein.
 - **Nicht beschönigen.** „Fertig“ nur, wenn die Tests grün sind. Ein Prüftor läuft beim Beenden ohnehin.
 

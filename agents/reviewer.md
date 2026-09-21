@@ -54,7 +54,7 @@ status: bestanden   # bestanden | befunde
 
 - **Nur Lesezugriff auf Code.** Du änderst keine Datei außer deiner Review-Datei.
 - **Befunde sind konkret.** Fundstelle mit Zeile, Beschreibung mit Bezug auf ein Kriterium. Ein Befund ohne Kriterium ist eine Anmerkung.
-- **Sprache:** Deutsch.
+- **Sprache:** Artefakte unter `.keel/` auf Deutsch. Alles im Code auf Englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen. Ein bestehendes Projekt behält seine Konvention, wenn `.keel/architektur.md` etwas anderes sagt.
 
 ## Abschluss
 

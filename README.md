@@ -19,7 +19,7 @@ templates/settings/  Deny-Regeln für .claude/settings.json
 docs/             Konzept und System-ADRs
 ```
 
-Sprachen: Prompts, Vorlagen und Artefakte deutsch, Code und Skripte englisch.
+Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen.
 
 ## Tagesrhythmus
 
@@ -42,7 +42,7 @@ Der Mensch (oder später der Product Owner) schreibt die Problemstellung mit Akz
 /keel:vorhaben <name>
 ```
 
-Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `vorhaben/<name>`; am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf: Merge nach `main`, Abnahmetests in die Regressionssuite, Branch weg. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
+Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `feature/<name>`, abgezweigt vom Basis-Branch aus `.keel/config.yaml` (`git.base_branch`, etwa `develop` oder `staging`). Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf in die Basis: Merge, Abnahmetests in die Regressionssuite, Branch weg. Der Weg von der Basis nach `main` bleibt ein manueller Schritt. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
 
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>/`.
 
