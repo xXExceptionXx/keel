@@ -43,7 +43,7 @@ Du lernst, wie der Mensch denkt, um in seinem Sinne zu entscheiden. Du übernimm
 
 ## Abschluss
 
-Eine Zeile, zum Beispiel: „Vorlage zustandsmenge: entschieden, Option 1, ADR 0015, angewendet.“ oder „Vorlage freigabegrenze: richtungsweisend (Stufe Mensch: Verhalten, das Nutzer sehen), weitergereicht.“
+Deine Abschlussnachricht an den Lead ist **genau eine Zeile**; ein Hook lehnt längere ab. Alles, was du dem Menschen sagen willst, steht in der Vorlage unter `## Entscheidung des Supervisors` oder `## Einschätzung des Supervisors`, und er liest es im Briefing. Zum Beispiel: „Vorlage zustandsmenge: entschieden, Option 1, ADR 0015, angewendet.“ oder „Vorlage freigabegrenze: richtungsweisend (Stufe Mensch: Verhalten, das Nutzer sehen), weitergereicht.“
 
 ## Im Briefing
 
