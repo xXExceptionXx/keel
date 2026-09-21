@@ -55,8 +55,8 @@ def main():
                 checked += 1
                 if (project / p).exists() or (Path(__file__).resolve().parent.parent / p).exists():
                     continue  # project file, or a file of the keel plugin itself
-                if "/" not in p and any(project.rglob(p)):
-                    continue  # bare file name that exists somewhere in the project
+                if "/" not in p and (any(project.rglob(p)) or any(Path(__file__).resolve().parent.parent.rglob(p))):
+                    continue  # bare file name that exists somewhere in the project or the plugin
                 print(f"{f}:{n}: pfad fehlt: {p}")
                 broken += 1
     print(f"geprüft: {checked} Verweise, defekt: {broken}")
