@@ -22,9 +22,13 @@ from frontmatter import parse as parse_fm  # noqa: E402
 LINE = re.compile(r"^(- (?P<befund>.+?) – (?P<fundstelle>.+?) – wird (?P<ziel>Aufgabe|Vorlage))\s*$")
 
 
-def newest_report(project):
-    reports = sorted((project / ".keel" / "work" / "audit").glob("*.md"))
-    return reports[-1] if reports else None
+def newest_reports(project):
+    out = []
+    for d in ("audit", "architektur"):
+        reports = sorted((project / ".keel" / "work" / d).glob("*.md"))
+        if reports:
+            out.append(reports[-1])
+    return out
 
 
 def propose_backlog(project, befund, fundstelle, report_name):
@@ -84,14 +88,19 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
-    report = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else newest_report(project)
-    if not report or not report.exists():
+    reports = [Path(sys.argv[2]).resolve()] if len(sys.argv) > 2 else newest_reports(project)
+    if not reports:
         print("kein Prüfbericht vorhanden")
         return
+    for report in reports:
+        route(project, report)
+
+
+def route(project, report):
     text = report.read_text(encoding="utf-8")
     data, _ = parse_fm(text)
-    if not data or data.get("typ") != "pruefbericht":
-        print(f"{report.name}: kein Prüfbericht (typ fehlt)")
+    if not data or data.get("typ") not in ("pruefbericht", "architekturbericht"):
+        print(f"{report.name}: kein Prüf- oder Architekturbericht (typ fehlt)")
         return
     if data.get("status") != "abweichungen":
         print(f"{report.name}: status passt, nichts zu routen")

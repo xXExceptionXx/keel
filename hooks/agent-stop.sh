@@ -54,6 +54,68 @@ case "$role" in
       done
     fi
     ;;
+  po)
+    planfile="$plans/$ref.md"
+    if [ -f "$planfile" ]; then
+      st="$($FM get "$planfile" status)"
+      case "$st" in
+        entwurf)
+          $FM validate "$planfile" --type plan --require vorhaben,titel,backlog,abstimmung 2>/tmp/keel-stop-err \
+            || block_stop "Plan unvollständig: $(cat /tmp/keel-stop-err)"
+          for sec in "## Problemstellung" "## Pflichtkriterien" "## Akzeptanzkriterien"; do
+            grep -q "^$sec" "$planfile" || block_stop "Plan-Abschnitt fehlt: $sec"
+          done
+          ;;
+        problemstellung)
+          [ "$($FM get "$planfile" abstimmung)" = "einig" ] || block_stop "status problemstellung verlangt abstimmung: einig"
+          ;;
+        blockiert)
+          [ "$($FM get "$planfile" abstimmung)" = "vorlage" ] || block_stop "status blockiert verlangt abstimmung: vorlage"
+          ;;
+        abgenommen)
+          $FM validate "$planfile" --nonempty abgenommen,abgenommen_von 2>/dev/null || block_stop "Abnahme braucht abgenommen=<Datum> und abgenommen_von=PO"
+          ;;
+        nacharbeit)
+          grep -q "^## Nacharbeit" "$planfile" || block_stop "status nacharbeit verlangt einen Abschnitt '## Nacharbeit'"
+          ;;
+        abnahme-bereit) block_stop "Abnahme nicht entschieden: setze status=abgenommen oder status=nacharbeit" ;;
+      esac
+      # Klärung: any task of this plan with a pending clarification must be answered
+      for t in "$tasks"/*.md; do
+        [ -f "$t" ] || continue
+        if grep -q "^## Klärung" "$t" && [ "$($FM get "$t" status 2>/dev/null)" = "neuschnitt" ]; then
+          k="$($FM get "$t" klaerung 2>/dev/null || true)"
+          [ "$k" = "beantwortet" ] || [ "$k" = "vorlage" ] || [ "$($FM get "$t" vorhaben)" != "$($FM get "$planfile" vorhaben)" ] \
+            || block_stop "Klärung in $(basename "$t") nicht beantwortet: setze klaerung=beantwortet mit '## Antwort des PO' oder klaerung=vorlage"
+        fi
+      done
+    else
+      block_stop "Plan-Datei $planfile fehlt"
+    fi
+    ;;
+  architekt)
+    case "$ref" in
+      bestandsaufnahme:*|wochenrunde:*)
+        modus="${ref%%:*}"; datum="${ref#*:}"
+        [ "$modus" = "bestandsaufnahme" ] && rep="$proj/.keel/work/architektur/bestand-$datum.md" || rep="$proj/.keel/work/architektur/woche-$datum.md"
+        $FM validate "$rep" --type architekturbericht --status passt,abweichungen --require datum,modus 2>/tmp/keel-stop-err \
+          || block_stop "Architekturbericht fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err)"
+        [ "$modus" = "bestandsaufnahme" ] && { grep -q "Referenzbeispiel" "$proj/.keel/architektur.md" || block_stop "architektur.md ohne Referenzbeispiele"; }
+        ;;
+      *)
+        planfile="$plans/$ref.md"
+        st="$($FM get "$planfile" status)"
+        if [ "$st" = "entwurf" ]; then
+          $FM validate "$planfile" --nonempty bewertung,abstimmung_runde 2>/dev/null || block_stop "Bewertung fehlt: setze bewertung=passt|anpassung|struktur und abstimmung_runde"
+          grep -q "^## Bewertung des Architekten" "$planfile" || block_stop "Abschnitt '## Bewertung des Architekten (Runde n)' fehlt"
+        else
+          $FM validate "$planfile" --type plan --status abnahmetests-bereit,blockiert 2>/tmp/keel-stop-err \
+            || block_stop "Strukturfrage: $(cat /tmp/keel-stop-err). Erlaubt: abnahmetests-bereit (Antwort) oder blockiert (ADR-Entwurf)."
+          grep -q "^## Antwort des Architekten" "$planfile" || block_stop "Abschnitt '## Antwort des Architekten' fehlt"
+        fi
+        ;;
+    esac
+    ;;
   coach)
     rep="$proj/.keel/work/coach/$ref.md"
     $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>/tmp/keel-stop-err \

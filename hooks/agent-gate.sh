@@ -37,9 +37,60 @@ case "$role" in
         || deny "Planer (Neuschnitt) darf nicht starten: $(cat /tmp/keel-gate-err)"
     else
       [ -n "$plan" ] || deny "Planer braucht die Zeile 'Vorhaben: <name>' oder 'Aufgabe: <ID>' im Prompt"
-      $FM validate "$plans/$plan.md" --type plan --status abnahmetests-bereit 2>/tmp/keel-gate-err \
+      $FM validate "$plans/$plan.md" --type plan --status abnahmetests-bereit,nacharbeit 2>/tmp/keel-gate-err \
         || deny "Planer darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Tester mit Abnahmetests."
     fi
+    ;;
+  po)
+    anlass="$(prompt_field "$prompt" "Anlass")"
+    [ -n "$plan" ] || deny "PO braucht die Zeile 'Vorhaben: <name>' im Prompt"
+    case "$anlass" in
+      problemstellung)
+        [ -n "$(prompt_field "$prompt" "Backlog")" ] || deny "PO (problemstellung) braucht die Zeile 'Backlog: <id>'"
+        [ ! -f "$plans/$plan.md" ] || $FM validate "$plans/$plan.md" --type plan --status entwurf 2>/tmp/keel-gate-err \
+          || deny "PO (problemstellung): Plan existiert schon: $(cat /tmp/keel-gate-err)"
+        ;;
+      abstimmung)
+        $FM validate "$plans/$plan.md" --type plan --status entwurf --nonempty bewertung 2>/tmp/keel-gate-err \
+          || deny "PO (abstimmung) darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Architekt mit Bewertung."
+        ;;
+      klaerung)
+        [ -n "$task" ] || deny "PO (klaerung) braucht die Zeile 'Aufgabe: <ID>'"
+        $FM validate "$tasks/$task.md" --type aufgabe --status neuschnitt 2>/tmp/keel-gate-err \
+          || deny "PO (klaerung) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        grep -q "^## Klärung" "$tasks/$task.md" || deny "PO (klaerung): Aufgabe hat keinen Abschnitt '## Klärung'"
+        ;;
+      abnahme)
+        $FM validate "$plans/$plan.md" --type plan --status abnahme-bereit 2>/tmp/keel-gate-err \
+          || deny "PO (abnahme) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        [ -f "$proj/.keel/work/acceptance/$plan.md" ] || deny "PO (abnahme): Abnahmenachweis fehlt"
+        ;;
+      *) deny "PO braucht 'Anlass: problemstellung | abstimmung | klaerung | abnahme'" ;;
+    esac
+    task="$plan"
+    ;;
+  architekt)
+    anlass="$(prompt_field "$prompt" "Anlass")"
+    case "$anlass" in
+      bewertung)
+        [ -n "$plan" ] || deny "Architekt (bewertung) braucht 'Vorhaben: <name>'"
+        $FM validate "$plans/$plan.md" --type plan --status entwurf 2>/tmp/keel-gate-err \
+          || deny "Architekt (bewertung) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        task="$plan"
+        ;;
+      strukturfrage)
+        [ -n "$plan" ] || deny "Architekt (strukturfrage) braucht 'Vorhaben: <name>'"
+        $FM validate "$plans/$plan.md" --type plan --status strukturaenderung 2>/tmp/keel-gate-err \
+          || deny "Architekt (strukturfrage) darf nicht starten: $(cat /tmp/keel-gate-err)"
+        task="$plan"
+        ;;
+      bestandsaufnahme|wochenrunde)
+        datum="$(prompt_field "$prompt" "Datum")"
+        [ -n "$datum" ] || deny "Architekt ($anlass) braucht 'Datum: YYYY-MM-DD'"
+        task="$anlass:$datum"
+        ;;
+      *) deny "Architekt braucht 'Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde'" ;;
+    esac
     ;;
   auditor|coach)
     datum="$(prompt_field "$prompt" "Datum")"

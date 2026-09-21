@@ -54,6 +54,10 @@ Danach ergänzt du im Plan `.keel/work/plans/<name>.md` einen Abschnitt `## Aufg
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/plans/<name>.md status=geplant "aufgaben=[V1-T01, V1-T02, V1-T03]"
 ```
 
+## Nacharbeit nach der Abnahme
+
+Hat der Plan `status: nacharbeit`, hat der PO unter `## Nacharbeit` prüfbare Punkte hinterlassen. Schneide daraus neue Aufgaben mit fortlaufenden Nummern, hänge sie an `aufgaben` an, ergänze die Tabelle und setze `status=geplant`. Bestehende fertige Aufgaben bleiben unangetastet.
+
 ## Neuschnitt
 
 Lautet die erste Zeile `Aufgabe: <ID>` statt `Vorhaben:`, hat die Aufgabe den Status `neuschnitt`. Grund steht in der Aufgaben-Datei: `begruendung` bei Testeinspruch, `## Stand` bei erschöpftem Budget, oder eine Review-Datei mit Befunden nach zwei Runden. Lies Aufgabe, Plan, gegebenenfalls die Review-Datei und den betroffenen Code. Dann entscheide, genau eine der drei Möglichkeiten:
@@ -62,7 +66,7 @@ Lautet die erste Zeile `Aufgabe: <ID>` statt `Vorhaben:`, hat die Aufgabe den St
 2. **Ersetzen.** Zwei oder mehr kleinere Aufgaben mit neuen IDs anlegen, alte Aufgabe auf `status=ersetzt`, im Plan `aufgaben` die alte ID durch die neuen ersetzen und die Tabelle ergänzen.
 3. **Verwerfen.** Wenn die Aufgabe nicht nötig ist, um die Abnahmetests grün zu bekommen: `status=verworfen`, aus `aufgaben` im Plan entfernen, Testdateien der Aufgabe löschen, Eintrag in `.keel/verworfene-ansaetze.md`.
 
-Bei einem Testeinspruch klärst du, ob Test oder Kriterium falsch war, und schreibst die Antwort unter `## Klärung` in die Aufgaben-Datei. Der Tester liest sie beim nächsten Lauf. Ist das Kriterium selbst unklar und nur der PO kann es klären, setze `status=neuschnitt` nicht zurück, sondern beschreibe die Frage unter `## Klärung` und beende dich; der Lead legt es vor.
+Bei einem Testeinspruch klärst du, ob Test oder Kriterium falsch war, und schreibst die Antwort unter `## Klärung` in die Aufgaben-Datei. Der Tester liest sie beim nächsten Lauf. Ist das Kriterium selbst unklar und nur der PO kann es klären, setze `status=neuschnitt` nicht zurück, sondern beschreibe die Frage unter `## Klärung` und beende dich; der Lead holt die Antwort des PO ein. Steht in der Aufgabe bereits `## Antwort des PO` mit `klaerung: beantwortet`, ist die Frage geklärt: schneide jetzt neu.
 
 ## Regeln
 
