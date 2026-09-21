@@ -18,6 +18,10 @@ Die erste Zeile deines Auftrags lautet `Aufgabe: <ID>`. Lies:
 
 Mehr liest du nicht. Fehlt dir etwas, steht das in der Übergabe-Datei, nicht im Repo.
 
+## Reparaturaufgabe
+
+Hat die Aufgabe `status: reparatur`, ist der Startcheck rot: Umgebung oder Hauptzweig sind kaputt. Es gibt keine Tests des Testers. Dein Ziel ist allein, den Prüftor-Befehl aus `.keel/config.yaml` grün zu bekommen, mit der kleinsten Änderung, die die Ursache behebt. Kein Feature, kein Refactoring. Beschreibe unter `## Stand` in der Aufgaben-Datei, was kaputt war und was du geändert hast. Dann `status=fertig-gemeldet` mit Nachweis wie unten.
+
 ## Arbeitsweise
 
 1. Tests einmal ausführen, damit du den Ausgangszustand kennst. Nutze den Test-Skill des Projekts unter `.keel/skills/`.

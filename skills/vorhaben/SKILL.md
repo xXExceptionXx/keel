@@ -20,24 +20,29 @@ Du liest keine Aufgaben-Dateien, Review-Dateien, Testausgaben oder Code. Nur Fro
 
 Die Plan-Datei ist `.keel/work/plans/$ARGUMENTS.md`, ihre Vorhaben-ID steht unter `vorhaben`.
 
-**0. Startcheck.** `git status --porcelain` muss leer sein, außer Dateien unter `.keel/`. Prüftor muss grün sein. Sonst: brich ab und melde den Zustand in drei Zeilen.
+**0. Startcheck.** `git status --porcelain` zeigt außer `.keel/` idealerweise nichts. Zeigt es Dateien, prüfe, ob sie zu einer laufenden Aufgabe gehören: eine Aufgabe dieses Vorhabens mit Status `tests-bereit`, `in-arbeit`, `testeinspruch`, `budget-erschoepft`, `nacharbeit` oder `review`, deren `tests` oder `dateien` die Dateien enthalten. Dann ist das der erwartete Zwischenstand einer unterbrochenen Session: überspringe das Prüftor und geh direkt zu Schritt 3, die Schleife nimmt die Aufgabe bei ihrem Status auf. Gehören die Dateien zu keiner laufenden Aufgabe, brich ab und melde sie. Ist der Baum sauber, muss das Prüftor grün sein; ist es rot, führe den Ablauf aus der Skill `keel:reparatur` aus und mache erst weiter, wenn er grün ist.
 
 **0b. Blockiert.** Ist der Plan-Status `blockiert`, brich ab und melde in drei Zeilen, welche Aufgabe blockiert und warum (Status der Aufgabe). Der Mensch oder der PO entscheidet, setzt den Plan-Status zurück auf `in-arbeit` und ruft dich erneut auf. Du hebst eine Blockade nie selbst auf.
 
 **1. Abnahmetests.** Ist der Plan-Status `problemstellung`, starte `keel:tester` mit `Vorhaben: $ARGUMENTS`. Danach muss der Status `abnahmetests-bereit` sein.
 
-**2. Planung.** Ist der Status `abnahmetests-bereit`, starte `keel:planer` mit `Vorhaben: $ARGUMENTS`. Danach muss der Status `geplant` sein und `aufgaben` gefüllt. Ist der Status `strukturaenderung`, brich ab und melde das in drei Zeilen; das wird eine Vorlage.
+**2. Planung.** Ist der Status `abnahmetests-bereit`, starte `keel:planer` mit `Vorhaben: $ARGUMENTS`. Danach muss der Status `geplant` sein und `aufgaben` gefüllt. Ist der Status `strukturaenderung`, schreibe eine Vorlage nach `.keel/decisions/pending/<YYYY-MM-DD>-<Vorhaben-ID>-struktur.md` (Format `.keel/decisions/VORLAGE.md`, Problem aus `## Strukturfrage` des Plans, Optionen: 1. Architekt bewertet, 2. Vorhaben abspecken, 3. Vorhaben zurückstellen), committe `.keel/` und brich ab mit drei Zeilen.
 
 **3. Aufgabenzyklus.** Setze den Plan-Status auf `in-arbeit`. Für jede ID in `aufgaben` in Reihenfolge, deren Status nicht `fertig` ist:
 
    a. Status `geplant`: starte `keel:tester` mit `Aufgabe: <ID>`. Erwartet danach: `tests-bereit`.
+   a2. Status `testeinspruch`, `budget-erschoepft` oder `neuschnitt` schon beim Start der Schleife: Neuschnitt, siehe unten. Status `review`: weiter bei c.
    b. Status `tests-bereit` oder `nacharbeit`: starte `keel:entwickler` mit `Aufgabe: <ID>`. Lies danach den Status:
       - `fertig-gemeldet`: erhöhe `review_runde` um 1, setze `status=review`, starte `keel:reviewer` mit `Aufgabe: <ID>` und `Vorhaben: $ARGUMENTS`.
-      - `testeinspruch` oder `budget-erschoepft`: setze den Plan-Status auf `blockiert`, committe den Stand von `.keel/` und brich ab mit drei Zeilen: welche Aufgabe, welcher Status. Der Neuschnitt ist Sache des Planers und kommt in der nächsten Ausbaustufe.
+      - `testeinspruch` oder `budget-erschoepft`: Neuschnitt, siehe unten.
    c. Nach dem Reviewer lies `status` in `.keel/work/reviews/<ID>-r<runde>.md`:
       - `bestanden`: Prüftor laufen lassen. Grün: `git add -A && git commit -m "<ID>: <titel>" -m "Keel-Task: <ID>"`, dann `status=fertig` in der Aufgaben-Datei und `.keel/` nachcommitten. Rot: das ist ein Fehler im System, brich ab und melde es.
       - `befunde` und `review_runde` kleiner 2: setze `status=nacharbeit`, zurück zu b.
-      - `befunde` und `review_runde` gleich 2: setze `status=neuschnitt`, Plan-Status `blockiert`, committe `.keel/` und brich ab mit drei Zeilen.
+      - `befunde` und `review_runde` gleich 2: Neuschnitt, siehe unten.
+
+   **Neuschnitt.** Lies `neuschnitt_runden` der Aufgabe (fehlt: 0). Ist es schon 1, schreibe eine Vorlage (siehe unten) und brich ab. Sonst setze `neuschnitt_runden=1` und `status=neuschnitt`, verwirf nicht committete Code-Änderungen der Aufgabe mit `git restore .` und `git clean -fd -- src tests` (die Tests des Testers gehen dabei verloren, der Tester schreibt sie nach dem Neuschnitt neu), und starte `keel:planer` mit `Aufgabe: <ID>` und `Vorhaben: $ARGUMENTS`. Danach lies das Frontmatter des Plans neu, `aufgaben` kann sich geändert haben, und setze die Schleife bei der ersten nicht fertigen Aufgabe fort. Hat die Aufgabe danach noch Status `neuschnitt`, hat der Planer eine Frage an den PO unter `## Klärung` hinterlassen: Vorlage schreiben und abbrechen.
+
+   **Vorlage schreiben.** Datei `.keel/decisions/pending/<YYYY-MM-DD>-<ID>.md` nach dem Format in `.keel/decisions/VORLAGE.md`, `von: Lead`. Problem in zwei Sätzen aus dem Status der Aufgabe (Begründung des Einspruchs, Stand bei Budget, Zahl der Review-Runden, Klärung des Planers). Optionen: 1. Aufgabe verwerfen, 2. Kriterien vom PO klären lassen und neu schneiden, 3. Vorhaben abbrechen. Empfehlung nach Lage. Dann Plan-Status `blockiert`, `git add .keel && git commit -m "<ID>: Vorlage, Vorhaben blockiert"`, Abbruch mit drei Zeilen.
 
 **4. Abnahme.** Sind alle Aufgaben `fertig`: führe den Abnahmebefehl aus, den `.keel/config.yaml` unter `test.acceptance` nennt, und schreibe `.keel/work/acceptance/$ARGUMENTS.md`:
 

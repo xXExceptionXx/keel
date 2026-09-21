@@ -22,8 +22,8 @@ finish() {  # record and allow stop
   exit 0
 }
 
-# Budget exhausted: force the state, allow the stop so the loop ends deterministically.
-if [ "$calls" -gt "$limit" ] && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
+# Budget exhausted (calls or time): force the state, allow the stop so the loop ends deterministically.
+if { [ "$calls" -gt "$limit" ] || [ -f "$sd/agent-$id.timeout" ]; } && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
   $FM set "$tasks/$ref.md" status=budget-erschoepft
   finish "budget-erschoepft"
 fi
@@ -33,12 +33,32 @@ fi
 case "$role" in
   probe) finish "ok" ;;
   planer)
-    $FM validate "$plans/$ref.md" --type plan --status geplant --nonempty aufgaben 2>/tmp/keel-stop-err \
-      || block_stop "Übergabe unvollständig: $(cat /tmp/keel-stop-err). Setze status: geplant und trage die Aufgaben-IDs in 'aufgaben' ein."
-    for t in $($FM get "$plans/$ref.md" aufgaben | tr ',' ' '); do
-      $FM validate "$tasks/$t.md" --type aufgabe --status geplant --require id,vorhaben,titel --nonempty dateien,referenz 2>/tmp/keel-stop-err \
-        || block_stop "Aufgaben-Datei fehlt oder unvollständig: $(cat /tmp/keel-stop-err)"
-    done
+    if [ -f "$tasks/$ref.md" ]; then
+      # Neuschnitt: the task is re-cut in place, replaced or discarded
+      $FM validate "$tasks/$ref.md" --type aufgabe --status geplant,ersetzt,verworfen 2>/tmp/keel-stop-err \
+        || block_stop "Neuschnitt unvollständig: $(cat /tmp/keel-stop-err). Erlaubt: geplant (neu geschnitten, tests: []), ersetzt (neue Aufgaben im Plan) oder verworfen."
+      st="$($FM get "$tasks/$ref.md" status)"
+      [ "$st" = "geplant" ] && [ -n "$($FM get "$tasks/$ref.md" tests 2>/dev/null || true)" ] && block_stop "Neu geschnittene Aufgabe muss tests: [] haben, der Tester schreibt sie neu."
+      vh="$($FM get "$tasks/$ref.md" vorhaben)"
+      planfile="$(grep -l "^vorhaben: $vh$" "$plans"/*.md | head -1)"
+      for t in $($FM get "$planfile" aufgaben | tr ',' ' '); do
+        $FM validate "$tasks/$t.md" --type aufgabe --status geplant,tests-bereit,in-arbeit,fertig,review,nacharbeit --require id,vorhaben,titel 2>/tmp/keel-stop-err \
+          || block_stop "Plan-Aufgabenliste verweist auf unbrauchbare Aufgabe: $(cat /tmp/keel-stop-err). Ersetzte und verworfene Aufgaben gehören nicht in 'aufgaben'."
+      done
+    else
+      $FM validate "$plans/$ref.md" --type plan --status geplant --nonempty aufgaben 2>/tmp/keel-stop-err \
+        || block_stop "Übergabe unvollständig: $(cat /tmp/keel-stop-err). Setze status: geplant und trage die Aufgaben-IDs in 'aufgaben' ein."
+      for t in $($FM get "$plans/$ref.md" aufgaben | tr ',' ' '); do
+        $FM validate "$tasks/$t.md" --type aufgabe --status geplant --require id,vorhaben,titel --nonempty dateien,referenz 2>/tmp/keel-stop-err \
+          || block_stop "Aufgaben-Datei fehlt oder unvollständig: $(cat /tmp/keel-stop-err)"
+      done
+    fi
+    ;;
+  auditor)
+    rep="$proj/.keel/work/audit/$ref.md"
+    [ -f "$proj/.keel/work/audit/woche-$ref.md" ] && [ ! -f "$rep" ] && rep="$proj/.keel/work/audit/woche-$ref.md"
+    $FM validate "$rep" --type pruefbericht --status passt,abweichungen --require datum,modus,seit 2>/tmp/keel-stop-err \
+      || block_stop "Prüfbericht fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err). Pflichtfelder: typ pruefbericht, datum, modus, seit, status passt|abweichungen."
     ;;
   tester)
     if [ -f "$tasks/$ref.md" ]; then

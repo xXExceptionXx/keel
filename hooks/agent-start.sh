@@ -12,5 +12,6 @@ ref=""
 printf '%s\n' "$ref" > "$sd/agent-$id.ref"
 printf '%s\n' "$role" > "$sd/agent-$id.role"
 printf '0\n' > "$sd/agent-$id.calls"
+date +%s > "$sd/agent-$id.start"
 record "agent_start" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" '{role:$role,agent_id:$id,ref:$ref}')"
 exit 0

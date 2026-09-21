@@ -12,7 +12,7 @@ Die erste Zeile deines Auftrags lautet `Aufgabe: <ID>`. Lies genau:
 
 1. `.keel/work/tasks/<ID>.md`: Fertig-Kriterien, Nachweis des Entwicklers, Runde unter `review_runde`.
 2. Den Diff der Aufgabe: `git diff HEAD -- . ':(exclude).keel'`. Er enthält auch die Tests des Testers; Tests sind Code und werden mitgeprüft.
-3. Die Akzeptanzkriterien des Vorhabens in `.keel/work/plans/<name>.md`, wobei `<name>` im Prompt unter `Vorhaben:` steht.
+3. Die Akzeptanzkriterien des Vorhabens in `.keel/work/plans/<name>.md`, wobei `<name>` im Prompt unter `Vorhaben:` steht. Bei `Vorhaben: R` (Reparatur) gibt es keinen Plan; die Kriterien stehen allein in der Aufgaben-Datei.
 4. Das Referenzbeispiel unter `referenz` in der Aufgaben-Datei.
 5. Bei `review_runde` größer 1 deine Befunde aus der Vorrunde in `.keel/work/reviews/<ID>-r<runde-1>.md`.
 

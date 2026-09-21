@@ -19,9 +19,19 @@ plans="$proj/.keel/work/plans"
 case "$role" in
   probe) ;;
   planer)
-    [ -n "$plan" ] || deny "Planer braucht die Zeile 'Vorhaben: <name>' im Prompt"
-    $FM validate "$plans/$plan.md" --type plan --status abnahmetests-bereit 2>/tmp/keel-gate-err \
-      || deny "Planer darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Tester mit Abnahmetests."
+    if [ -n "$task" ]; then
+      $FM validate "$tasks/$task.md" --type aufgabe --status neuschnitt 2>/tmp/keel-gate-err \
+        || deny "Planer (Neuschnitt) darf nicht starten: $(cat /tmp/keel-gate-err)"
+    else
+      [ -n "$plan" ] || deny "Planer braucht die Zeile 'Vorhaben: <name>' oder 'Aufgabe: <ID>' im Prompt"
+      $FM validate "$plans/$plan.md" --type plan --status abnahmetests-bereit 2>/tmp/keel-gate-err \
+        || deny "Planer darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Tester mit Abnahmetests."
+    fi
+    ;;
+  auditor)
+    datum="$(prompt_field "$prompt" "Datum")"
+    [ -n "$datum" ] || deny "Auditor braucht die Zeile 'Datum: YYYY-MM-DD' im Prompt"
+    task="$datum"
     ;;
   tester)
     if [ -n "$task" ]; then
@@ -36,8 +46,13 @@ case "$role" in
     ;;
   entwickler)
     [ -n "$task" ] || deny "Entwickler braucht die Zeile 'Aufgabe: <ID>' im Prompt"
-    $FM validate "$tasks/$task.md" --type aufgabe --status tests-bereit,nacharbeit --nonempty tests,dateien 2>/tmp/keel-gate-err \
-      || deny "Entwickler darf nicht starten: $(cat /tmp/keel-gate-err)"
+    if [ "$($FM get "$tasks/$task.md" status 2>/dev/null || true)" = "reparatur" ]; then
+      $FM validate "$tasks/$task.md" --type aufgabe --status reparatur 2>/tmp/keel-gate-err \
+        || deny "Entwickler darf nicht starten: $(cat /tmp/keel-gate-err)"
+    else
+      $FM validate "$tasks/$task.md" --type aufgabe --status tests-bereit,nacharbeit --nonempty tests,dateien 2>/tmp/keel-gate-err \
+        || deny "Entwickler darf nicht starten: $(cat /tmp/keel-gate-err)"
+    fi
     ;;
   reviewer)
     [ -n "$task" ] || deny "Reviewer braucht die Zeile 'Aufgabe: <ID>' im Prompt"

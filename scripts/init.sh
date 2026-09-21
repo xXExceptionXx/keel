@@ -59,10 +59,22 @@ add_import() {
   fi
 }
 
+add_gitignore() {
+  local gi="$PROJECT/.gitignore"
+  local line=".keel/work/logs/"
+  if [ -f "$gi" ] && grep -qxF "$line" "$gi"; then
+    skipped+=(".gitignore (logs entry present)")
+  else
+    printf '%s\n' "$line" >> "$gi"
+    created+=(".gitignore (.keel/work/logs/ added)")
+  fi
+}
+
 copy_templates
 link_skills
 merge_settings
 add_import
+add_gitignore
 
 echo "keel init in $PROJECT"
 echo

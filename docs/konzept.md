@@ -201,7 +201,7 @@ Regeln:
 
 Sequenzielle Arbeit heißt nicht, dass Integration von selbst passiert. Der Zustand des Hauptzweigs und der Umgebung braucht einen Besitzer und feste Regeln.
 
-- **Ein Branch pro Vorhaben, ein Commit pro Aufgabe.** Aufgaben landen als Commits mit Aufgaben-ID im Vorhaben-Branch. Der Branch wird nach der Abnahme durch den PO in den Hauptzweig gemergt. Der Lead führt den Merge aus, weil er ein Ablaufschritt ist, keine Entscheidung.
+- **Ein Commit pro Aufgabe, direkt auf dem Hauptzweig.** Aufgaben landen als Commits mit Aufgaben-ID im Betreff und Trailer `Keel-Task: <ID>`. Ein Vorhaben ist über `git log --grep` vollständig nachvollziehbar und pro Aufgabe revertierbar. Branches pro Vorhaben kommen erst, wenn zwei Leads parallel arbeiten oder ein Projekt Pull Requests verlangt, siehe System-ADR 0002. Die Abnahme durch den PO ist ein Statuswechsel im Plan, kein Merge.
 - **Aufgaben-Tests pro Aufgabe, gesamte Suite pro Vorhaben.** Das Prüftor jeder Aufgabe läuft die Aufgabentests und einen schnellen Stichproben-Modus. Vor der Abnahme eines Vorhabens läuft die gesamte Suite plus Abnahmetests. Vor dem täglichen Audit läuft die gesamte Suite auf dem Hauptzweig, damit der Auditor einen bekannten Zustand prüft.
 - **Roter Startcheck oder roter Hauptzweig erzeugt eine Reparaturaufgabe.** Deterministisch, mit Vorrang vor allem anderen, mit eigener ID und eigenem Budget. Der Lead spawnt dafür einen Entwickler mit der Aufgabe „Startcheck grün machen“ und den Logs als Input. Der Lead repariert nie selbst. Ist die Reparatur nach einem Budget nicht geschafft, wird sie zur Vorlage.
 - **Tagesabschluss nur an Aufgabengrenzen.** Der Lead beendet den Tag nicht mitten in einer Aufgabe. Entweder die Aufgabe wird fertig oder sie wird zurückgesetzt und morgen frisch begonnen. Halbfertige Branches sind der häufigste Grund für kaputten Zustand zwischen Sessions.
@@ -508,12 +508,12 @@ Die häufigsten Fehlerquellen aus Experimenten mit autonomen Agenten, mit dem St
 | 1 | Spezifikation und Zerlegung: unklare Rollen, zu viel auf einmal, fehlende Abbruchkriterien | abgedeckt | Rollen mit Grenzen, Planer, Fertig-Kriterien |
 | 2 | Übergaben: Kontextverlust, Formatfehler, ignorierter Input | abgedeckt | Feste Artefakte mit YAML-Frontmatter, Hook prüft Pflichtfelder an der Grenze; Abschlussnachrichten der Subagents hart begrenzt |
 | 3 | Voreiliges „fertig“, fehlende Ende-zu-Ende-Prüfung | abgedeckt | Abnahmetests pro Vorhaben inkl. E2E aus Nutzersicht, Aufgabentests, Prüftore, Nachweispflicht, PO nimmt gegen Abnahmenachweis ab |
-| 4 | Kaputter Zustand zwischen Sessions | abgedeckt | Startcheck als Schritt im Tagesrhythmus, Rot erzeugt Reparaturaufgabe, Tagesabschluss nur an Aufgabengrenzen |
+| 4 | Kaputter Zustand zwischen Sessions | abgedeckt, erprobt | Startcheck in Tagesstart und Vorhaben, Rot erzeugt Reparaturaufgabe `R-<Datum>`, Tagesabschluss nur an Aufgabengrenzen. Erprobt am 2026-09-21 mit simuliertem Defekt: eine Zeile, ein Commit |
 | 5 | Regressionen durch neue Features | abgedeckt | Aufgabentests pro Aufgabe, gesamte Suite vor Abnahme und vor dem Audit |
 | 6 | Doppelte Implementierungen | teilweise | Architekt, Referenzbeispiele. Offen: feste Duplikatsprüfung in der Wochenrunde |
 | 7 | Kontextverschmutzung durch Werkzeugausgaben, Zeitblindheit | teilweise | Tool-Skills mit Skripten: knappe Ausgaben, Details in Logdateien. Offen: grep-bare Fehlermarken, schnelle Stichproben-Modi für Tests |
 | 8 | Destruktive Aktionen, z. B. gelöschte Produktionsdaten | höchste Priorität, Punkt 1 der Einführung | Kein Produktionszugang für Agenten, destruktive Befehle per Deny-Regel gesperrt, isolierte Umgebungen, getestete Backups. Kein autonomer Lauf, bevor das steht |
-| 9 | Unehrliche Berichte, erfundene Ergebnisse | abgedeckt | Nachweispflicht, Auditor vergleicht Übergabenotiz und Code |
+| 9 | Unehrliche Berichte, erfundene Ergebnisse | abgedeckt, erprobt | Nachweispflicht, Auditor vergleicht Übergabenotiz und Code. Erster Audit am 2026-09-21 fand eine Erledigt-Zeile, die der Commit nicht deckte |
 | 10 | Tests passend gemacht statt Problem gelöst | abgedeckt | Tests vorab vom Tester, Änderungsverbot für den Entwickler |
 | 11 | Technischer Drift | abgedeckt | Konventionen als Code, Referenzbeispiele, Architekt |
 | 12 | Veraltende Schutzmaßnahmen nach Modellwechsel | abgedeckt | System-Coach prüft bei jedem Modellwechsel und in der Umfeld-Recherche |
@@ -619,10 +619,12 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 - [ ] Backlog-Skript mit Markdown-Adapter bauen; Adapter für GitHub Issues oder Linear erst, wenn ein Projekt ihn braucht
 - [x] Plugin-Repo `keel` angelegt: Rollen Planer, Tester, Entwickler, Reviewer; Lead als Skill; PO vorerst der Mensch (2026-09-21)
 - [x] Frontmatter-Schema und Prüf-Hooks an Start und Stop jeder Rolle, siehe System-ADR 0001 (2026-09-21)
-- [x] Budget-Hook und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Offen: Branch pro Vorhaben, bisher direkt auf main
+- [x] Budget-Hook (Werkzeugaufrufe, Diff-Zeilen, Zeit) und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Kein Branch pro Vorhaben, siehe System-ADR 0002
 - [ ] Basisregeln pro genutzter Sprache als Pakete anlegen
 - [x] Init-Befehl `/keel:init` (2026-09-21). Offen: Basisregeln einbinden
-- [ ] Startcheck-Skript und Reparaturaufgabe in den Tagesstart einbinden
+- [x] Startcheck in `/keel:tagesstart` und `/keel:vorhaben`, Reparaturaufgabe `R-<Datum>` mit Entwickler und Reviewer, erprobt mit simuliertem Defekt (2026-09-21)
+- [x] Tagesrhythmus als Befehle: `/keel:tagesabschluss`, `/keel:audit`, `/keel:inbox`, `/keel:tagesstart` (2026-09-21)
+- [x] Neuschnitt durch den Planer bei Testeinspruch, Budget und Befunden nach Runde 2; Vorlage erst beim zweiten Neuschnitt (2026-09-21)
 - [x] Plugin im Beispielprojekt installiert, erstes Vorhaben abgenommen (2026-09-21)
 - [ ] Kennzahlen-Hooks einrichten, Zugriff der arbeitenden Rollen auf den Kennzahlen-Ordner per Hook sperren
 - [ ] Erste Wochen: enger Spielraum für den PO, Vorlagen und Auditor-Befunde beobachten
@@ -638,6 +640,17 @@ Beispielprojekt, Vorhaben V1 „Rechnung mit Steuersätzen“, 2026-09-21, Claud
 - Ein berechtigter Testeinspruch: Der Planer hatte eine vierte Aufgabe „Abnahme absichern“ geschnitten, deren Kriterium Testdateien gegen ihre eigene Import-Zeile prüfte. Tester vermerkte den Widerspruch, Entwickler legte Einspruch ein statt drumherum zu bauen, Lead brach ab und meldete. Korrektur an den Maßstäben: Der Planer darf keine Prozessaufgaben schneiden, die Abnahme ist Schritt des Lead. Der Einzelfall wurde als PO verworfen und dokumentiert.
 - Der Tester hält Lücken in den Kriterien als „Anmerkung des Testers“ fest, der Planer entscheidet sie im Plan. Das ersetzt die direkte Absprache und funktioniert.
 - Der Reviewer erbringt den Nachweis selbst, statt dem Entwickler zu glauben. Seine Anmerkungen ohne Kriterienbezug blockieren nicht.
+
+## Erkenntnisse aus dem Tagesrhythmus
+
+Erster Durchlauf von Tagesabschluss, Audit, Inbox, Tagesstart mit Reparatur, 2026-09-21:
+
+- Der Tagesabschluss aus einer frischen Session funktioniert: Übergabenotiz nur aus Git-Log und Frontmatter, Tag gesetzt. Eine Erledigt-Zeile war ungenau, weil ein Commit-Betreff mehr versprach als sein Inhalt.
+- Der Auditor hat mit 39 Werkzeugaufrufen acht Befunde geliefert, sechs davon berechtigt und konkret mit Fundstelle: fehlendes ADR für eine delegierte Entscheidung, veraltete Plantabelle, leeres Backlog trotz Verweis, Platzhalter in der Kurzfassung. Zwei Befunde betrafen den Entwicklungsablauf des Plugins selbst (Arbeitsbaum, Prompt außerhalb des Repos) und wurden Vorlagen. Das Format hat gehalten: kein Freitext, jede Abweichung mit Vorschlag Aufgabe oder Vorlage.
+- Der Auditor findet, was Menschen bei manueller Nacharbeit übersehen. Die Regel „Korrekturen gehen an die Maßstäbe“ gilt auch für den Menschen: Meine PO-Entscheidung ohne ADR war der erste Befund.
+- Startcheck rot durch einen simulierten Defekt: Reparaturaufgabe, Entwickler mit 9 Aufrufen auf die eine Zeile, Reviewer bestanden, Commit. Kein Eingriff nötig.
+- Neuschnitt erprobt mit simuliertem Testeinspruch (V2): Der Planer entschied „Test falsch, Kriterium richtig“, schärfte das Kriterium mit Erwartungswert, leerte die Tests; Tester, Entwickler, Reviewer und Abnahme liefen danach ohne Eingriff durch. Ein erster Versuch mit committeten strittigen Tests ließ den Lead korrekt abbrechen, weil Startcheck und Neuschnitt sich widersprachen; im echten Ablauf sind Tests bis zum Review nie committet. Ergänzt: Der Lead erkennt unbestätigte Dateien einer laufenden Aufgabe als erwarteten Zwischenstand nach einem Sessionabbruch.
+- Für Entwicklungsläufe des Plugins gegen ein Projekt mit installierter Version: `--plugin-dir` plus `--settings '{"enabledPlugins":{"keel@keel":false}}'`, damit der Arbeitsbaum sauber bleibt. Der Auditor hatte den unsauberen Baum sofort gemeldet.
 
 ## Referenzen
 

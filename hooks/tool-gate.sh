@@ -32,6 +32,23 @@ if [ "$role" = "entwickler" ] && [ -n "$ref" ] && [ -f "$proj/.keel/work/tasks/$
   esac
 fi
 
+# Time budget
+minutes="$($CFG "$proj" budget.minutes 30)"
+if [ -f "$sd/agent-$id.start" ]; then
+  elapsed=$(( ($(date +%s) - $(cat "$sd/agent-$id.start")) / 60 ))
+  if [ "$elapsed" -ge "$minutes" ]; then
+    target="$(field '.tool_input.file_path')"
+    case "$tool:$target" in
+      Edit:"$proj"/.keel/work/*|Write:"$proj"/.keel/work/*) ;;
+      *)
+        record "budget_exhausted" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson minutes "$elapsed" '{role:$role,agent_id:$id,ref:$ref,minutes:$minutes}')"
+        echo "$elapsed" > "$sd/agent-$id.timeout"
+        deny "Zeitbudget erschöpft ($minutes Minuten). Schreibe deinen Stand in die Aufgaben-Datei unter .keel/work/ und beende dich. Keine weiteren Werkzeuge."
+        ;;
+    esac
+  fi
+fi
+
 # Tool-call budget
 limit="$($CFG "$proj" budget.tool_calls 60)"
 calls=0
