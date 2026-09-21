@@ -22,6 +22,8 @@ Die Plan-Datei ist `.keel/work/plans/$ARGUMENTS.md`, ihre Vorhaben-ID steht unte
 
 **0. Startcheck.** `git status --porcelain` muss leer sein, außer Dateien unter `.keel/`. Prüftor muss grün sein. Sonst: brich ab und melde den Zustand in drei Zeilen.
 
+**0b. Blockiert.** Ist der Plan-Status `blockiert`, brich ab und melde in drei Zeilen, welche Aufgabe blockiert und warum (Status der Aufgabe). Der Mensch oder der PO entscheidet, setzt den Plan-Status zurück auf `in-arbeit` und ruft dich erneut auf. Du hebst eine Blockade nie selbst auf.
+
 **1. Abnahmetests.** Ist der Plan-Status `problemstellung`, starte `keel:tester` mit `Vorhaben: $ARGUMENTS`. Danach muss der Status `abnahmetests-bereit` sein.
 
 **2. Planung.** Ist der Status `abnahmetests-bereit`, starte `keel:planer` mit `Vorhaben: $ARGUMENTS`. Danach muss der Status `geplant` sein und `aufgaben` gefüllt. Ist der Status `strukturaenderung`, brich ab und melde das in drei Zeilen; das wird eine Vorlage.

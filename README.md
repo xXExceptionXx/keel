@@ -10,15 +10,28 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 
 ```
 .claude-plugin/   Manifest und Marketplace
-skills/           Befehle wie /keel:init
-hooks/            Prüftore und Schutzhooks
-scripts/          Skripte, die Skills und Hooks gemeinsam nutzen
+agents/           Rollen: planer, tester, entwickler, reviewer
+skills/           Befehle: /keel:init, /keel:vorhaben <name>
+hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
+scripts/          frontmatter.py, config.py, gate.sh, init.sh
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Deny-Regeln für .claude/settings.json
 docs/             Konzept und System-ADRs
 ```
 
 Sprachen: Prompts, Vorlagen und Artefakte deutsch, Code und Skripte englisch.
+
+## Ein Vorhaben durchführen
+
+Der Mensch (oder später der Product Owner) schreibt die Problemstellung mit Akzeptanzkriterien nach `.keel/work/plans/<name>.md` mit `status: problemstellung`. Dann in einer Claude-Code-Session im Projekt:
+
+```
+/keel:vorhaben <name>
+```
+
+Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Bei Testeinspruch oder erschöpftem Budget bleibt das Vorhaben `blockiert`, bis ein Mensch entscheidet.
+
+Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>/`.
 
 ## Installation in einem Projekt
 
@@ -39,4 +52,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Scheibe 1 von 4: Skelett mit Init, Vorlagen und Schutzhooks. Rollen, Prüftore, Tagesrhythmus und Lernschleife folgen.
+Scheibe 2 von 4: ein vollständiger Aufgabenzyklus läuft. Erster Testlauf am 2026-09-21 im Beispielprojekt: 3 Aufgaben, 3 Reviews in Runde 1 bestanden, 1 berechtigter Testeinspruch, Abnahme grün. Tagesrhythmus (Auditor, Vorlagen, Startcheck) und Lernschleife (Kennzahlen, Coach, Backlog-Adapter) folgen.

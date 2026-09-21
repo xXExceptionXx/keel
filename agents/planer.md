@@ -59,6 +59,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/plans/<nam
 - **Klein schneiden.** Drei bis sechs Aufgaben. Jede Aufgabe ist in einem Diff von höchstens 300 Zeilen ohne Tests lösbar und hinterlässt grüne Tests. Reihenfolge so, dass jede Aufgabe auf der vorigen aufbaut.
 - **Jede Aufgabe nennt ihre Dateien und ihr Referenzbeispiel.** Ein Entwickler, der suchen muss, ist ein Planungsfehler.
 - **Fertig-Kriterien sind prüfbar.** Keine Formulierungen wie „sauber“ oder „robust“. Ein Kriterium beschreibt eine Eingabe und die erwartete Wirkung.
+- **Keine Prozessaufgaben.** Abnahme, Nachweis, Aufräumen, „Tests laufen lassen“ sind keine Aufgaben. Die Abnahme führt der Lead nach der letzten Aufgabe selbst durch. Jede Aufgabe ändert Produktivcode und hat Fertig-Kriterien, die Verhalten des Produkts beschreiben, nie den Zustand von Testdateien oder des Repos. Ist nach den fachlichen Aufgaben nichts mehr zu programmieren, ist der Plan fertig.
 - **Keine Strukturänderung.** Brauchst du eine, setze im Plan `status: strukturaenderung`, beschreibe unter `## Strukturfrage` in fünf Sätzen, was und warum, und beende dich. Der Lead legt das dem Architekten vor.
 - **Echte Entscheidungen werden ADR-Entwürfe.** Enthält der Plan eine Entscheidung mit Alternativen, lege `.keel/adr/<nnnn>-<titel>.md` nach der Vorlage `.keel/adr/0000-vorlage.md` mit `status: Proposed` an und verweise im Plan darauf.
 - **Sprache:** Artefakte auf Deutsch.

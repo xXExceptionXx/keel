@@ -614,20 +614,30 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 
 ### Einführung
 
-- [ ] Sicherheit zuerst: Deny-Regeln für destruktive Befehle, kein Produktionszugang, isolierte Umgebung, Backup getestet. Kein autonomer Lauf vorher
+- [x] Sicherheit zuerst: Deny-Regeln und Guard-Hook (2026-09-21). Offen pro Projekt: isolierte Umgebung, Backup getestet
 - [ ] Zielbild, Qualitätsmerkmale mit Rangfolge, Befugnisse und ein erstes Backlog schriftlich festhalten
 - [ ] Backlog-Skript mit Markdown-Adapter bauen; Adapter für GitHub Issues oder Linear erst, wenn ein Projekt ihn braucht
-- [ ] Plugin-Repo anlegen: Rollen-Definitionen, Hooks, Vorlagen, Befehle; anfangs zusammengelegt: PO + Lead, Tester + Reviewer
-- [ ] Frontmatter-Schema für Übergaben festlegen und den Prüf-Hook bauen
-- [ ] Budget-Hook und Aufgaben-ID-Konvention (Plan, Branch, Commit-Trailer) umsetzen
+- [x] Plugin-Repo `keel` angelegt: Rollen Planer, Tester, Entwickler, Reviewer; Lead als Skill; PO vorerst der Mensch (2026-09-21)
+- [x] Frontmatter-Schema und Prüf-Hooks an Start und Stop jeder Rolle, siehe System-ADR 0001 (2026-09-21)
+- [x] Budget-Hook und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Offen: Branch pro Vorhaben, bisher direkt auf main
 - [ ] Basisregeln pro genutzter Sprache als Pakete anlegen
-- [ ] Init-Befehl bauen, der `.keel/` samt Vorlagen anlegt, den Skills-Symlink setzt und die Basisregeln einbindet
+- [x] Init-Befehl `/keel:init` (2026-09-21). Offen: Basisregeln einbinden
 - [ ] Startcheck-Skript und Reparaturaufgabe in den Tagesstart einbinden
-- [ ] Plugin im ersten Projekt installieren und Import in `CLAUDE.md` ergänzen
+- [x] Plugin im Beispielprojekt installiert, erstes Vorhaben abgenommen (2026-09-21)
 - [ ] Kennzahlen-Hooks einrichten, Zugriff der arbeitenden Rollen auf den Kennzahlen-Ordner per Hook sperren
 - [ ] Erste Wochen: enger Spielraum für den PO, Vorlagen und Auditor-Befunde beobachten
 - [ ] Nach etwa einem Monat: erster Coach-Lauf, Korridore kalibrieren
 - [ ] Befugnisse und Maßstäbe nachschärfen, Rollen erst bei Überlastung trennen
+
+## Erkenntnisse aus dem ersten Lauf
+
+Beispielprojekt, Vorhaben V1 „Rechnung mit Steuersätzen“, 2026-09-21, Claude Code 2.1.236:
+
+- 13 Rollenläufe, 10 bis 21 Werkzeugaufrufe je Rolle, keine blockierte Übergabe, kein Budgetverstoß, jede Abschlussnachricht innerhalb von drei Zeilen. Die Hooks haben also nicht korrigieren müssen; die Prompts reichten. Ob das so bleibt, zeigt die Kennzahl `stop_blocked`.
+- Drei Aufgaben, drei Reviews in Runde 1 bestanden, Abnahmetests 5 von 5 grün.
+- Ein berechtigter Testeinspruch: Der Planer hatte eine vierte Aufgabe „Abnahme absichern“ geschnitten, deren Kriterium Testdateien gegen ihre eigene Import-Zeile prüfte. Tester vermerkte den Widerspruch, Entwickler legte Einspruch ein statt drumherum zu bauen, Lead brach ab und meldete. Korrektur an den Maßstäben: Der Planer darf keine Prozessaufgaben schneiden, die Abnahme ist Schritt des Lead. Der Einzelfall wurde als PO verworfen und dokumentiert.
+- Der Tester hält Lücken in den Kriterien als „Anmerkung des Testers“ fest, der Planer entscheidet sie im Plan. Das ersetzt die direkte Absprache und funktioniert.
+- Der Reviewer erbringt den Nachweis selbst, statt dem Entwickler zu glauben. Seine Anmerkungen ohne Kriterienbezug blockieren nicht.
 
 ## Referenzen
 
