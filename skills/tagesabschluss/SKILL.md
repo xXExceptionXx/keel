@@ -9,6 +9,8 @@ Werkzeuge: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py"` für Frontma
 
 ## Ablauf
 
+**0. Branch.** Der Tagesabschluss läuft auf dem Branch, auf dem gearbeitet wurde, meist `vorhaben/<name>`; wechsle nicht. Das Tages-Tag zeigt auf den Stand dieses Branches und der Audit prüft den Diff dorthin. Nach der Integration eines Vorhabens landen Übergabenotizen und Prüfberichte mit dem Merge auf `main`.
+
 **1. Aufgabengrenze.** `git status --porcelain` darf außer Dateien unter `.keel/` nichts zeigen. Zeigt es Code-Änderungen, ist eine Aufgabe halbfertig: brich ab und melde, welche Dateien betroffen sind. Der Tag endet nur an einer Aufgabengrenze.
 
 **2. Prüftor.** Prüftor laufen lassen. Zusätzlich den Abnahmebefehl aus `.keel/config.yaml` unter `test.acceptance`, falls Pläne mit Status `abnahme-bereit` oder `abgenommen` existieren. Merke dir nur: grün oder rot, mit einer Zeile Zusammenfassung.

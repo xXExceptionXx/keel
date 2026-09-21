@@ -20,6 +20,8 @@ Du liest keine Aufgaben-Dateien, Review-Dateien, Testausgaben oder Code. Nur Fro
 
 Die Plan-Datei ist `.keel/work/plans/$ARGUMENTS.md`, ihre Vorhaben-ID steht unter `vorhaben`.
 
+**0a. Branch.** Jedes Vorhaben lebt auf `vorhaben/$ARGUMENTS`. Lies zuerst den Plan-Status. Ist er `abgenommen`, geh zu Schritt 5 (Integration). Sonst: Existiert der Branch (`git branch --list vorhaben/$ARGUMENTS`), wechsle mit `git switch` dorthin. Existiert er nicht, wechsle auf `main`, prüfe dort das Prüftor (rot: Ablauf aus `keel:reparatur`, erst danach weiter) und lege den Branch mit `git switch -c vorhaben/$ARGUMENTS` an. Alle Commits dieses Ablaufs landen auf dem Branch, nie auf `main`.
+
 **0. Startcheck.** `git status --porcelain` zeigt außer `.keel/` idealerweise nichts. Zeigt es Dateien, prüfe, ob sie zu einer laufenden Aufgabe gehören: eine Aufgabe dieses Vorhabens mit Status `tests-bereit`, `in-arbeit`, `testeinspruch`, `budget-erschoepft`, `nacharbeit` oder `review`, deren `tests` oder `dateien` die Dateien enthalten. Dann ist das der erwartete Zwischenstand einer unterbrochenen Session: überspringe das Prüftor und geh direkt zu Schritt 3, die Schleife nimmt die Aufgabe bei ihrem Status auf. Gehören die Dateien zu keiner laufenden Aufgabe, brich ab und melde sie. Ist der Baum sauber, muss das Prüftor grün sein; ist es rot, führe den Ablauf aus der Skill `keel:reparatur` aus und mache erst weiter, wenn er grün ist.
 
 **0b. Blockiert.** Ist der Plan-Status `blockiert`, brich ab und melde in drei Zeilen, welche Aufgabe blockiert und warum (Status der Aufgabe). Der Mensch oder der PO entscheidet, setzt den Plan-Status zurück auf `in-arbeit` und ruft dich erneut auf. Du hebst eine Blockade nie selbst auf.
@@ -61,9 +63,11 @@ status: gruen   # gruen | rot
 **Aufgaben:** <IDs mit je einer Zeile Titel>
 ```
 
-Setze den Plan-Status auf `abnahme-bereit` bei grün, sonst `abnahme-rot`. Committe `.keel/`.
+Setze den Plan-Status auf `abnahme-bereit` bei grün, sonst `abnahme-rot`. Committe `.keel/` auf dem Branch und pushe ihn, falls ein Remote existiert (`git push -u origin vorhaben/$ARGUMENTS`). Der Branch bleibt bestehen, bis der PO abnimmt.
 
-**5. Abschluss.** Melde in höchstens fünf Zeilen: Vorhaben, Zahl der Aufgaben, Review-Runden gesamt, Abnahme grün oder rot, Blockaden. Keine Erzählung des Verlaufs; die steht in den Dateien und im Git-Log.
+**5. Integration.** Nur wenn der Plan-Status `abgenommen` ist, gesetzt vom Menschen oder PO. Dann: `git switch main`, Prüftor auf `main` grün, `git merge --no-ff vorhaben/$ARGUMENTS -m "Vorhaben <ID> integriert: <titel>"`. Danach die Abnahmetests in die Regressionssuite übernehmen: jede Datei unter `abnahmetests` mit `git mv` in den Ordner, den `.keel/architektur.md` für Regressionstests nennt (fehlt die Angabe: `tests/regression/`), Importpfade anpassen, Prüftor auf `main` grün, `abnahmetests` im Plan auf die neuen Pfade setzen, `status=integriert`, `integriert=<Datum>`, committen. Zum Schluss `git branch -d vorhaben/$ARGUMENTS`. Schlägt der Merge fehl, bleibt der Status `abgenommen`, brich ab und melde die Konflikte.
+
+**6. Abschluss.** Melde in höchstens fünf Zeilen: Vorhaben, Zahl der Aufgaben, Review-Runden gesamt, Abnahme grün oder rot, Blockaden. Keine Erzählung des Verlaufs; die steht in den Dateien und im Git-Log.
 
 ## Regeln
 

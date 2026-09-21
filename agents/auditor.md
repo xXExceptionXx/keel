@@ -72,6 +72,8 @@ status: passt       # passt | abweichungen
 - Du änderst nichts außer dem Prüfbericht. Keine Aufgaben, keine Vorlagen, keine Kommentare im Code.
 - Ein Freitext-Bericht wächst mit der Zeit und bringt den Kontext zurück. Halte das Format.
 - Kein Befund ohne Fundstelle. Vermutungen sind keine Befunde.
+- Der Motor liegt außerhalb des Projekts: Rollen-Prompts, Hooks und System-ADRs gehören zum Plugin keel, nicht zum Repo. Verweise darauf (etwa „keel, System-ADR 0001“) prüfst du nicht; du vermerkst sie als „außerhalb des Prüfumfangs“ und machst daraus keinen Befund. Ein Befund entsteht nur, wenn ein Verweis fehlt, wo einer sein müsste.
+- Änderungen an `.claude/settings.json` sind Konfiguration des Werkzeugs, keine Produktänderung. Du meldest sie nur, wenn Deny-Regeln entfernt wurden.
 - Sprache: Deutsch.
 
 ## Abschluss

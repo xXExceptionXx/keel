@@ -1,7 +1,7 @@
 ---
 nummer: 0002
 titel: Kein Branch pro Vorhaben, solange ein Lead sequenziell arbeitet
-status: Accepted
+status: Superseded by 0003
 datum: 2026-09-21
 entscheider: Ich
 hypothese: Nachvollziehbarkeit pro Vorhaben bleibt über Aufgaben-IDs in Commits erhalten; kein Bedarf an Branches, bis zwei Leads parallel arbeiten

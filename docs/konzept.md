@@ -201,7 +201,7 @@ Regeln:
 
 Sequenzielle Arbeit heißt nicht, dass Integration von selbst passiert. Der Zustand des Hauptzweigs und der Umgebung braucht einen Besitzer und feste Regeln.
 
-- **Ein Commit pro Aufgabe, direkt auf dem Hauptzweig.** Aufgaben landen als Commits mit Aufgaben-ID im Betreff und Trailer `Keel-Task: <ID>`. Ein Vorhaben ist über `git log --grep` vollständig nachvollziehbar und pro Aufgabe revertierbar. Branches pro Vorhaben kommen erst, wenn zwei Leads parallel arbeiten oder ein Projekt Pull Requests verlangt, siehe System-ADR 0002. Die Abnahme durch den PO ist ein Statuswechsel im Plan, kein Merge.
+- **Ein Branch pro Vorhaben, ein Commit pro Aufgabe.** Aufgaben landen als Commits mit Aufgaben-ID und Trailer `Keel-Task: <ID>` auf `vorhaben/<name>`. Nach der Abnahme durch den PO integriert der Lead: Merge nach `main`, Abnahmetests in die Regressionssuite, Branch löschen. Reparaturen laufen auf `reparatur/<ID>` und werden nach dem Review sofort gemergt. Siehe System-ADR 0003; ADR 0002 hatte Branches gestrichen und wurde zurückgewiesen.
 - **Aufgaben-Tests pro Aufgabe, gesamte Suite pro Vorhaben.** Das Prüftor jeder Aufgabe läuft die Aufgabentests und einen schnellen Stichproben-Modus. Vor der Abnahme eines Vorhabens läuft die gesamte Suite plus Abnahmetests. Vor dem täglichen Audit läuft die gesamte Suite auf dem Hauptzweig, damit der Auditor einen bekannten Zustand prüft.
 - **Roter Startcheck oder roter Hauptzweig erzeugt eine Reparaturaufgabe.** Deterministisch, mit Vorrang vor allem anderen, mit eigener ID und eigenem Budget. Der Lead spawnt dafür einen Entwickler mit der Aufgabe „Startcheck grün machen“ und den Logs als Input. Der Lead repariert nie selbst. Ist die Reparatur nach einem Budget nicht geschafft, wird sie zur Vorlage.
 - **Tagesabschluss nur an Aufgabengrenzen.** Der Lead beendet den Tag nicht mitten in einer Aufgabe. Entweder die Aufgabe wird fertig oder sie wird zurückgesetzt und morgen frisch begonnen. Halbfertige Branches sind der häufigste Grund für kaputten Zustand zwischen Sessions.
@@ -619,7 +619,7 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 - [ ] Backlog-Skript mit Markdown-Adapter bauen; Adapter für GitHub Issues oder Linear erst, wenn ein Projekt ihn braucht
 - [x] Plugin-Repo `keel` angelegt: Rollen Planer, Tester, Entwickler, Reviewer; Lead als Skill; PO vorerst der Mensch (2026-09-21)
 - [x] Frontmatter-Schema und Prüf-Hooks an Start und Stop jeder Rolle, siehe System-ADR 0001 (2026-09-21)
-- [x] Budget-Hook (Werkzeugaufrufe, Diff-Zeilen, Zeit) und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Kein Branch pro Vorhaben, siehe System-ADR 0002
+- [x] Budget-Hook (Werkzeugaufrufe, Diff-Zeilen, Zeit) und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Branch pro Vorhaben und Reparatur, siehe System-ADR 0003
 - [ ] Basisregeln pro genutzter Sprache als Pakete anlegen
 - [x] Init-Befehl `/keel:init` (2026-09-21). Offen: Basisregeln einbinden
 - [x] Startcheck in `/keel:tagesstart` und `/keel:vorhaben`, Reparaturaufgabe `R-<Datum>` mit Entwickler und Reviewer, erprobt mit simuliertem Defekt (2026-09-21)
@@ -650,6 +650,8 @@ Erster Durchlauf von Tagesabschluss, Audit, Inbox, Tagesstart mit Reparatur, 202
 - Der Auditor findet, was Menschen bei manueller Nacharbeit übersehen. Die Regel „Korrekturen gehen an die Maßstäbe“ gilt auch für den Menschen: Meine PO-Entscheidung ohne ADR war der erste Befund.
 - Startcheck rot durch einen simulierten Defekt: Reparaturaufgabe, Entwickler mit 9 Aufrufen auf die eine Zeile, Reviewer bestanden, Commit. Kein Eingriff nötig.
 - Neuschnitt erprobt mit simuliertem Testeinspruch (V2): Der Planer entschied „Test falsch, Kriterium richtig“, schärfte das Kriterium mit Erwartungswert, leerte die Tests; Tester, Entwickler, Reviewer und Abnahme liefen danach ohne Eingriff durch. Ein erster Versuch mit committeten strittigen Tests ließ den Lead korrekt abbrechen, weil Startcheck und Neuschnitt sich widersprachen; im echten Ablauf sind Tests bis zum Review nie committet. Ergänzt: Der Lead erkennt unbestätigte Dateien einer laufenden Aufgabe als erwarteten Zwischenstand nach einem Sessionabbruch.
+- Bei der Abnahme von V1 und V2 zwei Qualitätsbefunde: Das Pflichtfeld `steuersatzProzent` änderte die öffentliche Schnittstelle von `Position` ohne Vorlage; jetzt legt der Planer dafür einen ADR-Entwurf an, den die Inbox zeigt. Und Abnahmetests liefen nach der Abnahme in keinem Prüftor mehr; jetzt wandern sie bei der Integration in die Regressionssuite.
+- Zwei Auditor-Befunde betrafen den Entwicklungsablauf des Plugins: unsauberer Arbeitsbaum durch das Deaktivieren des installierten Plugins, und Verweise auf Prompts außerhalb des Repos. Beides wurde eingearbeitet: Entwicklungsläufe nutzen ein Settings-Override, und der Auditor behandelt Verweise auf den Motor als außerhalb des Prüfumfangs.
 - Für Entwicklungsläufe des Plugins gegen ein Projekt mit installierter Version: `--plugin-dir` plus `--settings '{"enabledPlugins":{"keel@keel":false}}'`, damit der Arbeitsbaum sauber bleibt. Der Auditor hatte den unsauberen Baum sofort gemeldet.
 
 ## Referenzen

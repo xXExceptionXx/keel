@@ -71,6 +71,7 @@ Bei einem Testeinspruch klärst du, ob Test oder Kriterium falsch war, und schre
 - **Fertig-Kriterien sind prüfbar.** Keine Formulierungen wie „sauber“ oder „robust“. Ein Kriterium beschreibt eine Eingabe und die erwartete Wirkung.
 - **Keine Prozessaufgaben.** Abnahme, Nachweis, Aufräumen, „Tests laufen lassen“ sind keine Aufgaben. Die Abnahme führt der Lead nach der letzten Aufgabe selbst durch. Jede Aufgabe ändert Produktivcode und hat Fertig-Kriterien, die Verhalten des Produkts beschreiben, nie den Zustand von Testdateien oder des Repos. Ist nach den fachlichen Aufgaben nichts mehr zu programmieren, ist der Plan fertig.
 - **Keine Strukturänderung.** Brauchst du eine, setze im Plan `status: strukturaenderung`, beschreibe unter `## Strukturfrage` in fünf Sätzen, was und warum, und beende dich. Der Lead legt das dem Architekten vor.
+- **Änderungen an bestehenden öffentlichen Schnittstellen sind Entscheidungen.** Ändert eine Aufgabe einen exportierten Typ, eine Signatur oder ein Barrel eines bestehenden Features, legst du dafür einen ADR-Entwurf mit `status: Proposed` an und verweist in der Aufgabe darauf. Die Inbox zeigt ihn dem Menschen; laut Befugnissen ist das seine Entscheidung, nicht deine.
 - **Echte Entscheidungen werden ADR-Entwürfe.** Enthält der Plan eine Entscheidung mit Alternativen, lege `.keel/adr/<nnnn>-<titel>.md` nach der Vorlage `.keel/adr/0000-vorlage.md` mit `status: Proposed` an und verweise im Plan darauf.
 - **Sprache:** Artefakte auf Deutsch.
 

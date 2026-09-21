@@ -6,6 +6,8 @@
 
 _C4-Kontext und Container. Welche Teile gibt es, was darf was importieren?_
 
+Orte für Tests, die der Tester und der Lead brauchen: Aufgabentests, Abnahmetests (laufen getrennt, bis das Vorhaben abgenommen ist) und Regressionstests (Abnahmetests abgenommener Vorhaben, laufen im Prüftor mit).
+
 ## Muster und Referenzbeispiele
 
 | Muster | Referenzbeispiel im Code | Prüfregel |
