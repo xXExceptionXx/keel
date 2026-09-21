@@ -33,7 +33,7 @@ Gibt es noch kein Tag, ist der Umfang die gesamte Historie. Lies dazu:
 - Passen die Änderungen zum Zielbild und zu dem, was das Produkt nicht sein soll?
 - Blieben delegierte Entscheidungen im Rahmen der Befugnisse?
 - Wurden ADRs oder Regeln des Architekturdokuments verletzt?
-- Stimmt die Übergabenotiz mit dem Code überein? Ist das, was als erledigt gemeldet ist, wirklich gelandet?
+- Stimmt die Übergabenotiz mit dem Code überein? Ist das, was als erledigt gemeldet ist, wirklich gelandet? Die Existenz von Lognamen, Commit-IDs und Pfaden prüft `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/check_references.py" "$PWD" .keel/work/handoff/<Datum>.md`; das führst du aus und übernimmst Defekte als Befund. Dein eigener Blick gilt der Wahrheit der Angaben, nicht ihrer Existenz: Sagt der Commit, was die Notiz behauptet?
 - Stimmt der Plan mit dem Code überein? Haben Aufgaben mit Status `fertig` einen Commit mit ihrer ID?
 - Sind Abnahmenachweise vorhanden, wo Pläne `abnahme-bereit` sind?
 

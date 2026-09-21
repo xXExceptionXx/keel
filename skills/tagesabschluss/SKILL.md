@@ -50,6 +50,8 @@ tag: day-2026-09-22
 
 Jede Zeile ist ein Fakt mit Quelle im Repo. Keine Einschätzungen, keine Erzählung.
 
+**4b. Belege prüfen.** Bevor du weitermachst: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/check_references.py" "$PWD" .keel/work/handoff/<Datum>.md`. Jeder genannte Logname, jede Commit-ID und jeder Dateipfad muss existieren. Meldet das Skript defekte Verweise, korrigiere die genannten Zeilen aus der Quelle (Git-Log, Ausgabe des Test-Skills) und prüfe erneut. Kein Tag mit defekten Verweisen. Lognamen tippst du nie, du übernimmst den Pfad aus der Zeile `Log: …` des Test-Skills oder aus `gate: … Log: …`.
+
 **5. Tag setzen.** `git add .keel && git commit -m "Daily handoff <Datum>"`, dann `git tag day-<Datum>`. Existiert das Tag schon, nimm `day-<Datum>-2` und trage das ins Frontmatter ein.
 
 **6. Abschluss.** Melde in drei Zeilen: Tag, Tests grün oder rot, Zahl erledigter Aufgaben und offener Vorlagen.
