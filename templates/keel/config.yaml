@@ -10,9 +10,18 @@ test:
   acceptance: npm test --silent    # Abnahmetests eines Vorhabens
 
 budget:
-  tool_calls: 60
+  tool_calls: 60           # Standard je Rollenlauf
   diff_lines: 300
   minutes: 30
+  # Je Rolle überschreibbar als <rolle>_<schlüssel>. Lesende Rollen brauchen mehr, in großen Repos deutlich mehr.
+  architekt_tool_calls: 200
+  architekt_minutes: 60
+  auditor_tool_calls: 150
+  auditor_minutes: 45
+  coach_tool_calls: 150
+  coach_minutes: 45
+  po_tool_calls: 100
+  planer_tool_calls: 100
   context_window: 200000   # Kontextfenster des Lead-Modells in Tokens
   context_percent: 50      # Kontext-Alarm ab diesem Anteil
 

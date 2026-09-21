@@ -33,7 +33,7 @@ if [ "$role" = "entwickler" ] && [ -n "$ref" ] && [ -f "$proj/.keel/work/tasks/$
 fi
 
 # Time budget
-minutes="$($CFG "$proj" budget.minutes 30)"
+minutes="$(role_limit "$role" minutes 30)"
 if [ -f "$sd/agent-$id.start" ]; then
   elapsed=$(( ($(date +%s) - $(cat "$sd/agent-$id.start")) / 60 ))
   if [ "$elapsed" -ge "$minutes" ]; then
@@ -50,7 +50,7 @@ if [ -f "$sd/agent-$id.start" ]; then
 fi
 
 # Tool-call budget
-limit="$($CFG "$proj" budget.tool_calls 60)"
+limit="$(role_limit "$role" tool_calls 60)"
 calls=0
 [ -f "$sd/agent-$id.calls" ] && calls="$(cat "$sd/agent-$id.calls")"
 calls=$((calls + 1))

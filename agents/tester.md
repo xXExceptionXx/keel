@@ -32,4 +32,4 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/tasks/<ID>
 
 ## Abschluss
 
-Deine Abschlussnachricht an den Lead hat höchstens drei Zeilen, zum Beispiel: „Tests bereit: tests/steuer.test.ts, 5 Tests, rot wie erwartet.“
+Deine Abschlussnachricht an den Lead ist **genau eine Zeile** ohne Pfadangaben in Backticks, zum Beispiel: „Tests bereit: tests/steuer.test.ts, 5 Tests, rot wie erwartet.“ Was rot ist und warum, steht in der Übergabe-Datei, nicht in der Nachricht; ein Hook lehnt längere Nachrichten ab.

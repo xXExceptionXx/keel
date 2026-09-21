@@ -38,12 +38,24 @@ Steht im Auftrag `Epic: <epic-name>`, lies zuerst `.keel/work/epics/<epic-name>.
 
 Der PO hat `.keel/work/epics/<name>.md` mit `status: skizze` geschrieben: Zielbild des Themas, Vorhaben-Liste, Leitfragen. Deine Frage ist nicht „passt das ins System“, sondern: **Welche Entscheidung im ersten Vorhaben müsste ein späteres Vorhaben wieder umstoßen?** Lies die ganze Vorhaben-Liste, den Bestand und die ADRs. Suche nach Entscheidungen mit Reichweite über mehrere Vorhaben: Wo ein Zustand hängt (an der Entität oder an ihrem Teil), was eine Identität ist, was gespeichert und was abgeleitet wird, wo Grenzen zwischen Features verlaufen, welche Schnittstelle öffentlich wird. Die Leitfragen des PO sind Startpunkt, nicht Grenze; die wichtigste Frage stellt oft niemand.
 
-Schreibe in die Epic-Datei:
+Schreibe die vollständige Bewertung in die Anlage `.keel/work/epics/<name>.bewertung.md` (Frontmatter `typ: epic-bewertung`, `epic: <name>`, `datum`) und in die Epic-Datei nur eine Kurzfassung, damit spätere Rollen die Epic-Datei klein vorfinden:
 
 ```markdown
 ## Epic-Bewertung des Architekten
 
-**Tragende Entscheidungen:**
+Vollständig in `.keel/work/epics/<name>.bewertung.md`.
+
+| Nr | Entscheidung | Reichweite | Erzwingt Vorhaben 1 | Empfehlung |
+| --- | --- | --- | --- | --- |
+| 1 | <Frage> | <Vorhaben> | ja \| nein, bis n | <Option, ein Halbsatz> |
+
+**Tracer Bullet:** ja | nein, weil …
+```
+
+Format der Anlage:
+
+```markdown
+## Tragende Entscheidungen
 
 ### 1. <Entscheidung als Frage>
 - **Reichweite:** welche Vorhaben der Liste sie betrifft
@@ -52,12 +64,10 @@ Schreibe in die Epic-Datei:
 - **Erzwingt Vorhaben 1 die Entscheidung:** ja | nein, verschiebbar bis Vorhaben n
 - **Empfehlung:** … – weil …
 
-**Tracer Bullet:** Vorhaben 1 ist der dünnste Ende-zu-Ende-Pfad: ja | nein, weil … (dann Vorschlag)
-
 **Bestand:** was heute schon existiert und zu welcher Option es passt
-
-**Bedenken-Log:** je Zeile ein Risiko mit Datum, das spätere Vorhaben betrifft
 ```
+
+Risiken, die spätere Vorhaben betreffen, trägst du direkt in das `## Bedenken-Log` der Epic-Datei ein, je Zeile mit Datum.
 
 Setze `status=bewertet`. Du entscheidest nicht; du machst Reichweite und Kosten sichtbar, damit PO oder Mensch entscheiden können.
 

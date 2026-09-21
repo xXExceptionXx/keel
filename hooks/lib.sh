@@ -34,6 +34,14 @@ keel_role() {
   esac
 }
 
+# Budget for a role: budget.<role>_<key> in .keel/config.yaml, else budget.<key>, else the built-in default.
+role_limit() {  # role_limit <role> <key> <default>
+  local p; p="$(project_dir)"
+  local v; v="$($CFG "$p" "budget.$1_$2" "")"
+  [ -n "$v" ] && { printf '%s' "$v"; return; }
+  $CFG "$p" "budget.$2" "$3"
+}
+
 # Extract "Aufgabe: V1-T01" or "Vorhaben: rechnung" from a prompt.
 prompt_field() { { printf '%s' "$1" | grep -oE "^$2:[[:space:]]*[A-Za-z0-9_.-]+" || true; } | head -1 | sed -E "s/^$2:[[:space:]]*//"; }
 

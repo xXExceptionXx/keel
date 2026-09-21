@@ -6,19 +6,25 @@ Maßstab ist die Umkehrbarkeit. Leicht Umkehrbares entscheidet der PO, schwer Um
 
 ## Der PO entscheidet selbst
 
-- Leicht rückgängig zu machen
-- Keine Auswirkung auf Nutzer oder Kosten
-- Innerhalb von Zielbild und Qualitätsmerkmalen
+- Zuschnitt eines Wunsches in Vorhaben oder ein Epic, Reihenfolge innerhalb eines Epics
+- Verhandelbare Kriterien streichen oder abschwächen, wenn der Architekt die Kosten benannt hat
+- Namen, Fehlermeldungen und Signaturen **innerhalb eines neuen** Features, das noch niemand von außen nutzt
+- Abnahme eines Vorhabens gegen den Abnahmenachweis
 - Dokumentiert als ADR mit Status _Accepted (delegiert)_
 
 ## Vorlage an mich
 
-- Schwer umkehrbar
-- Datenmodell, Architekturgrenzen, API-Vertrag
-- Neue externe Abhängigkeit
-- Kosten, personenbezogene Daten
-- Widerspruch zu einem angenommenen ADR
-- Keine Einigung zwischen PO und Architekt
+Der PO liest diese Liste wörtlich. Was hier nicht steht, entscheidet er. Deshalb konkret:
+
+- Jede Änderung an einem **exportierten** Typ, einer exportierten Funktion oder einem Barrel eines Features, das schon abgenommen ist. Ergänzen zählt als Ändern: ein neues Pflichtfeld, ein neues Literal in einer Zustands- oder Schrittmenge, ein neuer Parameter.
+- Datenmodell: neue Tabellen, neue Spalten, geänderte Beziehungen, Migrationen
+- Architekturgrenzen: neue Schicht, neues Feature-Verzeichnis, neue Abhängigkeitsrichtung zwischen Features
+- Neue Laufzeit- oder Entwicklungsabhängigkeit
+- Alles, was Beträge, Rundung oder Berechnungsergebnisse verändert
+- Personenbezogene Daten: neue Felder, neue Verarbeitung, neue Empfänger
+- Verhalten, das Nutzer sehen und das nicht in der Problemstellung stand
+- Widerspruch zu einem angenommenen ADR, keine Einigung zwischen PO und Architekt, Strukturänderung laut Planer oder Architekt
+- Leitentscheidungen eines Epics, die eine der obigen Kategorien berühren
 
 ## Kalibrierung
 

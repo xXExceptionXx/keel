@@ -11,7 +11,7 @@ proj="$(project_dir)"
 sd="$(state_dir)"
 ref="$(cat "$sd/agent-$id.ref" 2>/dev/null || true)"
 calls="$(cat "$sd/agent-$id.calls" 2>/dev/null || echo 0)"
-limit="$($CFG "$proj" budget.tool_calls 60)"
+limit="$(role_limit "$role" tool_calls 60)"
 msg="$(field '.last_assistant_message')"
 lines="$(printf '%s\n' "$msg" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 tasks="$proj/.keel/work/tasks"
@@ -127,8 +127,10 @@ case "$role" in
         ep="$proj/.keel/work/epics/${ref#epic:}.md"
         st="$($FM get "$ep" status)"
         if [ "$st" = "bewertet" ]; then
-          grep -q "^## Epic-Bewertung des Architekten" "$ep" || block_stop "Abschnitt '## Epic-Bewertung des Architekten' fehlt"
-          grep -q "Tragende Entscheidungen" "$ep" || block_stop "Epic-Bewertung ohne 'Tragende Entscheidungen'"
+          grep -q "^## Epic-Bewertung des Architekten" "$ep" || block_stop "Abschnitt '## Epic-Bewertung des Architekten' (Kurzfassung) fehlt in der Epic-Datei"
+          anl="${ep%.md}.bewertung.md"
+          $FM validate "$anl" --type epic-bewertung --require epic,datum 2>/tmp/keel-stop-err || block_stop "Anlage fehlt oder unvollständig: $(cat /tmp/keel-stop-err)"
+          grep -q "Tragende Entscheidungen" "$anl" || block_stop "Anlage ohne 'Tragende Entscheidungen'"
         elif [ "$st" = "aktiv" ] || [ "$st" = "kurskorrektur" ]; then
           grep -q "^## Retrospektiven" "$ep" || block_stop "Abschnitt '## Retrospektiven' fehlt"
           [ "$st" = "kurskorrektur" ] && { grep -qi "kurskorrektur:" "$ep" || block_stop "status kurskorrektur ohne Eintrag 'kurskorrektur: …' in den Retrospektiven"; }
