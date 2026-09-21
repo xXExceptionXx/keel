@@ -1,0 +1,4 @@
+evals/**/results/
+report.html
+aggregate-result.json
+.DS_Store

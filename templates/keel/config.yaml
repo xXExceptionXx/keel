@@ -1,0 +1,11 @@
+# keel-Projektkonfiguration. Anbieterwahl ist ein Projekt-ADR.
+backlog:
+  provider: markdown   # markdown | github | linear
+  # github:
+  #   repo: owner/name
+  #   labels:
+  #     vorgeschlagen: "keel:vorgeschlagen"
+  #     bereit: "keel:bereit"
+  #     in_arbeit: "keel:in-arbeit"
+  #     erledigt: "keel:erledigt"
+  #     verworfen: "keel:verworfen"

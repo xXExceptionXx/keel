@@ -1,0 +1,15 @@
+{
+  "name": "keel",
+  "description": "Marketplace für das keel-Agentensystem.",
+  "owner": {
+    "name": "xXExceptionXx"
+  },
+  "plugins": [
+    {
+      "name": "keel",
+      "source": "./",
+      "description": "Schlankes Agentensystem für autonome Softwareentwicklung.",
+      "version": "0.1.0"
+    }
+  ]
+}
