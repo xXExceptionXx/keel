@@ -405,7 +405,7 @@ Der Lead ist die einzige langlebige Rolle und damit am anfälligsten für Drift 
 
 1. **Schlank halten.** Der Lead liest keine vollständigen Berichte, nur Status. Reviewer, Tester und Compliance schreiben Ergebnisse in Dateien und geben knapp zurück, z. B. „bestanden“ oder „3 Befunde, Details in Datei X“. Wichtig: Die Abschlussnachricht eines Subagents landet vollständig im Kontext des Lead. Jeder Rollen-Prompt begrenzt sie deshalb hart auf drei Zeilen, und der Frontmatter-Hook prüft, dass die zugehörige Datei existiert und vollständig ist. Vertrauen in den Prompt allein reicht nicht.
 2. **Zwischenabschluss nach Arbeitseinheiten.** Nach jedem Vorhaben oder einer festen Zahl von Aufgaben schreibt der Lead eine Zwischenübergabe und beendet sich. Ein Skript startet einen frischen Lead, der nur diese Übergabe liest. Das ist deterministisch und hängt nicht von einer Kontextmessung ab.
-3. **Prozent-Alarm als Sicherheitsnetz.** Ein Hook liest nach jedem Werkzeugaufruf die Kontextgröße. Hooks bekommen den Pfad zum Session-Transkript; aus den Usage-Feldern der letzten Assistentennachricht lässt sich der Kontext exakt berechnen, nicht nur schätzen. Hooks bekommen außerdem Agent-ID und Agent-Typ, der Alarm kann also gezielt auf den Lead reagieren. Über der Schwelle, anfangs etwa 50 %, weist er den Lead an: aktuelle Aufgabe sauber abschließen, Zwischenübergabe schreiben, beenden. Eigenkonstruktion, muss erprobt werden.
+3. **Prozent-Alarm als Sicherheitsnetz.** Umgesetzt am 2026-09-21 als PostToolUse-Hook, der die exakte Kontextgröße aus dem Transkript liest und ab der Schwelle eine Anweisung in den Kontext gibt. Ein Hook liest nach jedem Werkzeugaufruf die Kontextgröße. Hooks bekommen den Pfad zum Session-Transkript; aus den Usage-Feldern der letzten Assistentennachricht lässt sich der Kontext exakt berechnen, nicht nur schätzen. Hooks bekommen außerdem Agent-ID und Agent-Typ, der Alarm kann also gezielt auf den Lead reagieren. Über der Schwelle, anfangs etwa 50 %, weist er den Lead an: aktuelle Aufgabe sauber abschließen, Zwischenübergabe schreiben, beenden. Eigenkonstruktion, muss erprobt werden.
 
 Auto-Compact bleibt nur die letzte Rückfallebene. Greift der Prozent-Alarm regelmäßig, sind die Arbeitseinheiten zu groß oder der Lead liest zu viel.
 
@@ -616,7 +616,7 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 
 - [x] Sicherheit zuerst: Deny-Regeln und Guard-Hook (2026-09-21). Offen pro Projekt: isolierte Umgebung, Backup getestet
 - [ ] Zielbild, Qualitätsmerkmale mit Rangfolge, Befugnisse und ein erstes Backlog schriftlich festhalten
-- [ ] Backlog-Skript mit Markdown-Adapter bauen; Adapter für GitHub Issues oder Linear erst, wenn ein Projekt ihn braucht
+- [x] Backlog-Skript mit Markdown- und GitHub-Adapter, beide erprobt (2026-09-21). Linear erst bei Bedarf
 - [x] Plugin-Repo `keel` angelegt: Rollen Planer, Tester, Entwickler, Reviewer; Lead als Skill; PO vorerst der Mensch (2026-09-21)
 - [x] Frontmatter-Schema und Prüf-Hooks an Start und Stop jeder Rolle, siehe System-ADR 0001 (2026-09-21)
 - [x] Budget-Hook (Werkzeugaufrufe, Diff-Zeilen, Zeit) und Aufgaben-ID in Plan, Aufgaben-Datei, Commit-Betreff und Trailer `Keel-Task` (2026-09-21). Branch pro Vorhaben und Reparatur, siehe System-ADR 0003
@@ -626,9 +626,9 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 - [x] Tagesrhythmus als Befehle: `/keel:tagesabschluss`, `/keel:audit`, `/keel:inbox`, `/keel:tagesstart` (2026-09-21)
 - [x] Neuschnitt durch den Planer bei Testeinspruch, Budget und Befunden nach Runde 2; Vorlage erst beim zweiten Neuschnitt (2026-09-21)
 - [x] Plugin im Beispielprojekt installiert, erstes Vorhaben abgenommen (2026-09-21)
-- [ ] Kennzahlen-Hooks einrichten, Zugriff der arbeitenden Rollen auf den Kennzahlen-Ordner per Hook sperren
+- [x] Kennzahlen aus Artefakten und Rohdaten (`metrics.py`), Kennzahlen-Ordner für arbeitende Rollen per Hook gesperrt, nur der Coach liest ihn (2026-09-21)
 - [ ] Erste Wochen: enger Spielraum für den PO, Vorlagen und Auditor-Befunde beobachten
-- [ ] Nach etwa einem Monat: erster Coach-Lauf, Korridore kalibrieren
+- [x] Coach als Rolle mit `/keel:coach`, erster Lauf am 2026-09-21 auf den Daten des ersten Tages; Kalibrierung nach einem Monat echter Nutzung
 - [ ] Befugnisse und Maßstäbe nachschärfen, Rollen erst bei Überlastung trennen
 
 ## Erkenntnisse aus dem ersten Lauf
@@ -653,6 +653,13 @@ Erster Durchlauf von Tagesabschluss, Audit, Inbox, Tagesstart mit Reparatur, 202
 - Bei der Abnahme von V1 und V2 zwei Qualitätsbefunde: Das Pflichtfeld `steuersatzProzent` änderte die öffentliche Schnittstelle von `Position` ohne Vorlage; jetzt legt der Planer dafür einen ADR-Entwurf an, den die Inbox zeigt. Und Abnahmetests liefen nach der Abnahme in keinem Prüftor mehr; jetzt wandern sie bei der Integration in die Regressionssuite.
 - Zwei Auditor-Befunde betrafen den Entwicklungsablauf des Plugins: unsauberer Arbeitsbaum durch das Deaktivieren des installierten Plugins, und Verweise auf Prompts außerhalb des Repos. Beides wurde eingearbeitet: Entwicklungsläufe nutzen ein Settings-Override, und der Auditor behandelt Verweise auf den Motor als außerhalb des Prüfumfangs.
 - Für Entwicklungsläufe des Plugins gegen ein Projekt mit installierter Version: `--plugin-dir` plus `--settings '{"enabledPlugins":{"keel@keel":false}}'`, damit der Arbeitsbaum sauber bleibt. Der Auditor hatte den unsauberen Baum sofort gemeldet.
+
+## Erkenntnisse aus der Lernschleife
+
+Erster Coach-Lauf und Kennzahlen am 2026-09-21, nach einem Tag Betrieb im Beispielprojekt:
+
+- Die Kennzahlen lassen sich vollständig aus Artefakten ableiten; keine Rolle meldet etwas. Zwei Korridore waren am ersten Tag verletzt: „Vorlagen pro Woche“ bei 0, weil der Mensch als PO direkt entschieden hat, und „Audit-Abweichungen pro Bericht“ bei 8, weil der erste Audit Aufbauarbeit prüfte. Beides sind Startphänomene, keine Systemfehler; der Coach soll das erkennen.
+- Der GitHub-Adapter arbeitet mit Labels `keel:<status>` und schließt Issues bei erledigt oder verworfen. Das Löschen von Issues gibt es nicht, das Skript kennt keinen solchen Befehl.
 
 ## Referenzen
 

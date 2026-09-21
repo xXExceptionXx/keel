@@ -28,9 +28,9 @@ case "$role" in
         || deny "Planer darf nicht starten: $(cat /tmp/keel-gate-err). Erst der Tester mit Abnahmetests."
     fi
     ;;
-  auditor)
+  auditor|coach)
     datum="$(prompt_field "$prompt" "Datum")"
-    [ -n "$datum" ] || deny "Auditor braucht die Zeile 'Datum: YYYY-MM-DD' im Prompt"
+    [ -n "$datum" ] || deny "$role braucht die Zeile 'Datum: YYYY-MM-DD' im Prompt"
     task="$datum"
     ;;
   tester)

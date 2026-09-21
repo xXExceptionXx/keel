@@ -31,6 +31,9 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:audit` | Auditor | Prüfbericht über den Diff seit dem letzten Tag; `/keel:audit woche` prüft den Gesamtstand |
 | `/keel:inbox` | Mensch | Offene Vorlagen, Pläne zur Abnahme, Blockaden, letzter Prüfbericht |
 | `/keel:reparatur` | Lead | Reparaturaufgabe bei rotem Startcheck, läuft auch aus tagesstart und vorhaben heraus |
+| `/keel:kennzahlen` | Mensch | Kennzahlen der Lernschleife mit Korridoren, aus Artefakten und Rohdaten |
+| `/keel:coach` | Coach | Lernschleife: Hypothesen prüfen, Umfeld, Justierungen als Vorlagen; monatlich oder bei Korridorverletzung |
+| `/keel:backlog <befehl>` | PO, Auditor | Backlog über die Schnittstelle: next, show, list, propose, status, link; Anbieter Markdown oder GitHub Issues |
 
 Der Mensch entscheidet Vorlagen unter `.keel/decisions/pending/`, nimmt Pläne mit `status: abgenommen` ab und hebt Blockaden auf. Alles andere läuft ohne ihn.
 
@@ -65,4 +68,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Scheibe 3 von 4: Tagesrhythmus komplett. Erprobt im Beispielprojekt am 2026-09-21: drei Vorhaben abgenommen und integriert, davon eines vollständig auf einem `vorhaben/`-Branch mit Merge nach Abnahme; Audit mit Befunden, Reparatur nach simuliertem Defekt, Neuschnitt nach Testeinspruch. Offen ist die Lernschleife: Kennzahlen, Coach, Backlog-Adapter.
+Alle vier Scheiben gebaut und im Beispielprojekt erprobt: Skelett, Aufgabenzyklus, Tagesrhythmus, Lernschleife. Ab jetzt zählt Betrieb: Korridore kalibrieren, Coach-Vorschläge entscheiden, Rollen-Prompts nachschärfen. Offen: Linear-Adapter, Compliance als Agent (Datenschutz), Architekt als eigene Rolle, Basisregel-Pakete pro Sprache.

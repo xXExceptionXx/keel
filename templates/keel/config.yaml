@@ -13,6 +13,23 @@ budget:
   tool_calls: 60
   diff_lines: 300
   minutes: 30
+  context_window: 200000   # Kontextfenster des Lead-Modells in Tokens
+  context_percent: 50      # Kontext-Alarm ab diesem Anteil
+
+# Korridore der Lernschleife; Startwerte, der Coach schlägt Kalibrierungen vor. Format "min-max".
+korridore:
+  vorlagen_pro_woche: 2-5
+  entscheidungsdauer_tage: 0-2
+  gekippte_delegierte_adrs_prozent: 0-10
+  review_runden_pro_aufgabe: 1-2
+  ruecklaufquote_review_prozent: 0-30
+  neuschnitt_quote_prozent: 0-20
+  blockierte_uebergaben_prozent: 0-20
+  budget_verstoesse: 0-0
+  kontext_alarme: 0-0
+  audit_abweichungen_pro_bericht: 0-3
+  diff_zeilen_pro_aufgabe: 20-300
+  tokens_pro_aufgabe_k: 0-400
 
 backlog:
   provider: markdown   # markdown | github | linear

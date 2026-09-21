@@ -12,7 +12,7 @@ sd="$(state_dir)"
 
 # Metrics folder is off limits for working roles
 metrics="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}"
-if printf '%s' "$payload" | jq -r '.tool_input | tostring' | grep -qF "$metrics"; then
+if [ "$role" != "coach" ] && printf '%s' "$payload" | jq -r '.tool_input | tostring' | grep -qF "$metrics"; then
   deny "Der Kennzahlen-Ordner ist für arbeitende Rollen gesperrt"
 fi
 

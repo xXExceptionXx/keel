@@ -12,6 +12,7 @@ Sammle:
 3. **Blockiert:** Pläne mit Status `blockiert` oder `strukturaenderung`, Aufgaben mit Status `neuschnitt`, `testeinspruch`, `budget-erschoepft`, `reparatur`.
 4. **Letzter Prüfbericht:** neueste Datei unter `.keel/work/audit/`, Status und Datum.
 5. **ADR-Entwürfe:** Dateien unter `.keel/adr/` mit Status `Proposed`. Der Mensch nimmt an mit `status: Accepted` oder lehnt ab mit `status: Rejected`.
-6. **Delegierte ADRs:** Dateien unter `.keel/adr/` mit Status `Accepted (delegiert)`, die jünger als sieben Tage sind.
+6. **Kennzahlen:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/metrics.py" "$PWD" --json | jq '{verletzungen, rollenlaeufe}'`. Bei Verletzungen größer 0: „Korridore verletzt, `/keel:coach` empfohlen“.
+7. **Delegierte ADRs:** Dateien unter `.keel/adr/` mit Status `Accepted (delegiert)`, die jünger als sieben Tage sind.
 
 Gib eine kompakte Übersicht in dieser Reihenfolge aus, je Punkt eine Zeile, leere Abschnitte mit „keine“. Danach in einem Satz, was der Mensch tun kann: Eine Vorlage entscheidet er, indem er im Frontmatter `status: entschieden` und `entscheidung: <Nummer der Option>` setzt und die Datei nach `.keel/decisions/done/` verschiebt. Einen Plan nimmt er ab, indem er `status: abgenommen` setzt. Eine Blockade hebt er auf, indem er den Plan-Status auf `in-arbeit` setzt, nachdem er die Ursache behoben hat.

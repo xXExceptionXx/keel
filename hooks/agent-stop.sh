@@ -18,7 +18,7 @@ tasks="$proj/.keel/work/tasks"
 plans="$proj/.keel/work/plans"
 
 finish() {  # record and allow stop
-  record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result}')"
+  record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$(field '.agent_transcript_path')" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript}')"
   exit 0
 }
 
@@ -53,6 +53,11 @@ case "$role" in
           || block_stop "Aufgaben-Datei fehlt oder unvollständig: $(cat /tmp/keel-stop-err)"
       done
     fi
+    ;;
+  coach)
+    rep="$proj/.keel/work/coach/$ref.md"
+    $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>/tmp/keel-stop-err \
+      || block_stop "Coach-Bericht fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err)"
     ;;
   auditor)
     rep="$proj/.keel/work/audit/$ref.md"

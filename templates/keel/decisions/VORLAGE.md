@@ -4,7 +4,9 @@ titel: <Titel>
 von: <PO | Coach>
 datum: YYYY-MM-DD
 status: offen   # offen | entschieden
-entscheidung:
+entscheidung:   # Nummer der gewählten Option
+entschieden:    # YYYY-MM-DD, vom Menschen gesetzt
+hypothese:      # nur bei Vorlagen des Coachs
 ---
 
 # Vorlage: <Titel>
