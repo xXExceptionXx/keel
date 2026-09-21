@@ -7,5 +7,6 @@ project="$(printf '%s' "$payload" | jq -r '.cwd // empty')"
 [ -z "$project" ] && project="$(pwd)"
 dir="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$project")"
 mkdir -p "$dir"
-printf '%s' "$payload" | jq -c --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {ts: $ts}' >> "$dir/hooks.jsonl"
+line="$(printf '%s' "$payload" | jq -c --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {ts: $ts}')" || exit 0
+printf '%s\n' "$line" >> "$dir/hooks.jsonl"
 exit 0

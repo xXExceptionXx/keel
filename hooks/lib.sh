@@ -52,5 +52,6 @@ record() {  # record <event> <json-fields>: append a metrics line
   local p; p="$(project_dir)"
   local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
   mkdir -p "$d"
-  jq -nc --arg ev "$1" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson f "$2" '{event:$ev,ts:$ts} + $f' >> "$d/events.jsonl"
+  local line; line="$(jq -nc --arg ev "$1" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson f "$2" '{event:$ev,ts:$ts} + $f')" || return 0
+  printf '%s\n' "$line" >> "$d/events.jsonl"
 }

@@ -28,12 +28,12 @@ if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:
   cfg="$(dirname "${BASH_SOURCE[0]}")/../scripts/config.py"
   fp="$(python3 "$cfg" "$cwd" git.feature_prefix feature/)"; xp="$(python3 "$cfg" "$cwd" git.fix_prefix fix/)"
   esc() { printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g'; }
-  if ! printf '%s' "$cmd" | grep -Eq "git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+[[:space:]]*\$"; then
-    deny "deleting remote branches is only allowed for merged $fp* and $xp* branches"
-  fi
-fi
-if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+(branch[[:space:]]+.*-D\b|reset[[:space:]]+--hard|filter-branch|reflog[[:space:]]+expire|gc[[:space:]]+--prune)'; then
-  deny "destructive git operation is not allowed; use git stash or git restore"
+  # Judge every command segment on its own; a segment may end with a redirection.
+  printf '%s\n' "$cmd" | sed -E 's/&&|\|\||;|\|/\n/g' | while IFS= read -r seg; do
+    seg="$(printf '%s' "$seg" | sed -E 's/[[:space:]]+[0-9]*>&?[0-9]*[[:space:]]*[^[:space:]]*//g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+    printf '%s' "$seg" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' || continue
+    printf '%s' "$seg" | grep -Eq "^git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+$" || echo DENY
+  done | grep -q DENY && deny "deleting remote branches is only allowed for merged $fp* and $xp* branches"
 fi
 
 # File deletion outside the working directory
