@@ -10,7 +10,7 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 
 ```
 .claude-plugin/   Manifest und Marketplace
-agents/           Rollen: planer, tester, entwickler, reviewer, auditor
+agents/           Rollen: po, architekt, planer, tester, entwickler, reviewer, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
 scripts/          frontmatter.py, config.py, gate.sh, init.sh
@@ -26,7 +26,9 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | Befehl | Wer | Was |
 | --- | --- | --- |
 | `/keel:tagesstart` | Lead | Startcheck, bei Rot Reparaturaufgabe; Übergabenotiz des Vortags in Kurzform; Inbox; Vorhaben mit Status; Empfehlung |
-| `/keel:vorhaben <name>` | Lead | Ein Vorhaben von der Problemstellung bis zum Abnahmenachweis, siehe unten |
+| `/keel:vorhaben <name> [<backlog-id>]` | Lead | Ein Vorhaben: PO schreibt die Problemstellung aus dem Backlog-Element, Architekt bewertet, Abstimmung, dann Aufgabenzyklus bis zur Abnahme durch den PO und Integration |
+| `/keel:epic <name> <backlog-id>` | Lead | Ein großes Thema: PO-Skizze, Epic-Bewertung des Architekten nach Reichweite, Leitentscheidungen als ADR oder Vorlage, dann das erste Vorhaben |
+| `/keel:architektur bestand\|woche` | Architekt | Bestandsaufnahme eines bestehenden Projekts oder wöchentliche Drift-Runde |
 | `/keel:tagesabschluss` | Lead | Übergabenotiz aus Artefakten, gesamte Testsuite, Commit, Tag `day-<Datum>` |
 | `/keel:audit` | Auditor | Prüfbericht über den Diff seit dem letzten Tag; `/keel:audit woche` prüft den Gesamtstand |
 | `/keel:inbox` | Mensch | Offene Vorlagen, Pläne zur Abnahme, Blockaden, letzter Prüfbericht |
@@ -39,13 +41,13 @@ Der Mensch entscheidet Vorlagen unter `.keel/decisions/pending/`, nimmt Pläne m
 
 ## Ein Vorhaben durchführen
 
-Der Mensch (oder später der Product Owner) schreibt die Problemstellung mit Akzeptanzkriterien nach `.keel/work/plans/<name>.md` mit `status: problemstellung`. Dann in einer Claude-Code-Session im Projekt:
+Der Mensch schreibt drei Sätze ins Backlog: Titel, Problem, Warum. Dann in einer Claude-Code-Session im Projekt:
 
 ```
-/keel:vorhaben <name>
+/keel:vorhaben <name> <backlog-id>
 ```
 
-Die Haupt-Session ist der Lead. Er ruft der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `feature/<name>`, abgezweigt vom Basis-Branch aus `.keel/config.yaml` (`git.base_branch`, etwa `develop` oder `staging`). Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf in die Basis: Merge, Abnahmetests in die Regressionssuite, Branch weg. Der Weg von der Basis nach `main` bleibt ein manueller Schritt. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
+Die Haupt-Session ist der Lead. Der PO macht aus dem Backlog-Element eine Problemstellung mit Pflicht-, verhandelbaren und Akzeptanzkriterien, der Architekt bewertet sie in drei Stufen mit Kosten, der PO entscheidet den Kompromiss innerhalb seiner Befugnisse oder legt vor. Dann ruft der Lead der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `feature/<name>`, abgezweigt vom Basis-Branch aus `.keel/config.yaml` (`git.base_branch`, etwa `develop` oder `staging`). Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf in die Basis: Merge, Abnahmetests in die Regressionssuite, Branch weg. Der Weg von der Basis nach `main` bleibt ein manueller Schritt. Bei Testeinspruch, erschöpftem Budget oder Befunden nach zwei Review-Runden schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
 
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>/`.
 
@@ -68,4 +70,4 @@ Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt D
 
 ## Stand
 
-Alle vier Scheiben gebaut und im Beispielprojekt erprobt: Skelett, Aufgabenzyklus, Tagesrhythmus, Lernschleife. Ab jetzt zählt Betrieb: Korridore kalibrieren, Coach-Vorschläge entscheiden, Rollen-Prompts nachschärfen. Offen: Linear-Adapter, Compliance als Agent (Datenschutz), Architekt als eigene Rolle, Basisregel-Pakete pro Sprache.
+Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Compliance als Agent für personenbezogene Daten, Basisregel-Pakete pro Sprache, ein Wrapper für unbeaufsichtigte Läufe über Nutzungslimits hinweg.
