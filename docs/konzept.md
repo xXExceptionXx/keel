@@ -606,7 +606,7 @@ claude plugin marketplace add <github-user>/keel
 claude plugin install keel@<marketplace> --scope project
 ```
 
-Mit `--scope project` landet im Projekt nur ein Eintrag unter `extraKnownMarketplaces` und `enabledPlugins` in `.claude/settings.json`. Ein Befehl wie `/keel:init` legt in neuen Projekten die Ordnerstruktur mit leeren Vorlagen an.
+Mit `--scope project` landet im Projekt nur ein Eintrag unter `enabledPlugins` in `.claude/settings.json`. Ein Befehl wie `/keel:init` legt in neuen Projekten die Ordnerstruktur mit leeren Vorlagen an.
 
 Jedes Projekt hat damit vier Berührungspunkte: den Eintrag und die Deny-Regeln in `settings.json`, eine Zeile in `CLAUDE.md`, den Ordner `.keel/` und den Symlink `.claude/skills`.
 

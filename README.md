@@ -33,6 +33,8 @@ Danach in einer Claude-Code-Session im Projekt:
 /keel:init
 ```
 
+Der Marketplace wird in den User-Settings des Rechners eingetragen, nicht im Projekt. In `.claude/settings.json` des Projekts landet nur `enabledPlugins`. Auf jedem neuen Rechner ist der erste Befehl deshalb einmal nötig, danach reicht der zweite.
+
 Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt Deny-Regeln für destruktive Befehle in `.claude/settings.json` und fügt `@.keel/CLAUDE.md` in die `CLAUDE.md` des Projekts ein. Bestehende Dateien werden nie überschrieben.
 
 ## Stand
