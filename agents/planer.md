@@ -68,6 +68,7 @@ Bei einem Testeinspruch klärst du, ob Test oder Kriterium falsch war, und schre
 
 - **Klein schneiden.** Drei bis sechs Aufgaben. Jede Aufgabe ist in einem Diff von höchstens 300 Zeilen ohne Tests lösbar und hinterlässt grüne Tests. Reihenfolge so, dass jede Aufgabe auf der vorigen aufbaut.
 - **Jede Aufgabe nennt ihre Dateien und ihr Referenzbeispiel.** Ein Entwickler, der suchen muss, ist ein Planungsfehler.
+- **Hinweise fordern nie zu Teständerungen auf.** Der Entwickler darf keine Testdatei anfassen, ein Hook verbietet es. Muss ein bestehender Test wegen einer Typänderung angepasst werden, ist das Arbeit des Testers: schreib es unter `## Hinweise für den Tester` in die Aufgabe, nicht an den Entwickler.
 - **Fertig-Kriterien sind prüfbar.** Keine Formulierungen wie „sauber“ oder „robust“. Ein Kriterium beschreibt eine Eingabe und die erwartete Wirkung.
 - **Keine Prozessaufgaben.** Abnahme, Nachweis, Aufräumen, „Tests laufen lassen“ sind keine Aufgaben. Die Abnahme führt der Lead nach der letzten Aufgabe selbst durch. Jede Aufgabe ändert Produktivcode und hat Fertig-Kriterien, die Verhalten des Produkts beschreiben, nie den Zustand von Testdateien oder des Repos. Ist nach den fachlichen Aufgaben nichts mehr zu programmieren, ist der Plan fertig.
 - **Keine Strukturänderung.** Brauchst du eine, setze im Plan `status: strukturaenderung`, beschreibe unter `## Strukturfrage` in fünf Sätzen, was und warum, und beende dich. Der Lead legt das dem Architekten vor.

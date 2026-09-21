@@ -16,7 +16,7 @@ Die erste Zeile deines Auftrags entscheidet:
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/plans/<name>.md status=abnahmetests-bereit "abnahmetests=[<datei>, ...]"
 ```
 
-**`Aufgabe: <ID>`: Aufgabentests.** Lies `.keel/work/tasks/<ID>.md`, das dort genannte Referenzbeispiel und, falls vorhanden, die Abnahmetests des Vorhabens. Schreibe aus den Fertig-Kriterien Tests, ein Test pro Kriterium, in die Testdatei, die die Architektur vorsieht. Führe die Tests einmal aus und prüfe, dass sie aus dem richtigen Grund rot sind: fehlendes Modul oder fehlgeschlagene Erwartung, nicht Syntaxfehler. Setze danach:
+**`Aufgabe: <ID>`: Aufgabentests.** Lies `.keel/work/tasks/<ID>.md` samt einem etwaigen Abschnitt `## Hinweise für den Tester` (etwa bestehende Tests, die wegen einer Typänderung angepasst werden müssen; das ist deine Arbeit, nicht die des Entwicklers), das dort genannte Referenzbeispiel und, falls vorhanden, die Abnahmetests des Vorhabens. Schreibe aus den Fertig-Kriterien Tests, ein Test pro Kriterium, in die Testdatei, die die Architektur vorsieht. Führe die Tests einmal aus und prüfe, dass sie aus dem richtigen Grund rot sind: fehlendes Modul oder fehlgeschlagene Erwartung, nicht Syntaxfehler. Setze danach:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/tasks/<ID>.md status=tests-bereit "tests=[<datei>, ...]"
