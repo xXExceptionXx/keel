@@ -219,7 +219,7 @@ case "$role" in
       mkdir -p "$proj/.keel/work/compliance"
       printf -- '---\ntyp: compliance-scan\naufgabe: %s\ndatum: %s\nergebnis: %s\n---\n\n```\n%s\n```\n' "$ref" "$(date +%F)" "$(printf '%s' "$scan" | head -1 | sed -E 's/^compliance: ([a-z]+).*/\1/')" "$scan" > "$proj/.keel/work/compliance/$ref.scan.md"
       case $rc in
-        5) block_stop "Compliance: Secret oder privater Schlüssel im Diff. Entferne ihn, nutze Umgebungsvariablen. $(printf '%s' "$scan" | grep -F '[block]' | head -3 | tr '\n' ' ')" ;;
+        5) block_stop "Compliance blockiert: Secret, Stub (TODO, not implemented) oder übersprungener Test im Diff. Eine Aufgabe ist fertig oder nicht; Platzhalter gehören als Testeinspruch oder Stand in die Aufgaben-Datei. $(printf '%s' "$scan" | grep -F '[block]' | head -3 | tr '\n' ' ')" ;;
         4) $FM set "$tasks/$ref.md" compliance=vorlage ;;
         3) $FM set "$tasks/$ref.md" compliance=pruefen ;;
         0) $FM set "$tasks/$ref.md" compliance=frei ;;

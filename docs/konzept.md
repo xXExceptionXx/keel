@@ -680,6 +680,8 @@ Startpunkt der Referenzliste für die Umfeld-Recherche des System-Coachs.
 - [Building a C compiler with a team of parallel Claudes](https://www.anthropic.com/engineering/building-c-compiler) – Anthropic, 16 parallele Agenten, Lehren zu Tests, Kontext und Rollen
 - [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) – Anthropic, Fehlermuster über mehrere Sessions und Gegenmaßnahmen
 - [Scaling Managed Agents](https://anthropic.com/engineering/managed-agents) – Anthropic, warum Schutzmaßnahmen mit neuen Modellen veralten
+- [Harness design for long-running application development](https://www.anthropic.com/engineering/harness-design-long-running-apps) – Anthropic, Planer, Generator, Evaluator, Feature-Liste als Vertrag
+- [Don't Build Multi-Agents](https://cognition.com/blog/dont-build-multi-agents) – Cognition, implizite Entscheidungen zwischen Agenten
 - [Engineering at Anthropic](https://www.anthropic.com/engineering) – laufende Beiträge zu Agenten und Harnesses
 - [Orchestrate teams of Claude Code sessions](https://code.claude.com/docs/en/agent-teams) – Claude-Code-Doku zu Agent Teams
 - [Scaling long-running autonomous coding](https://cursor.com/blog/scaling-agents) – Cursor, Planer, Worker und Judge

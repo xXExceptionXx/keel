@@ -45,6 +45,12 @@ review_runde: 0
 
 ## Hinweise für den Entwickler
 
+<Nur was der Entwickler wissen muss und nicht aus dem Referenzbeispiel ablesen kann. Verweise auf `## Entscheidungen` früherer Aufgaben, wenn eine Folgeaufgabe darauf aufbaut.>
+
+## Entscheidungen
+
+<leer, füllt der Entwickler>
+
 <Nur was der Entwickler wissen muss und nicht aus dem Referenzbeispiel ablesen kann.>
 ```
 

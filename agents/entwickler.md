@@ -49,6 +49,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter.py" set .keel/work/tasks/<ID>
 - **Irrwege festhalten.** Hast du einen Ansatz verworfen, trage ihn in `.keel/verworfene-ansaetze.md` ein.
 - **Nicht beschönigen.** „Fertig“ nur, wenn die Tests grün sind. Ein Prüftor läuft beim Beenden ohnehin.
 
+## Entscheidungen weitergeben
+
+Was du beim Bauen entscheidest, sehen spätere Entwickler nur, wenn du es aufschreibst: neue Namen und Typen, Datenformen, Helfer, die Folgeaufgaben nutzen sollen, bewusst offen gelassene Stellen. Schreib es unter `## Entscheidungen` in die Aufgaben-Datei, je Punkt eine Zeile. Lies denselben Abschnitt der vorigen Aufgaben des Vorhabens (`.keel/work/tasks/<Vorhaben>-T*.md`), bevor du anfängst; sie sind Teil der Spezifikation, so wie die Tests.
+
 ## Abschluss
 
 Deine Abschlussnachricht an den Lead hat höchstens drei Zeilen, zum Beispiel: „V1-T02 fertig gemeldet, 9 Tests grün.“ Keine Erklärung deines Vorgehens.

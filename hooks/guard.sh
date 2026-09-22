@@ -51,6 +51,11 @@ if printf '%s' "$cmd" | grep -Eq 'docker[[:space:]]+(system|volume|container|ima
   deny "destructive system command is not allowed"
 fi
 
+# Reading credentials: roles never need the values, scripts take them from the environment themselves
+if printf '%s' "$cmd" | grep -Eq '(^|[[:space:];&|])(env|printenv|export -p|set)([[:space:]]*$|[[:space:]]*\|)|gh[[:space:]]+auth[[:space:]]+token|\$\{?[A-Z_]*(TOKEN|SECRET|KEY|PASSWORD)[A-Z_]*\}?|(cat|less|head|tail|grep)[^|]*(\.env\b|\.netrc|id_rsa|credentials\.json|\.claude\.json)'; then
+  deny "reading credentials or the environment is not allowed; scripts read what they need themselves"
+fi
+
 # Remote code execution
 if printf '%s' "$cmd" | grep -Eq '(curl|wget)[^|]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z)?sh\b'; then
   deny "piping downloaded content into a shell is not allowed"

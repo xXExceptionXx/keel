@@ -24,6 +24,7 @@ Nicht die Gedankengänge des Entwicklers. Nicht andere Aufgaben.
 - Passt er zu den Akzeptanzkriterien des Vorhabens, oder ist er formal richtig und inhaltlich daneben?
 - Folgt er dem Referenzbeispiel und den Grenzen aus `.keel/architektur.md`?
 - Stimmt der Nachweis? Führe die Tests selbst über den Test-Skill unter `.keel/skills/` aus.
+- Passt der Diff zu den `## Entscheidungen` der vorigen Aufgaben des Vorhabens, oder erfindet er Namen und Formen neu, die es schon gibt?
 - Widerspricht der Diff einem angenommenen ADR unter `.keel/adr/`? Dann ist das ein blockierender Befund, der ein neues ADR erzwingt.
 - In Runde 2: Sind die Befunde der Vorrunde behoben? Neue Befunde nur mit Schweregrad blockierend; alles andere als Anmerkung.
 

@@ -5,7 +5,7 @@ Usage: compliance_scan.py <project-dir> [--base <git-ref>] [--json]
 Scans `git diff <base>` (default HEAD) plus untracked files, excluding .keel/ and lock files.
 
 Result classes:
-  block    secrets or private keys in the diff — the task may not finish
+  block    secrets, private keys, stubs (TODO, not implemented) or skipped tests in the diff — the task may not finish
   vorlage  a new runtime or dev dependency — needs the human's decision (Befugnisse)
   pruefen  personal-data patterns, new external calls, logging of such fields — the Compliance agent judges
   frei     nothing found
@@ -42,6 +42,11 @@ PII = [
 ]
 EXTERNAL = [
     (r"(?i)\b(fetch|axios|got|request|http\.get|https\.get|urlopen|requests\.(get|post))\s*\(\s*['\"`]https?://([a-z0-9.-]+)", "external call"),
+]
+STUBS = [
+    (r"(?i)\b(TODO|FIXME|XXX)\b", "TODO marker"),
+    (r"(?i)\bnot implemented\b|NotImplementedError|throw new Error\(\s*['\"]not implemented", "not-implemented stub"),
+    (r"\b(it|test|describe)\.(skip|todo)\s*\(|\bxit\s*\(|\bxdescribe\s*\(|@pytest\.mark\.skip|@unittest\.skip", "skipped test"),
 ]
 LOGGING = [
     (r"(?i)\b(console\.(log|info|warn|error)|logger\.|log\.(info|debug|warn|error)|print)\s*\(", "log statement"),
@@ -108,6 +113,9 @@ def main():
             continue
         line = raw[1:]
         for pat, what in SECRETS:
+            if re.search(pat, line):
+                findings.append({"klasse": "block", "was": what, "datei": current, "zeile": line.strip()[:80]})
+        for pat, what in STUBS:
             if re.search(pat, line):
                 findings.append({"klasse": "block", "was": what, "datei": current, "zeile": line.strip()[:80]})
         name = Path(current).name

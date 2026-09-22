@@ -50,6 +50,7 @@ vorschlaege: 2
 ## Regeln
 
 - **Nur bei gemessenem Problem, offenem Risiko oder deutlicher Vereinfachung.** Etwas ist nicht deshalb ein Vorschlag, weil es neu ist.
+- **Rückbau ist ein Vorschlag wie Einbau.** Zähle aus `events.jsonl`, welche Schutzmaßnahmen ausgelöst haben (`stop_blocked` nach Grund, `budget_exhausted`, `context_alarm`, Guard- und Gate-Ablehnungen aus `hooks.jsonl`). Eine Maßnahme, die über zwei Coach-Läufe nie ausgelöst hat, ist ein Kandidat für Abschaltung; schlag sie mit Hypothese vor. Nach einem Modellwechsel prüfst du das für alle Maßnahmen, weil Schutz für ein altes Modell beim neuen totes Gewicht sein kann.
 - **Korridore kalibrieren ist ein Vorschlag**, keine Änderung. Hältst du einen Korridor für falsch gesetzt, schlag den neuen Wert mit Begründung vor; er steht in `.keel/config.yaml` unter `korridore`.
 - **Du änderst nichts.** Keine Prompts, keine Hooks, keine Korridore, keine Regeln. Vorlagen sind dein einziger Hebel.
 - **Höchstens drei Vorlagen pro Lauf.** Mehr entscheidet niemand in zehn Minuten.
