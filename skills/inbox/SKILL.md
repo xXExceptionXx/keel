@@ -14,7 +14,7 @@ Sammle:
 2c. **Epics:** Dateien unter `.keel/work/epics/`: Titel, Status, Zahl der Vorhaben integriert/gesamt aus der Tabelle. Status `leitentscheidungen-offen` oder `kurskorrektur` fett; die zugehörigen Vorlagen stehen unter 1.
 3. **Blockiert:** Pläne mit Status `blockiert` oder `strukturaenderung`, Aufgaben mit Status `neuschnitt`, `testeinspruch`, `budget-erschoepft`, `reparatur`.
 4. **Letzter Prüfbericht:** neueste Datei unter `.keel/work/audit/`, Status und Datum.
-5. **Backlog-Vorschläge:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/backlog.py" list --status vorgeschlagen`, je Element ID, Titel, Herkunft. Der Mensch setzt sie mit `status <id> bereit` oder `verworfen`.
+5. **Backlog-Vorschläge:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/backlog.py" list --status vorgeschlagen`, je Element ID, Titel, Herkunft. Elemente, die zu einem Epic gehören (Body `Epic:`), werden mit dem Epic bereit und hier nur mit Verweis auf das Epic genannt. Der Mensch setzt sie mit `status <id> bereit` oder `verworfen`.
 6. **ADR-Entwürfe:** Dateien unter `.keel/adr/` mit Status `Proposed`. Der Mensch nimmt an mit `status: Accepted` oder lehnt ab mit `status: Rejected`.
 7. **Kennzahlen:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/metrics.py" "$PWD" --json | jq '{verletzungen, rollenlaeufe}'`. Bei Verletzungen größer 0: „Korridore verletzt, `/keel:coach` empfohlen“.
 8. **Delegierte ADRs:** Dateien unter `.keel/adr/` mit Status `Accepted (delegiert)`, die jünger als sieben Tage sind.

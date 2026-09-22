@@ -30,7 +30,7 @@ Der PO und der Supervisor lesen diese Liste wörtlich. Was hier steht, entscheid
 
 - Zielbild, Nicht-Ziele, Rangfolge der Qualitätsmerkmale, diese Befugnisse, die Reihenfolge der Roadmap
 - Kurskorrekturen an Leitentscheidungen eines Epics
-- Jede Änderung an einem **exportierten** Typ, einer exportierten Funktion oder einem Barrel eines Features, das schon **externe Aufrufer** hat. Ergänzen zählt als Ändern: ein neues Pflichtfeld, ein neues Literal in einer Zustands- oder Schrittmenge, ein neuer Parameter.
+- Jede Änderung an einem **exportierten** Typ, einer exportierten Funktion oder einem Barrel eines Features, das schon **externe Aufrufer** hat. Externe Aufrufer gibt es, sobald das Paket veröffentlicht ist oder eine andere Codebasis es einbindet; vor der ersten Veröffentlichung (etwa `private: true`, Version unter 1.0) gilt: keine externen Aufrufer, solche Änderungen sind Supervisor-Stufe. Ergänzen zählt als Ändern: ein neues Pflichtfeld, ein neues Literal in einer Zustands- oder Schrittmenge, ein neuer Parameter.
 - Datenmodell: neue Tabellen, neue Spalten, geänderte Beziehungen, Migrationen
 - Architekturgrenzen: neue Schicht, neues Feature-Verzeichnis, neue Abhängigkeitsrichtung zwischen Features
 - Neue Laufzeitabhängigkeit, externe Dienste, Kosten, Verträge

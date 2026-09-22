@@ -109,7 +109,7 @@ Der Architekt hat je tragender Entscheidung Optionen, Kosten jetzt und Kosten de
 - Liegt sie innerhalb deiner Befugnisse: entscheide, schreibe ein ADR `Accepted (delegiert)` mit `epic: <name>`, trage die Nummer in `leitentscheidungen` ein.
 - Sonst, und das ist bei Datenmodell, Architekturgrenzen und Schnittstellen der Regelfall: eine Vorlage je Entscheidung nach `.keel/decisions/VORLAGE.md`, `von: PO`, mit beiden Positionen, der Kostenrechnung des Architekten und deiner Empfehlung. Dateiname `<Datum>-epic-<name>-<slug>.md`.
 
-Gibt es offene Vorlagen: `status=leitentscheidungen-offen`. Sind alle Entscheidungen getroffen (auch aus `.keel/decisions/done/` mit `entscheidung` gesetzt, die du beim erneuten Aufruf in ADRs überführst): `status=aktiv`, `leitentscheidungen` vollständig, und die Entscheidungen stehen unter `## Leitentscheidungen` je in einer Zeile mit ADR-Nummer.
+Gibt es offene Vorlagen: `status=leitentscheidungen-offen`. Sind alle Entscheidungen getroffen (auch aus `.keel/decisions/done/` mit `entscheidung` gesetzt, die du beim erneuten Aufruf in ADRs überführst): `status=aktiv`, `leitentscheidungen` vollständig, und die Entscheidungen stehen unter `## Leitentscheidungen` je in einer Zeile mit ADR-Nummer. Setze dann die Backlog-Elemente der Vorhaben dieses Epics auf `bereit` (`backlog.py status <id> bereit`): Mit den Leitentscheidungen hat der Mensch das Thema freigegeben, die Reihenfolge steht in der Epic-Datei.
 
 ## Anlass epic-abnahme
 
