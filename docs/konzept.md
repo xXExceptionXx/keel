@@ -19,39 +19,37 @@ Das Setup soll mir erlauben, strategisch zu steuern: Ich entscheide über das Wa
 
 ## Hierarchie und Beziehungen
 
-Ich spreche nur mit dem Product Owner und lese den Bericht des Auditors. Alles darunter läuft über feste Übergaben.
+Ich spreche im Alltag mit dem Supervisor, im Morgen-Briefing, und schreibe Backlog-Einträge; ich lese die Berichte von Auditor und Coach. Alles darunter läuft über feste Übergaben. Stand 2026-09-22; das ursprüngliche Diagramm ohne Supervisor, Compliance-Rolle und Epic-Ebene ist durch `docs/system.md` ersetzt.
 
 ```mermaid
 flowchart TD
-    ICH["Ich<br/>Zielbild, Maßstäbe, Befugnisse"]
-    COACH["System-Coach<br/>Lernschleife, monatlich"]
-    AUD["Auditor<br/>tägliche Prüfung"]
-    PO["Product Owner<br/>Was und Warum"]
-    ARC["Architekt<br/>Systemstruktur"]
-    LEAD["Lead<br/>Orchestrierung"]
+    ICH["Ich<br/>Zielbild, Rangfolge, Befugnisse, Roadmap, Richtung"]
+    SUP["Supervisor<br/>rechte Hand, entscheidet seine Stufe, Briefing"]
+    COACH["System-Coach<br/>Lernschleife, bei Fälligkeit"]
+    AUD["Auditor<br/>tägliche Prüfung, Wochenlauf"]
+    LEAD["Lead<br/>/keel:start, /keel:stop, taktet"]
+    PO["Product Owner<br/>Was und Warum, Abnahme"]
+    ARC["Architekt<br/>Bewertung, Epic-Bewertung, Bestand, Drift"]
     PLAN["Planer<br/>schneidet Aufgaben"]
     TEST["Tester<br/>Tests vorab"]
     DEV["Entwickler<br/>eine kleine Aufgabe"]
     REV["Reviewer<br/>prüft pro Aufgabe"]
-    COMP["Compliance<br/>Hooks + Ermessen"]
+    COMP["Compliance<br/>Scan als Hook, Rolle bei Ermessen"]
 
-    ICH -->|Zielbild, Backlog, Entscheidungen| PO
-    PO -->|Vorlagen| ICH
-    AUD -->|Prüfbericht| ICH
-    COACH -->|Justierungsvorschläge| ICH
-    PO <-->|max. 2 Runden| ARC
-    PO -->|Problemstellung + Kriterien| LEAD
-    LEAD -->|Abnahmetests zuerst| TEST
+    ICH <-->|Briefing| SUP
+    ICH -->|Backlog-Eintrag| LEAD
+    LEAD -->|Vorlage| SUP
+    SUP -.->|richtungsweisend| ICH
+    AUD -.->|Prüfbericht| ICH
+    COACH -.->|Justierungsvorschläge| ICH
+    LEAD --> PO
+    LEAD --> ARC
+    PO <-.->|max. 2 Runden| ARC
     LEAD --> PLAN
-    PLAN -.->|Strukturänderung| ARC
-    PLAN -->|Aufgabenliste| TEST
-    TEST --> DEV
-    DEV --> REV
-    REV -.->|Befunde, max. 2 Runden| DEV
-    DEV -.->|Testeinspruch, Budget erschöpft| PLAN
-    REV --> COMP
-    COMP -->|fertig| LEAD
-    LEAD -->|Abnahmenachweis| PO
+    LEAD -->|Abnahmetests, Aufgabentests| TEST
+    LEAD --> DEV
+    LEAD --> REV
+    LEAD --> COMP
 ```
 
 Gestrichelte Linien sind Rückläufe. Sie sind genauso feste Übergaben wie der Weg nach vorn, siehe Aufgabenzyklus.
@@ -61,16 +59,17 @@ Auditor und System-Coach stehen bewusst außerhalb der Befehlskette und berichte
 | Rolle | Ebene | Berichtet an | Läuft wann | Lebensdauer |
 | --- | --- | --- | --- | --- |
 | Ich | Strategie | – | täglich, feste Zeitfenster | – |
-| System-Coach | System | Ich | monatlich oder bei Korridor-Verletzung | kurz, pro Lauf |
+| Supervisor | Richtung innerhalb der Roadmap | Ich | bei jeder Vorlage, morgens im Briefing | kurz, pro Anlass; Briefing als Session |
+| System-Coach | System | Ich | bei Fälligkeit: Tage und Rollenläufe über den Schwellen | kurz, pro Lauf |
 | Auditor | Kontrolle | Ich | einmal täglich | kurz, pro Prüfung |
-| Product Owner | Produkt | Ich | bei Anlass, vom Lead aufgerufen | kurz, pro Anlass |
+| Product Owner | Produkt | Supervisor, Ich | Problemstellung, Epic-Skizze, Abstimmung, Klärung, Abnahme; vom Lead aufgerufen | kurz, pro Anlass |
 | Architekt | System | PO | bei Bedarf, wöchentlich | kurz, pro Anlass |
 | Lead | Ablauf | PO | durchgehend als Taktgeber | bis zum nächsten Zwischenabschluss |
 | Planer | Feature | Lead | pro Vorhaben | kurz, pro Vorhaben |
 | Tester | Vorhaben und Aufgabe | Lead | pro Vorhaben (Abnahmetests), pro Aufgabe (Aufgabentests) | kurz, pro Anlass |
 | Entwickler | Aufgabe | Lead | pro Aufgabe | kurz, pro Aufgabe |
 | Reviewer | Aufgabe | Lead | pro Aufgabe | kurz, pro Aufgabe |
-| Compliance | Aufgabe | Lead | pro Aufgabe, meist als Hook | kurz, pro Aufgabe |
+| Compliance | Aufgabe | Lead | Scan beim Beenden jedes Entwicklers, Rolle nur bei Ermessensbefunden | kurz, pro Aufgabe |
 
 Autorität und Ablaufsteuerung sind getrennt: Der PO steht über dem Lead, weil er über das Was entscheidet. Der Lead ist aber der Taktgeber, der ihn bei Anlass aufruft. Der Lead ist damit die einzige langlebige Rolle.
 

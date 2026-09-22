@@ -2,7 +2,7 @@
 
 Schlankes Agentensystem für autonome Softwareentwicklung als Claude-Code-Plugin. Der Mensch entscheidet über das Was, die Rollen lösen das Wie. Zustand lebt in Dateien, Übergaben sind feste Artefakte, Prüftore blockieren statt zu bitten.
 
-Das vollständige Konzept steht in [docs/konzept.md](docs/konzept.md), sechs Diagramme zu Rollen, Tagesrhythmus, Zuständen, Hooks und Lernschleife in [docs/system.md](docs/system.md).
+Das vollständige Konzept steht in [docs/konzept.md](docs/konzept.md), sieben Diagramme zu Rollen, Fälligkeiten, Zuständen, Epics, Hooks, Supervisor- und Lernschleife in [docs/system.md](docs/system.md).
 
 ## Aufbau
 

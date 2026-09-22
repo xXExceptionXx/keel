@@ -63,8 +63,8 @@ def main():
 
     # day close-out: commits after the last day tag from a day before today
     last_tag = sh(["git", "tag", "-l", "day-*", "--sort=-creatordate"], project).split("\n")[0] if sh(["git", "tag", "-l", "day-*"], project) else ""
-    rng = f"{last_tag}..HEAD" if last_tag else "HEAD"
-    log = sh(["git", "log", "--format=%cs", rng, "--", ".", ":(exclude).keel"], project)
+    rng = f"^{last_tag}" if last_tag else ""
+    log = sh(["git", "log", "--all", "--format=%cs", rng, "--", ".", ":(exclude).keel"], project) if last_tag else sh(["git", "log", "--all", "--format=%cs", "--", ".", ":(exclude).keel"], project)
     commit_days = sorted({d for d in log.split("\n") if d})
     stale_days = [d for d in commit_days if d < today.isoformat()]
     if stale_days:
@@ -99,7 +99,7 @@ def main():
     # architecture round: days and commits since the last report
     last_arch = newest(project / ".keel" / "work" / "architektur")
     since_arg = f"--since={last_arch.isoformat()}" if last_arch else "--since=1970-01-01"
-    commits = len([l for l in sh(["git", "log", "--format=%h", since_arg, "--", ".", ":(exclude).keel"], project).split("\n") if l])
+    commits = len([l for l in sh(["git", "log", "--all", "--format=%h", since_arg, "--", ".", ":(exclude).keel"], project).split("\n") if l])
     adays = (today - last_arch).days if last_arch else None
     if (adays is None or adays >= th["architektur_tage"]) and commits >= th["architektur_min_commits"]:
         items.append({"art": "architektur", "hart": True, "rolle": "architekt", "grund": f"{adays if adays is not None else 'noch keine'} Tage seit der letzten Wochenrunde, {commits} Commits seitdem", "befehl": "/keel:start führt sie aus"})

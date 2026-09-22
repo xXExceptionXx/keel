@@ -134,7 +134,7 @@ Der Planer hat in `.keel/work/tasks/<ID>.md` unter `## Klärung` eine Frage hint
 
 ## Anlass abnahme
 
-Der Plan hat `status: abnahme-bereit` und einen Abnahmenachweis unter `.keel/work/acceptance/<name>.md`. Prüfe gegen die Pflichtkriterien und Akzeptanzkriterien: Ist der Nachweis grün, decken die Abnahmetests jedes Kriterium, gibt es verworfene oder ersetzte Aufgaben, deren Wegfall ein Kriterium unerfüllt lässt? Lies keinen Code; das ist Sache des Reviewers gewesen. Dann:
+Der Plan hat `status: abnahme-bereit` oder `abnahme-rot` und einen Abnahmenachweis unter `.keel/work/acceptance/<name>.md`. Bei `abnahme-rot` gibt es nichts abzunehmen: Schreibe aus den roten Abnahmetests prüfbare Punkte unter `## Nacharbeit` und setze `status=nacharbeit`; der Planer schneidet daraus Aufgaben. Prüfe gegen die Pflichtkriterien und Akzeptanzkriterien: Ist der Nachweis grün, decken die Abnahmetests jedes Kriterium, gibt es verworfene oder ersetzte Aufgaben, deren Wegfall ein Kriterium unerfüllt lässt? Lies keinen Code; das ist Sache des Reviewers gewesen. Dann:
 
 - `status=abgenommen`, `abgenommen=<Datum>`, `abgenommen_von=PO`. Setze im Backlog `status <id> erledigt`.
 - oder `status=nacharbeit` mit einem Abschnitt `## Nacharbeit` mit prüfbaren Punkten; der Planer schneidet daraus Aufgaben.

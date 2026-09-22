@@ -157,7 +157,8 @@ def main():
         if len(dates) >= 2:
             span = (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[0])).days
             weeks = max(1.0, span / 7)
-    vorlagen_pro_woche = round(len(all_dec) / weeks, 1)
+    human_dec = [d for d in all_dec if d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden")]
+    vorlagen_pro_woche = round(len(human_dec) / weeks, 1)
     durations = []
     for d in done_dec:
         if d.get("datum") and d.get("entschieden"):
@@ -196,7 +197,7 @@ def main():
     audit_avg = round(sum(n for _, n in audits) / len(audits), 1) if audits else None
 
     rows = [
-        ("Meine Aufmerksamkeit", "vorlagen_pro_woche", "Vorlagen pro Woche", vorlagen_pro_woche),
+        ("Meine Aufmerksamkeit", "vorlagen_pro_woche", "Vorlagen an den Menschen pro Woche", vorlagen_pro_woche),
         ("Meine Aufmerksamkeit", "entscheidungsdauer_tage", "Zeit bis zur Entscheidung (Tage)", entscheidungsdauer),
         ("PO-Kalibrierung", "gekippte_delegierte_adrs_prozent", "Gekippte delegierte ADRs (%)", gekippt_prozent),
         ("Supervisor", "gekippte_supervisor_entscheidungen_prozent", "Gekippte Supervisor-Entscheidungen (%)", sup_gekippt_prozent),

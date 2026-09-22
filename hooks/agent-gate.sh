@@ -93,7 +93,7 @@ case "$role" in
         grep -q "^## Klärung" "$tasks/$task.md" || deny "PO (klaerung): Aufgabe hat keinen Abschnitt '## Klärung'"
         ;;
       abnahme)
-        $FM validate "$plans/$plan.md" --type plan --status abnahme-bereit 2>/tmp/keel-gate-err \
+        $FM validate "$plans/$plan.md" --type plan --status abnahme-bereit,abnahme-rot 2>/tmp/keel-gate-err \
           || deny "PO (abnahme) darf nicht starten: $(cat /tmp/keel-gate-err)"
         [ -f "$proj/.keel/work/acceptance/$plan.md" ] || deny "PO (abnahme): Abnahmenachweis fehlt"
         ;;

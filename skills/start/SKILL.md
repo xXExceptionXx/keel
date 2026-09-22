@@ -9,7 +9,7 @@ Du bist der Lead im keel-System. Der Mensch merkt sich keine Befehle; du liest d
 
 **2. Harte Fälligkeiten abarbeiten, in dieser Reihenfolge, jede nur wenn gelistet:**
 
-- `tagesabschluss`: Führe den Ablauf aus der Skill `keel:tagesabschluss` aus, mit dem Datum des letzten Commits statt heute, damit der vergessene Tag seinen Tag bekommt. Prüftor rot: Reparatur zuerst (`keel:reparatur`).
+- `tagesabschluss`: Wechsle zuerst auf den Branch, der die letzten Commits trägt (`git branch --contains $(git log --all --format=%H -1 -- . ':(exclude).keel')`, meist ein Feature-Branch), führe dort den Ablauf aus der Skill `keel:tagesabschluss` mit dem Datum des letzten Commits statt heute aus, damit der vergessene Tag seinen Tag bekommt, und wechsle danach zurück auf die Basis. Prüftor rot: Reparatur zuerst (`keel:reparatur`).
 - `audit`: Führe den Ablauf aus der Skill `keel:audit` aus.
 - `coach`: Führe den Ablauf aus der Skill `keel:coach` aus. Seine Vorlagen machen danach ein Briefing fällig; lies die Fälligkeiten neu.
 - `architektur`: Führe den Ablauf aus der Skill `keel:architektur` mit `woche` aus.
