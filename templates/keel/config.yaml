@@ -43,6 +43,9 @@ korridore:
   diff_zeilen_pro_aufgabe: 20-300
   tokens_pro_aufgabe_k: 0-400
 
+supervisor:
+  model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es
+
 # Fälligkeiten, die /keel:start abarbeitet und die ein Hook bis dahin erzwingt. Nur bei genug Betrieb.
 faelligkeiten:
   coach_tage: 30               # frühestens nach so vielen Tagen …

@@ -20,6 +20,15 @@
         ]
       },
       {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/model-gate.sh\""
+          }
+        ]
+      },
+      {
         "hooks": [
           {
             "type": "command",

@@ -9,6 +9,9 @@ out="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$proj" 2>/dev/null)"; rc=$?
 [ "$rc" -eq 0 ] && [ "$out" = "nichts fällig" ] && exit 0
 if [ "$rc" -ne 0 ]; then
   msg="keel: Fälligkeiten stehen aus, keel-Rollen sind bis dahin gesperrt. Starte /keel:start, es arbeitet sie in Reihenfolge ab. $out"
+  if printf '%s' "$out" | grep -q "briefing"; then
+    msg="$msg Das Briefing braucht das Modell des Supervisors ($($CFG "$proj" supervisor.model claude-fable-5-1)); stelle es vor /keel:start um."
+  fi
 else
   msg="keel: Hinweise ohne Sperre. $out"
 fi

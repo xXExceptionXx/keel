@@ -28,7 +28,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:start` | Liest, was fällig ist, und tut es in Reihenfolge: vergessener Tagesabschluss, Audit, Coach, Architektur-Runde, dann das Briefing mit dem Supervisor, falls eines aussteht. Sonst Tagesstart und das nächste Vorhaben. |
 | `/keel:stop` | Tagesabschluss mit Übergabenotiz und Tag, Audit, ein Satz zu morgen. |
 
-Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
+Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Steht ein Briefing an, muss die Session auf dem Modell des Supervisors laufen; ein Hook prüft das und sagt, wie umgestellt wird. Aus dem Terminal wählt `scripts/keel.sh <projekt>` das Modell selbst und öffnet die Session mit `/keel:start`. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
 
 ## Tagesrhythmus
 
