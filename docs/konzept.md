@@ -580,7 +580,8 @@ Für den sequenziellen Ablauf reichen Subagents. Agent Teams sind nicht nötig u
 | Rollen | Je eine Agent-Definition im Plugin, mit eigenem Prompt und erlaubten Tools, z. B. Reviewer nur lesend. Jede Rolle endet mit einer Abschlussnachricht von höchstens drei Zeilen |
 | Lead | Haupt-Session, die alle Subagents flach und der Reihe nach aufruft, auch den PO |
 | Planer | Subagent mit Lesewerkzeugen und Schreibrecht nur auf die Plan-Datei. Das ersetzt den Plan-Modus, der für die Haupt-Session gedacht ist |
-| Prüftore | Hooks im Plugin: Tests, Compliance-Checks, Frontmatter-Prüfung und Budget beim Abschluss einer Aufgabe |
+| Prüftore | Hooks im Plugin: Tests, Compliance-Checks, Frontmatter-Prüfung und Budget beim Abschluss einer Aufgabe. Die Startbedingungen der Rollen stehen als Tabelle in `scripts/flow.py`; `tests/gate/` prüft das Gate gegen den vorigen Stand |
+| Sichtbarkeit | `/keel:hilfe` erklärt den Stand auf Abruf, `/keel:monitor` zeigt ihn laufend als lokale Webseite; beide lesen nur |
 | Sicherheit | Deny-Regeln in `.claude/settings.json` für destruktive Befehle, Produktions-Credentials nicht in der Umgebung |
 | Kennzahlen-Sperre | Agent-Definitionen können nur Werkzeuge einschränken, keine Pfade. Pfad-Deny-Regeln gelten sessionweit. Die Sperre des Kennzahlen-Ordners für arbeitende Rollen ist deshalb ein PreToolUse-Hook, der Agent-Typ und Pfad prüft und alles außer dem Coach abweist |
 | Tool-Skills | Allgemeine im Plugin, projektspezifische unter `.keel/skills/` mit Symlink aus `.claude/skills/`, jeweils mit Skripten |
@@ -629,6 +630,7 @@ Hinweis: Laut Erfahrungsberichten wird ein Plugin nicht zuverlässig automatisch
 - [x] Kennzahlen aus Artefakten und Rohdaten (`metrics.py`), Kennzahlen-Ordner für arbeitende Rollen per Hook gesperrt, nur der Coach liest ihn (2026-09-21)
 - [ ] Erste Wochen: enger Spielraum für den PO, Vorlagen und Auditor-Befunde beobachten
 - [x] Coach als Rolle mit `/keel:coach`, erster Lauf am 2026-09-21 auf den Daten des ersten Tages; Kalibrierung nach einem Monat echter Nutzung
+- [x] Ablauf-Monitor `/keel:monitor` als lokale Webseite, Startbedingungen der Rollen als gemeinsame Tabelle für Gate und Monitor, Regressionstest für das Gate (2026-09-26, System-ADR 0017). Offen: Erprobung im echten Projekt
 - [ ] Befugnisse und Maßstäbe nachschärfen, Rollen erst bei Überlastung trennen
 
 ## Erkenntnisse aus dem ersten Lauf
@@ -672,6 +674,10 @@ Ergänzt am 2026-09-26. Für die ersten Wochen im echten Projekt stand eine Prox
 ## Modellwechsel
 
 Ergänzt am 2026-09-26, als Opus 5.5 seit Tagen verfügbar war und keel es nicht bemerkt hatte. Jeder Rollenlauf schreibt jetzt sein Modell mit. Läuft eine Rolle auf einem neuen Modell, nennt der Sessionstart das als Hinweis. Nach zehn Läufen auf dem neuen Modell wird der Coach fällig, auch vor Ablauf seiner 30 Tage, vergleicht je Rolle altes und neues Modell und schlägt Änderungen als Vorlage vor. Welches Modell eine Rolle bekommt, steuert keel noch nicht; als nächsten Schritt schlägt System-ADR 0016 Komplexitätsstufen vor: Der Planer stuft jede Aufgabe ein, die Konfiguration ordnet Stufen Modellen zu, und bei Belegen wird eine Stufe höher eskaliert. Siehe System-ADR 0015 und 0016.
+
+## Ablauf-Monitor
+
+Ergänzt am 2026-09-26. keel lief still im Hintergrund: Wer gerade arbeitet, wer als Nächstes dran ist und warum etwas steht, war nur über `/keel:hilfe` oder durch Lesen der Dateien zu erfahren. `/keel:monitor` zeigt das laufend als lokale Webseite: ein Ablaufdiagramm mit jeder Rolle als aktiv, bereit oder gesperrt, die laufende Rolle mit dem Befehl, in dem der Lead sie rief, Fälligkeiten, Vorlagen, einen Ereignisstrom mit den Gründen für Blockaden, je Vorhaben eine Zeitleiste von der Problemstellung bis zur Abnahme und alle Übergaben als lesbare Dokumente. Er beobachtet nur, wie die Hilfe. „Wer kommt als Nächstes“ beantwortet er als Regel, nicht als Vorhersage: bereit ist eine Rolle, deren Startbedingung erfüllt ist; welche davon der Lead ruft, bleibt seine Entscheidung. Damit Anzeige und Gate nicht auseinanderlaufen, stehen die Startbedingungen jetzt in einer Tabelle (`scripts/flow.py`), aus der beide lesen, und ein Regressionstest (`tests/gate/`) vergleicht das Gate vor jeder Änderung mit dem vorigen Stand. Mit `monitor.autostart: true` starten ihn die Befehle, die das System arbeiten lassen, von selbst mit. Siehe System-ADR 0017.
 
 ## Supervisor und Morgen-Briefing
 

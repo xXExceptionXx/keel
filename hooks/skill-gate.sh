@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# PreToolUse on Skill and UserPromptSubmit (a typed "/keel:<skill>" never passes the Skill tool), two duties:
+# PreToolUse on Skill and UserPromptSubmit (a typed "/keel:<skill>" never passes the Skill tool), three duties:
 # 1. /keel:hilfe marks the session as a helper session; agent-gate then denies every role start in it.
 # 2. The briefing is a conversation with the Supervisor and must run on the Supervisor's model. When
 #    /keel:briefing or /keel:start (with a briefing due) is invoked, read the session's model from the
 #    transcript and refuse with instructions if it is not the configured one.
+# 3. The start commands start the flow monitor when monitor.autostart is true (System-ADR 0017).
 set -uo pipefail
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -20,6 +21,11 @@ if [ "$event" = "UserPromptSubmit" ]; then
 else
   skill="$(field '.tool_input.skill')"
 fi
+# The commands that set the system to work also start the flow monitor when monitor.autostart is true.
+case "$skill" in
+  keel:start|start|keel:vorhaben|vorhaben|keel:epic|epic|keel:tagesstart|tagesstart|keel:briefing|briefing)
+    python3 "$PLUGIN_ROOT/scripts/monitor.py" "$(project_dir)" --ensure --if-autostart --quiet --plugin-root "$PLUGIN_ROOT" >/dev/null 2>&1 || true ;;
+esac
 case "$skill" in
   keel:hilfe|hilfe)
     sid="$(field '.session_id')"

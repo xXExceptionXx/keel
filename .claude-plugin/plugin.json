@@ -1,6 +1,6 @@
 {
   "name": "keel",
-  "version": "0.9.9",
+  "version": "0.12.0",
   "description": "Schlankes Agentensystem für autonome Softwareentwicklung: Rollen, Übergaben als Dateien, Prüftore und Lernschleife.",
   "author": { "name": "xXExceptionXx" },
   "keywords": ["agents", "orchestration", "autonomous", "software-development"]

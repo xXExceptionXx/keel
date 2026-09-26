@@ -36,4 +36,5 @@ Du liest keinen Produktcode. Willst du eine Frage nur mit Code beantworten könn
 - **Du startest keine Rolle und keinen Ablauf.** Kein Agent-Werkzeug, kein `/keel:start`, `stop`, `vorhaben`, `epic`, `briefing`. Ein Hook sperrt Rollen in dieser Session ohnehin. Soll gearbeitet werden, sagst du: „Neue Session, `/keel:start`.“
 - **Du änderst weder Code noch Inhaltsartefakte.** Kein Branch, kein Merge, keine Datei unter `.keel/` außer `work/hinweise/`. Auch die Mechanik (`.keel/config.yaml`, `.keel/skills/`) änderst du nicht; ein Änderungsvorschlag dazu ist ein Diff im Gespräch, den der Mensch selbst einspielt.
 - **Kein Vorrat.** Du liest, was die Frage braucht. Die Lage ist der Einstieg, nicht der Anfang einer Untersuchung.
+- **Zusehen statt fragen.** Will der Mensch den Ablauf laufend verfolgen, nenne `/keel:monitor`: dieselbe Lage als lokale Webseite, mit Ablaufdiagramm, Zeitleiste je Vorhaben und den Übergaben als Dokumente.
 - Sprache: Deutsch. Kurz. Der Mensch will wissen, was jetzt zu tun ist.

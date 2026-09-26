@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>keel-Monitor</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #667085; --line: #e3e6eb;
+  --accent: #2f6fdf; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --info: #6b46c1;
+  --chip: #eef1f5; --code: #f1f3f6; --active-bg: #e8f0fe;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b; --panel: #1a1e26; --text: #e4e7ec; --muted: #98a2b3; --line: #2b313c;
+    --accent: #6ea0ff; --ok: #4cc38a; --warn: #e0b04f; --bad: #f07070; --info: #a78bfa;
+    --chip: #232833; --code: #222733; --active-bg: #1f2b44;
+  }
+  .badge.hart, .badge.bad, .badge.soft, .badge.warn, .badge.ok, .badge.info { color: #12151b; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 16px; margin: 0; }
+header .meta { color: var(--muted); font-size: 13px; }
+header .live { margin-left: auto; font-size: 12px; color: var(--muted); }
+header .live.err { color: var(--bad); }
+main { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.3fr) minmax(280px, 1fr); gap: 12px; padding: 12px 16px; align-items: start; }
+@media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } .col-docs { grid-column: 1 / -1; } }
+@media (max-width: 720px) { main { grid-template-columns: 1fr; } }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; min-width: 0; }
+section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+section h2 .count { background: var(--chip); color: var(--text); border-radius: 10px; padding: 0 7px; font-size: 11px; letter-spacing: 0; }
+.empty { color: var(--muted); font-style: italic; }
+a, .link { color: var(--accent); cursor: pointer; text-decoration: none; }
+a:hover, .link:hover { text-decoration: underline; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+.muted { color: var(--muted); }
+
+/* now */
+.active { border-left: 3px solid var(--accent); background: var(--active-bg); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+.active .role { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 var(--accent); animation: pulse 1.6s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(47,111,223,.5); } 70% { box-shadow: 0 0 0 8px rgba(47,111,223,0); } 100% { box-shadow: 0 0 0 0 rgba(47,111,223,0); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin-top: 6px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+/* flow diagram */
+.flow-section { grid-column: 1 / -1; margin-bottom: 0; }
+.legend { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; display: flex; gap: 4px 10px; align-items: center; flex-wrap: wrap; }
+.lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; border: 2px solid; margin-right: -6px; }
+.lg.aktiv { border-color: var(--accent); background: var(--active-bg); }
+.lg.bereit { border-color: var(--ok); }
+.lg.gesperrt { border-color: var(--bad); }
+.lg.ruht { border-color: var(--line); }
+.lane { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; padding: 8px 0; border-top: 1px dashed var(--line); }
+.lane:first-child { border-top: 0; padding-top: 0; }
+.lane-label { flex: 0 0 110px; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding-top: 8px; }
+@media (max-width: 720px) { .lane-label { flex-basis: 100%; padding-top: 0; } }
+.node { border: 2px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 112px; max-width: 220px; font-size: 12.5px; line-height: 1.35; background: var(--panel); }
+.node b { font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+.node .st { color: var(--muted); display: block; }
+.node .refs { display: block; margin-top: 2px; overflow-wrap: anywhere; }
+.node .last { display: block; color: var(--muted); font-size: 11.5px; }
+.node.aktiv { border-color: var(--accent); background: var(--active-bg); }
+.node.bereit { border-color: var(--ok); }
+.node.bereit .st { color: var(--ok); }
+.node.gesperrt { border-color: var(--bad); border-style: dashed; }
+.node.gesperrt .st { color: var(--bad); }
+.node.ruht { opacity: .75; }
+.node.pseudo { border-style: dotted; color: var(--muted); display: flex; align-items: center; }
+.arrow { align-self: center; color: var(--muted); font-size: 16px; }
+
+/* roles */
+.roles { display: flex; flex-wrap: wrap; gap: 6px; }
+.rolechip { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--chip); font-size: 12.5px; line-height: 1.3; }
+.rolechip b { display: block; font-weight: 600; }
+.rolechip small { color: var(--muted); }
+.rolechip.on { border-color: var(--accent); background: var(--active-bg); }
+.rolechip.bad small { color: var(--bad); }
+
+/* lists */
+ul.plain { list-style: none; margin: 0; padding: 0; }
+ul.plain li { padding: 5px 0; border-top: 1px solid var(--line); }
+ul.plain li:first-child { border-top: 0; }
+.badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--chip); color: var(--text); white-space: nowrap; vertical-align: 1px; }
+.badge.hart, .badge.bad { background: var(--bad); color: #fff; }
+.badge.soft, .badge.warn { background: var(--warn); color: #fff; }
+.badge.ok { background: var(--ok); color: #fff; }
+.badge.info { background: var(--info); color: #fff; }
+
+/* events */
+.filters { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; text-transform: none; letter-spacing: 0; }
+.filters button { font: inherit; font-size: 11.5px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 12px; padding: 1px 8px; cursor: pointer; }
+.filters button.on { background: var(--chip); color: var(--text); border-color: var(--muted); }
+.ev { display: grid; grid-template-columns: 64px 18px 1fr; gap: 6px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.ev:first-child { border-top: 0; }
+.ev .t { color: var(--muted); font-family: var(--mono); font-size: 11.5px; padding-top: 1px; }
+.ev .i { text-align: center; }
+.ev .reason { color: var(--muted); display: block; overflow-wrap: anywhere; }
+.ev.k-denied .i, .ev.k-stop_blocked .i { color: var(--bad); }
+.ev.k-budget_exhausted .i { color: var(--warn); }
+.ev.k-befehl { background: linear-gradient(90deg, var(--chip), transparent 60%); }
+#events { max-height: calc(100vh - 150px); overflow: auto; }
+
+/* docs */
+details.group { border-top: 1px solid var(--line); padding: 4px 0; }
+details.group:first-of-type { border-top: 0; }
+details.group summary { cursor: pointer; font-family: var(--mono); font-size: 12.5px; padding: 3px 0; }
+details.group summary .count { color: var(--muted); }
+.doc { display: flex; gap: 6px; align-items: baseline; padding: 3px 0 3px 14px; font-size: 13px; }
+.doc .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+input.search { width: 100%; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); margin-bottom: 6px; }
+
+/* viewer */
+#viewer { position: fixed; inset: 0 0 0 auto; width: min(780px, 100%); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.15); transform: translateX(100%); transition: transform .18s ease; z-index: 10; display: flex; flex-direction: column; }
+#viewer.open { transform: none; }
+#viewer .bar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+#viewer .bar .path { font-family: var(--mono); font-size: 12.5px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#viewer .bar button { font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--text); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+#viewer .content { overflow: auto; padding: 12px 20px 40px; }
+.fm { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; background: var(--code); border-radius: 6px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+.fm dt { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.fm dd { margin: 0; overflow-wrap: anywhere; }
+.md h1 { font-size: 20px; } .md h2 { font-size: 17px; border-bottom: 1px solid var(--line); padding-bottom: 3px; } .md h3 { font-size: 15px; }
+.md code { font-family: var(--mono); font-size: 12.5px; background: var(--code); padding: 1px 4px; border-radius: 3px; }
+.md pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow: auto; }
+.md pre code { background: none; padding: 0; }
+.md table { border-collapse: collapse; display: block; overflow: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
+.md blockquote { margin: 0; padding: 2px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+.md hr { border: 0; border-top: 1px solid var(--line); }
+.md .diagram { overflow: auto; margin: 8px 0; }
+.md .diagram svg { max-width: 100%; height: auto; }
+.md pre.mermaid::before { content: "Diagramm (Mermaid-Quelltext)"; display: block; color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; margin-bottom: 4px; }
+#scrim { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 9; display: none; }
+
+/* vorhaben timeline */
+.vh-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; margin-bottom: 4px; }
+.vh-head h2 { margin: 0; font-size: 20px; }
+.vh-links { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.steps { display: flex; flex-wrap: wrap; gap: 10px 4px; margin: 8px 0 10px; padding: 0; list-style: none; counter-reset: step; }
+.steps li { flex: 1 1 100px; hyphens: manual; border-top: 4px solid var(--line); padding: 6px 4px 0; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.steps li b { display: block; color: var(--text); font-weight: 600; }
+.steps li.done { border-color: var(--ok); }
+.steps li.now { border-color: var(--accent); color: var(--text); }
+.steps li.now.blocked { border-color: var(--warn); }
+.next { background: var(--active-bg); border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 13.5px; }
+.next small { color: var(--muted); display: block; font-size: 11.5px; }
+h3.sub { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+table.tasks { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.tasks th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+table.tasks td { border-bottom: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+table.tasks tr.out td { opacity: .55; }
+.tl { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+.tl li { position: relative; padding: 0 0 12px 10px; font-size: 13px; }
+.tl li::before { content: ""; position: absolute; left: -21px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); border: 2px solid var(--panel); }
+.tl li.ok::before { background: var(--ok); }
+.tl li.bad::before { background: var(--bad); }
+.tl li.warn::before { background: var(--warn); }
+.tl li.run::before { background: var(--accent); }
+.tl .when { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.tl .inc { color: var(--bad); font-size: 12.5px; display: block; }
+.vh-list li { display: flex; gap: 6px; align-items: baseline; }
+#scrim.open { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>keel-Monitor</h1>
+  <span class="meta" id="meta">lädt …</span>
+  <span class="live" id="live"></span>
+</header>
+
+<main>
+  <section class="flow-section">
+    <h2>Ablauf
+      <span class="legend"><i class="lg aktiv"></i>aktiv <i class="lg bereit"></i>bereit <i class="lg gesperrt"></i>gesperrt <i class="lg ruht"></i>ruht</span>
+    </h2>
+    <div id="flow"></div>
+  </section>
+  <div class="col-now">
+    <section>
+      <h2>Jetzt</h2>
+      <div id="now"></div>
+    </section>
+    <section>
+      <h2>Fällig <span class="count" id="due-count"></span></h2>
+      <div id="due"></div>
+    </section>
+    <section>
+      <h2>Vorhaben und Epics</h2>
+      <div id="plans"></div>
+    </section>
+    <section>
+      <h2>Offene Vorlagen <span class="count" id="dec-count"></span></h2>
+      <div id="decisions"></div>
+    </section>
+  </div>
+
+  <div class="col-events">
+    <section>
+      <h2>Ereignisse
+        <span class="filters" id="filters">
+          <button data-f="befehl" class="on">Befehle</button>
+          <button data-f="rolle" class="on">Rollen</button>
+          <button data-f="problem" class="on">Blockaden</button>
+          <button data-f="sonst" class="on">Sonstige</button>
+        </span>
+      </h2>
+      <div id="events"></div>
+    </section>
+  </div>
+
+  <div class="col-docs">
+    <section>
+      <h2>Dokumente im Projekt</h2>
+      <input class="search" id="search" placeholder="Filtern nach Name, Typ, Status …" autocomplete="off">
+      <div id="docs"></div>
+    </section>
+    <section>
+      <h2>Wie keel funktioniert</h2>
+      <div id="motor"></div>
+    </section>
+  </div>
+</main>
+
+<div id="scrim"></div>
+<aside id="viewer" aria-hidden="true">
+  <div class="bar"><span class="path" id="v-path"></span><button id="v-close">Schließen</button></div>
+  <div class="content" id="v-content"></div>
+</aside>
+
+<script>
+"use strict";
+const ROLES = ["supervisor", "po", "architekt", "planer", "tester", "entwickler", "reviewer", "compliance", "auditor", "coach"];
+const ROLE_NAMES = { supervisor: "Supervisor", po: "PO", architekt: "Architekt", planer: "Planer", tester: "Tester", entwickler: "Entwickler", reviewer: "Reviewer", compliance: "Compliance", auditor: "Auditor", coach: "Coach" };
+const POLL_MS = 3000;
+const FILES_EVERY = 5; // refresh the document list every n polls
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const roleName = r => ROLE_NAMES[r] || r || "?";
+
+let fileIndex = {};   // id or name -> path, to turn references into links
+let lastState = null;
+let lastFiles = null;
+let filters = new Set(["befehl", "rolle", "problem", "sonst"]);
+let polls = 0;
+let allVorhaben = [];
+let viewing = null;   // {kind: "vorhaben", name} while the viewer shows a live view
+
+function ago(sec) {
+  if (sec == null) return "?";
+  if (sec < 60) return `${sec} s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)} min`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} h ${Math.floor(sec % 3600 / 60)} min`;
+  return `${Math.floor(sec / 86400)} d`;
+}
+function since(ts) {
+  if (!ts) return null;
+  return Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 1000));
+}
+function clock(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const today = new Date().toDateString() === d.toDateString();
+  const hm = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  return today ? hm : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " + hm;
+}
+
+// ---- references: task ids, plan names, epic:<name> become links into the viewer
+function refPath(ref) {
+  if (!ref) return null;
+  ref = String(ref).trim();
+  if (ref.startsWith("epic:")) return fileIndex["epic:" + ref.slice(5)] || null;
+  return fileIndex[ref] || null;
+}
+function refLink(ref, label) {
+  const p = refPath(ref);
+  const text = esc(label ?? ref);
+  return p ? `<span class="link" data-open="${esc(p)}">${text}</span>` : text;
+}
+
+// ---- fetch
+async function getJSON(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).fehler || r.statusText);
+  return r.json();
+}
+
+async function poll() {
+  try {
+    if (polls % FILES_EVERY === 0 || !lastFiles) {
+      lastFiles = await getJSON("/api/files");
+      allVorhaben = (await getJSON("/api/vorhaben")).vorhaben;
+      buildIndex(lastFiles);
+      renderDocs();
+      renderMotor();
+    }
+    lastState = await getJSON("/api/state");
+    render(lastState);
+    if (viewing && viewing.kind === "vorhaben") await openVorhaben(viewing.name, true);
+    $("live").textContent = "aktualisiert " + new Date().toLocaleTimeString("de-DE");
+    $("live").className = "live";
+  } catch (e) {
+    $("live").textContent = "keine Verbindung zum Monitor: " + e.message;
+    $("live").className = "live err";
+  }
+  polls++;
+  setTimeout(poll, POLL_MS);
+}
+
+function buildIndex(f) {
+  fileIndex = {};
+  for (const g of f.gruppen) for (const d of g.dateien) {
+    if (d.id) fileIndex[d.id] = d.pfad;
+    if (g.ordner.endsWith("/epics")) fileIndex["epic:" + d.name] = fileIndex["epic:" + d.name] || d.pfad;
+    if (!fileIndex[d.name] || g.ordner.endsWith("/plans") || g.ordner.endsWith("/tasks")) fileIndex[d.name] = d.pfad;
+  }
+}
+
+// ---- render state
+function render(s) {
+  const l = s.lage;
+  const pv = l.plugin || {};
+  $("meta").innerHTML = [
+    `<b>${esc(l.projekt)}</b>`,
+    `Branch <span class="mono">${esc(l.branch || "?")}</span> (Basis ${esc(l.basis || "?")})`,
+    `${l.arbeitsbaum_geaendert} geänderte Dateien`,
+    `keel ${esc(pv.genutzt || "?")}` + (pv.installiert && pv.marketplace && pv.installiert !== pv.marketplace ? ` <span class="badge warn">Update ${esc(pv.marketplace)}</span>` : ""),
+  ].join(" · ");
+  renderNow(s);
+  renderFlow(s);
+  renderDue(l.faellig);
+  renderPlans(l);
+  renderDecisions(l.vorlagen);
+  renderEvents(s.ereignisse);
+}
+
+function renderNow(s) {
+  const out = [];
+  for (const a of s.aktiv) {
+    out.push(`<div class="active">
+      <div class="role"><span class="pulse"></span>${esc(roleName(a.rolle))} arbeitet</div>
+      <dl class="kv">
+        ${a.ref ? `<dt>an</dt><dd>${refLink(a.ref)}</dd>` : ""}
+        <dt>seit</dt><dd>${ago(a.seit_sekunden)}</dd>
+        <dt>gerufen von</dt><dd>Lead${a.befehl ? ` in <span class="mono">${esc(a.befehl)}</span>` : ""}</dd>
+        ${a.werkzeugaufrufe ? `<dt>Werkzeugaufrufe</dt><dd>${esc(a.werkzeugaufrufe)}</dd>` : ""}
+        ${a.zeitbudget_erschoepft ? `<dt>Budget</dt><dd><span class="badge warn">Zeitbudget erschöpft</span></dd>` : ""}
+        ${a.lead_model ? `<dt>Modell Lead</dt><dd class="mono">${esc(a.lead_model)}</dd>` : ""}
+      </dl></div>`);
+  }
+  for (const p of s.startet) {
+    out.push(`<div class="active"><div class="role">${esc(roleName(p.rolle))} startet …</div>
+      <dl class="kv">${p.ref ? `<dt>an</dt><dd>${refLink(p.ref)}</dd>` : ""}<dt>seit</dt><dd>${ago(p.seit_sekunden)}</dd></dl></div>`);
+  }
+  if (!out.length) {
+    const last = [...s.ereignisse].reverse().find(e => e.event === "agent_stop" || e.event === "befehl");
+    out.push(`<div class="empty">Keine Rolle aktiv.</div>` +
+      (last ? `<div class="muted" style="margin-top:4px">Zuletzt: ${last.event === "befehl" ? `<span class="mono">${esc(last.befehl)}</span>` : `${esc(roleName(last.role))} ${esc(last.result || "")}`} vor ${ago(since(last.ts))}</div>` : ""));
+  }
+  $("now").innerHTML = out.join("");
+}
+
+// Nodes of the flow diagram. A role can appear twice (Tester for acceptance tests and per task, PO for
+// the problem statement and the acceptance); "anlass" picks which of its ready objects a node shows.
+const FLOW = [
+  { label: "Entscheiden", nodes: [
+    { human: true, name: "Mensch", sub: "Backlog, Briefing" }, "⇄",
+    { role: "supervisor", name: "Supervisor", anlass: ["entscheiden"] }, " ",
+    { lead: true, name: "Lead", sub: "taktet in der Haupt-Session" } ] },
+  { label: "Vorhaben", nodes: [
+    { role: "po", name: "PO", anlass: ["problemstellung", "abstimmung", "klaerung", "epic-abstimmung", "epic-abnahme"], notPlanStatus: ["abnahme-bereit", "abnahme-rot"] }, "⇄",
+    { role: "architekt", name: "Architekt", anlass: ["bewertung", "strukturfrage", "epic-bewertung", "epic-retrospektive", "architektur"] }, "→",
+    { role: "tester", name: "Tester", sub: "Abnahmetests", anlass: ["abnahmetests"], refKind: "plan" }, "→",
+    { role: "planer", name: "Planer", anlass: ["planung", "neuschnitt"] }, "→",
+    { pseudo: true, name: "Aufgabenzyklus ↓" }, "→",
+    { role: "po", name: "PO", sub: "Abnahme", anlass: ["abnahme"], planStatus: ["abnahme-bereit", "abnahme-rot"] }, "→",
+    { human: true, name: "Lead", sub: "Integration in die Basis" } ] },
+  { label: "Aufgabenzyklus", nodes: [
+    { role: "tester", name: "Tester", sub: "Tests je Aufgabe", anlass: ["aufgabe"], refKind: "aufgabe" }, "→",
+    { role: "entwickler", name: "Entwickler", anlass: ["aufgabe", "reparatur"] }, "→",
+    { role: "compliance", name: "Compliance", anlass: ["aufgabe"] }, "→",
+    { role: "reviewer", name: "Reviewer", anlass: ["aufgabe"] }, "↺" ] },
+  { label: "Prüfen, lernen", nodes: [
+    { role: "auditor", name: "Auditor", anlass: ["audit"] },
+    { role: "coach", name: "Coach", anlass: ["coach"] } ] },
+];
+
+function isTaskRef(ref) { const p = refPath(ref); return !!p && p.includes("/work/tasks/"); }
+
+function renderFlow(s) {
+  const roles = s.rollen || {};
+  const lastStop = {};
+  for (const e of s.ereignisse) if (e.event === "agent_stop") lastStop[e.role] = e;
+  const planStatus = Object.fromEntries((s.lage.vorhaben || []).map(v => [v.name, v.status]));
+  const running = [...s.aktiv, ...s.startet];
+  const lastCmd = [...s.ereignisse].reverse().find(e => e.event === "befehl");
+
+  const node = n => {
+    if (typeof n === "string") return n.trim() ? `<span class="arrow">${n}</span>` : "";
+    if (n.pseudo) return `<div class="node pseudo">${esc(n.name)}</div>`;
+    if (n.human) return `<div class="node ruht"><b>${esc(n.name)}</b><span class="st">${esc(n.sub)}</span></div>`;
+    if (n.lead) {
+      const on = running.length > 0 || false;
+      return `<div class="node ${on ? "" : "ruht"}"><b>${esc(n.name)}</b><span class="st">${esc(n.sub)}</span>
+        ${lastCmd ? `<span class="last">zuletzt <span class="mono">${esc(lastCmd.befehl)}</span> vor ${ago(since(lastCmd.ts))}</span>` : ""}</div>`;
+    }
+    const r = roles[n.role] || { zustand: "ruht", bereit: [] };
+    const refs = r.bereit.filter(b => n.anlass.includes(b.anlass));
+    const run = running.find(a => a.rolle === n.role && (
+      !n.refKind || (n.refKind === "aufgabe") === isTaskRef(a.ref)) && (
+      !n.planStatus || n.planStatus.includes(planStatus[a.ref])) && (
+      !n.notPlanStatus || !n.notPlanStatus.includes(planStatus[a.ref])));
+    let z = run ? "aktiv" : r.zustand === "gesperrt" ? "gesperrt" : refs.length ? "bereit" : "ruht";
+    const label = z === "aktiv" ? `arbeitet${run.ref ? " an " + refLink(run.ref) : ""}`
+      : z === "gesperrt" ? "gesperrt"
+      : z === "bereit" ? (running.length ? "bereit, wartet" : "bereit") : "ruht";
+    const shown = z === "bereit" || z === "gesperrt" ? refs.slice(0, 3) : [];
+    const refHtml = shown.map(b => b.pfad ? `<span class="link" data-open="${esc(b.pfad)}">${esc(b.ref)}</span>` : esc(b.ref)).join(", ")
+      + (refs.length > shown.length && shown.length ? ` +${refs.length - shown.length}` : "");
+    const st = lastStop[n.role];
+    return `<div class="node ${z}" title="${esc(r.grund || "")}">
+      <b>${z === "aktiv" ? `<span class="pulse"></span>` : ""}${esc(n.name)}</b>
+      ${n.sub ? `<span class="st">${esc(n.sub)}</span>` : ""}
+      <span class="st">${label}</span>
+      ${refHtml ? `<span class="refs">${z === "gesperrt" ? "wartet: " : "für "}${refHtml}</span>` : ""}
+      ${st && z !== "aktiv" ? `<span class="last">zuletzt ${esc(st.result || "fertig")}, vor ${ago(since(st.ts))}</span>` : ""}
+    </div>`;
+  };
+  $("flow").innerHTML = FLOW.map(l => `<div class="lane"><span class="lane-label">${esc(l.label)}</span>${l.nodes.map(node).join("")}</div>`).join("");
+}
+
+function renderDue(d) {
+  const items = (d && d.faellig) || [];
+  $("due-count").textContent = items.length || "";
+  $("due").innerHTML = items.length ? `<ul class="plain">${items.map(i => `<li>
+      <span class="badge ${i.hart ? "hart" : "soft"}">${i.hart ? "hart" : "Hinweis"}</span> <b>${esc(i.art)}</b>
+      <div class="muted">${esc(i.grund)}</div>${i.befehl ? `<div class="mono">${esc(i.befehl)}</div>` : ""}</li>`).join("")}</ul>`
+    : `<div class="empty">Nichts fällig.</div>`;
+}
+
+function statusBadge(st) {
+  const cls = /blockiert|einspruch|erschoepft|nacharbeit|offen/.test(st || "") ? "warn"
+    : /abgenommen|integriert|fertig|aktiv|entschieden/.test(st || "") ? "ok" : "";
+  return st ? `<span class="badge ${cls}">${esc(st)}</span>` : "";
+}
+
+function renderPlans(l) {
+  const rows = [];
+  for (const e of l.epics) rows.push(`<li>Epic ${refLink("epic:" + e.name, e.name)} ${statusBadge(e.status)}</li>`);
+  for (const v of l.vorhaben) {
+    const tasks = Object.entries(v.aufgaben || {}).map(([k, n]) => `${esc(k)} ${n}`).join(", ") || "keine Aufgaben";
+    rows.push(`<li><span class="link" data-vorhaben="${esc(v.name)}">${esc(v.name)}</span> ${statusBadge(v.status)}
+      ${v.branch ? `<span class="mono muted">${esc(v.branch)}</span>` : ""}
+      <div class="muted">${tasks}</div></li>`);
+  }
+  const open = new Set(l.vorhaben.map(v => v.name));
+  const closed = allVorhaben.filter(v => !open.has(v.name));
+  $("plans").innerHTML = (rows.length ? `<ul class="plain">${rows.join("")}</ul>` : `<div class="empty">Keine offenen.</div>`) +
+    (closed.length ? `<details class="group" style="margin-top:6px"><summary>abgeschlossen oder verworfen <span class="count">${closed.length}</span></summary>
+      <ul class="plain vh-list">${closed.map(v => `<li><span class="link" data-vorhaben="${esc(v.name)}">${esc(v.name)}</span> ${statusBadge(v.status)}</li>`).join("")}</ul></details>` : "");
+}
+
+function renderDecisions(v) {
+  $("dec-count").textContent = v.length || "";
+  $("decisions").innerHTML = v.length ? `<ul class="plain">${v.map(d => `<li>
+      <span class="link" data-open="${esc(d.datei)}">${esc(d.titel || d.datei)}</span>
+      ${d.eskaliert ? `<span class="badge info">richtungsweisend</span>` : ""}
+      <div class="muted">von ${esc(d.von || "?")}, ${d.alter_tage ?? "?"} Tage alt · ${d.eskaliert ? "entscheidest du im Briefing" : "entscheidet der Supervisor"}</div></li>`).join("")}</ul>`
+    : `<div class="empty">Keine.</div>`;
+}
+
+// ---- events
+const EV = {
+  befehl: { f: "befehl", i: "⌘", t: e => `Befehl <span class="mono">${esc(e.befehl)}</span>` },
+  agent_start: { f: "rolle", i: "▶", t: e => `<b>${esc(roleName(e.role))}</b> gestartet${e.ref ? " · " + refLink(e.ref) : ""}` },
+  agent_stop: { f: "rolle", i: "■", t: e => `<b>${esc(roleName(e.role))}</b> beendet ${statusBadge(e.result)}${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${e.calls != null ? e.calls + " Werkzeugaufrufe" : ""}${e.model ? " · " + esc(e.model) : ""}</span>` },
+  stop_blocked: { f: "problem", i: "⛔", t: e => `Übergabe von <b>${esc(roleName(e.role))}</b> blockiert${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${esc(e.reason)}</span>` },
+  denied: { f: "problem", i: "✋", t: e => `Abgelehnt von ${esc(e.hook)}${e.role ? " für <b>" + esc(roleName(e.role)) + "</b>" : ""}<span class="reason">${esc(e.reason)}</span>` },
+  budget_exhausted: { f: "problem", i: "⏱", t: e => `Budget erschöpft: <b>${esc(roleName(e.role))}</b>${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${e.calls ? e.calls + " Aufrufe" : ""}${e.minutes ? e.minutes + " Minuten" : ""}</span>` },
+  context_alarm: { f: "sonst", i: "◔", t: e => `Kontext-Alarm<span class="reason">${esc(e.reason || e.step || "")}</span>` },
+};
+function renderEvents(list) {
+  const rows = [];
+  for (const e of [...list].reverse()) {
+    const def = EV[e.event] || { f: "sonst", i: "·", t: x => `${esc(x.event)}<span class="reason">${esc(Object.entries(x).filter(([k]) => !["event", "ts"].includes(k)).map(([k, v]) => k + "=" + (typeof v === "object" ? JSON.stringify(v) : v)).join(" "))}</span>` };
+    if (!filters.has(def.f)) continue;
+    rows.push(`<div class="ev k-${esc(e.event)}"><span class="t">${esc(clock(e.ts))}</span><span class="i">${def.i}</span><span>${def.t(e)}</span></div>`);
+  }
+  $("events").innerHTML = rows.join("") || `<div class="empty">Keine Ereignisse. Sie erscheinen, sobald in einer Session mit keel gearbeitet wird.</div>`;
+}
+$("filters").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const f = b.dataset.f;
+  filters.has(f) ? filters.delete(f) : filters.add(f);
+  b.classList.toggle("on", filters.has(f));
+  if (lastState) renderEvents(lastState.ereignisse);
+});
+
+// ---- documents
+const openGroups = new Set([".keel/work/plans", ".keel/work/tasks", ".keel/decisions/pending"]);
+function renderDocs() {
+  if (!lastFiles) return;
+  const q = $("search").value.trim().toLowerCase();
+  const html = [];
+  for (const g of lastFiles.gruppen) {
+    const docs = g.dateien.filter(d => !q || [d.name, d.typ, d.status, d.titel, d.vorhaben, g.ordner].some(x => String(x ?? "").toLowerCase().includes(q)));
+    if (!docs.length) continue;
+    docs.sort((a, b) => b.geaendert - a.geaendert);
+    html.push(`<details class="group" data-g="${esc(g.ordner)}" ${q || openGroups.has(g.ordner) ? "open" : ""}>
+      <summary>${esc(g.ordner.replace(/^\.keel\/?/, "") || ".keel")} <span class="count">${docs.length}</span></summary>
+      ${docs.map(d => `<div class="doc"><span class="name"><span class="link" data-open="${esc(d.pfad)}" title="${esc(d.pfad)}">${esc(d.titel || d.name)}</span></span>${statusBadge(d.status)}</div>`).join("")}
+    </details>`);
+  }
+  $("docs").innerHTML = html.join("") || `<div class="empty">Keine Dokumente${q ? " zum Filter" : ""}.</div>`;
+}
+$("docs").addEventListener("toggle", ev => {
+  const g = ev.target.dataset && ev.target.dataset.g; if (!g) return;
+  ev.target.open ? openGroups.add(g) : openGroups.delete(g);
+}, true);
+$("search").addEventListener("input", renderDocs);
+
+function renderMotor() {
+  const m = (lastFiles && lastFiles.motor) || [];
+  const groups = {};
+  for (const p of m) (groups[p.split("/")[0]] ||= []).push(p);
+  const label = { docs: "Konzept und Entscheidungen", agents: "Rollen", skills: "Befehle" };
+  $("motor").innerHTML = Object.entries(groups).map(([k, list]) => `<details class="group" ${k === "docs" ? "open" : ""}>
+      <summary>${esc(label[k] || k)} <span class="count">${list.length}</span></summary>
+      ${list.map(p => `<div class="doc"><span class="name"><span class="link" data-doc="${esc(p)}">${esc(p.replace(/^(docs|agents|skills)\//, "").replace(/\/SKILL\.md$|\.md$/, ""))}</span></span></div>`).join("")}
+    </details>`).join("") || `<div class="empty">Keine Motor-Dokumente gefunden.</div>`;
+}
+
+// ---- viewer
+function showViewer(path, html, keepScroll) {
+  const c = $("v-content");
+  const top = c.scrollTop;
+  $("v-path").textContent = path;
+  c.innerHTML = html;
+  $("viewer").classList.add("open"); $("viewer").setAttribute("aria-hidden", "false");
+  $("scrim").classList.add("open");
+  c.scrollTop = keepScroll ? top : 0;
+  renderMermaid(c);
+}
+// Diagrams render with mermaid from jsdelivr, loaded on first use; offline the source stays visible.
+let mermaidLoad = null;
+async function renderMermaid(root) {
+  const blocks = [...root.querySelectorAll("pre.mermaid")];
+  if (!blocks.length) return;
+  try {
+    mermaidLoad ||= import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs").then(m => {
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      m.default.initialize({ startOnLoad: false, theme: dark ? "dark" : "default", securityLevel: "strict" });
+      return m.default;
+    });
+    const mermaid = await mermaidLoad;
+    for (const [i, pre] of blocks.entries()) {
+      if (!pre.isConnected) return;
+      try {
+        const { svg } = await mermaid.render(`mmd-${Date.now()}-${i}`, pre.textContent);
+        const div = document.createElement("div");
+        div.className = "diagram";
+        div.innerHTML = svg;
+        pre.replaceWith(div);
+      } catch (e) { /* keep the source of a diagram mermaid cannot parse */ }
+    }
+  } catch (e) {
+    mermaidLoad = null;
+  }
+}
+async function openDoc(url) {
+  viewing = null;
+  try {
+    const d = await getJSON(url);
+    const fm = Object.entries(d.frontmatter || {});
+    const plan = d.frontmatter && d.frontmatter.typ === "plan" ? d.pfad.split("/").pop().replace(/\.md$/, "") : null;
+    showViewer(d.pfad,
+      (plan ? `<div class="vh-links"><span class="link" data-vorhaben="${esc(plan)}">Zeitleiste dieses Vorhabens</span></div>` : "") +
+      (fm.length ? `<dl class="fm">${fm.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${fmValue(k, v)}</dd>`).join("")}</dl>` : "") +
+      `<div class="md">${markdown(d.body || "")}</div>`);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+function fmValue(k, v) {
+  if (Array.isArray(v)) return v.length ? v.map(x => refLink(x)).join(", ") : `<span class="muted">[]</span>`;
+  if (k === "status") return statusBadge(v);
+  return refPath(v) ? refLink(v) : esc(v);
+}
+async function openVorhaben(name, refresh) {
+  try {
+    const v = await getJSON("/api/vorhaben?name=" + encodeURIComponent(name));
+    if (refresh && !(viewing && viewing.name === name)) return;
+    viewing = { kind: "vorhaben", name };
+    showViewer(`Vorhaben ${v.name}` + (v.id ? ` (${v.id})` : ""), renderVorhaben(v), refresh);
+  } catch (e) {
+    if (!refresh) alert(e.message);
+  }
+}
+function dur(a, b) {
+  if (!a) return "";
+  const s = Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000);
+  return ago(Math.max(0, s));
+}
+function renderVorhaben(v) {
+  const blocked = v.status === "blockiert";
+  const steps = v.phasen.map((p, i) => {
+    const cls = v.phase == null ? "" : i < v.phase ? "done" : i === v.phase ? "now" + (blocked ? " blocked" : "") : "";
+    const name = esc(p.name).replace("Problemstellung", "Problem&shy;stellung").replace("Abnahmetests", "Abnahme&shy;tests");
+    return `<li class="${cls}"><b>${name}</b>${p.zustaendig ? esc(p.zustaendig) : ""}</li>`;
+  }).join("");
+  const tasks = v.aufgaben.map(t => `<tr class="${t.im_plan ? "" : "out"}">
+      <td class="mono"><span class="link" data-open="${esc(t.pfad)}">${esc(t.id)}</span></td>
+      <td>${esc(t.titel || "")}${t.neuschnitt_runden && t.neuschnitt_runden !== "0" ? ` <span class="badge warn">Neuschnitt</span>` : ""}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${t.naechste ? esc(t.naechste) : `<span class="muted">–</span>`}</td>
+      <td>${t.reviews.map(r => `<span class="link" data-open="${esc(r.pfad)}" title="${esc(r.status || "")}">${esc(r.name.slice(t.id.length + 1))}${r.status === "bestanden" ? " ✓" : r.status === "befunde" ? " ✗" : ""}</span>`).join(" ")}
+          ${t.compliance_dateien.map(c => `<span class="link" data-open="${esc(c)}">${c.endsWith(".scan.md") ? "Scan" : "Compliance"}</span>`).join(" ")}</td>
+    </tr>`).join("");
+  const runs = v.laeufe.map(r => {
+    const cls = !r.stop ? "run" : r.ergebnis === "ok" && !r.vorfaelle.length ? "ok" : r.ergebnis === "ok" ? "warn" : "bad";
+    return `<li class="${cls}"><span class="when">${esc(clock(r.start))}</span>
+      <b>${esc(roleName(r.rolle))}</b> · ${refLink(r.ref)} · ${r.stop ? `${dur(r.start, r.stop)} ${statusBadge(r.ergebnis)}` : `<span class="badge info">läuft seit ${dur(r.start)}</span>`}
+      ${r.werkzeugaufrufe != null ? `<span class="muted">· ${esc(r.werkzeugaufrufe)} Aufrufe</span>` : ""}
+      ${r.vorfaelle.map(i => `<span class="inc">${i.art === "stop_blocked" ? "⛔ Übergabe blockiert" : "⏱ Budget erschöpft"}: ${esc(i.grund)}</span>`).join("")}</li>`;
+  }).join("");
+  return `<div class="vh-head"><h2>${esc(v.titel || v.name)}</h2>${statusBadge(v.status)}</div>
+    <div class="vh-links"><span class="link" data-open="${esc(v.pfad)}">Plan öffnen</span>
+      ${v.epic ? ` · Epic ${v.epic_pfad ? `<span class="link" data-open="${esc(v.epic_pfad)}">${esc(v.epic)}</span>` : esc(v.epic)}` : ""}
+      ${v.branch ? ` · <span class="mono">${esc(v.branch)}</span>` : ""}</div>
+    <ol class="steps">${steps}</ol>
+    ${v.naechste ? `<div class="next"><small>Als Nächstes laut Ablauf</small>${esc(v.naechste)}</div>` : ""}
+    <h3 class="sub">Aufgaben</h3>
+    ${v.aufgaben.length ? `<table class="tasks"><thead><tr><th>ID</th><th>Titel</th><th>Status</th><th>als Nächstes</th><th>Reviews, Compliance</th></tr></thead><tbody>${tasks}</tbody></table>`
+      : `<div class="empty">Noch keine Aufgaben geschnitten.</div>`}
+    <h3 class="sub">Abnahme</h3>
+    ${v.abnahme ? `<span class="link" data-open="${esc(v.abnahme.pfad)}">Abnahmenachweis</span> ${statusBadge(v.abnahme.status)}` : `<div class="empty">Noch kein Abnahmenachweis.</div>`}
+    ${v.vorlagen.length ? `<h3 class="sub">Vorlagen</h3><ul class="plain">${v.vorlagen.map(d => `<li><span class="link" data-open="${esc(d.pfad)}">${esc(d.titel)}</span>
+        ${d.offen ? (d.eskaliert ? `<span class="badge info">richtungsweisend, offen</span>` : `<span class="badge warn">offen</span>`) : `<span class="badge ok">entschieden${d.entscheider ? " · " + esc(d.entscheider) : ""}</span>`}</li>`).join("")}</ul>` : ""}
+    <h3 class="sub">Rollenläufe</h3>
+    ${runs ? `<ol class="tl">${runs}</ol>` : `<div class="empty">Keine aufgezeichneten Rollenläufe auf diesem Rechner.</div>`}`;
+}
+function closeViewer() {
+  viewing = null;
+  $("viewer").classList.remove("open"); $("viewer").setAttribute("aria-hidden", "true");
+  $("scrim").classList.remove("open");
+}
+$("v-close").addEventListener("click", closeViewer);
+$("scrim").addEventListener("click", closeViewer);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeViewer(); });
+document.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]");
+  if (o) return openDoc("/api/file?path=" + encodeURIComponent(o.dataset.open));
+  const vh = e.target.closest("[data-vorhaben]");
+  if (vh) return openVorhaben(vh.dataset.vorhaben);
+  const d = e.target.closest("[data-doc]");
+  if (d) return openDoc("/api/doc?name=" + encodeURIComponent(d.dataset.doc));
+});
+
+// ---- a small Markdown renderer: enough for handoffs, templates and the concept documents
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`);
+  s = esc(s)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*\w])\*([^*\s][^*]*)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, href) => /^https?:/.test(href) ? `<a href="${href}" target="_blank" rel="noopener">${t}</a>` : `<span title="${href}">${t}</span>`);
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
+}
+function markdown(src) {
+  src = src.replace(/<!--[\s\S]*?-->/g, "");
+  const lines = src.split("\n");
+  const out = [];
+  let i = 0;
+  const isTableSep = l => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+  const cells = l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim()));
+  while (i < lines.length) {
+    const l = lines[i];
+    let m;
+    if ((m = l.match(/^\s*```\s*(\S*)/))) {
+      const lang = m[1]; const buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]);
+      i++;
+      out.push(`<pre class="${esc(lang)}"><code>${esc(buf.join("\n"))}</code></pre>`);
+      continue;
+    }
+    if ((m = l.match(/^(#{1,6})\s+(.*)$/))) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+    if (/^\s*\|/.test(l) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const head = cells(l); i += 2; const body = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) body.push(cells(lines[i++]));
+      out.push(`<table><thead><tr>${head.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${body.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    if (/^\s*>/.test(l)) {
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+      out.push(`<blockquote>${markdown(buf.join("\n"))}</blockquote>`);
+      continue;
+    }
+    if (/^\s*([-*+]|\d+[.)])\s+/.test(l)) {
+      out.push(list(lines, i, r => { i = r; }));
+      continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    const buf = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\s*```|\s*>|\s*([-*+]|\d+[.)])\s+|\s*\|)/.test(lines[i])) buf.push(lines[i++]);
+    if (!buf.length) buf.push(lines[i++]);
+    out.push(`<p>${inline(buf.join(" "))}</p>`);
+  }
+  return out.join("\n");
+}
+function list(lines, start, done) {
+  const indent = l => l.match(/^\s*/)[0].length;
+  const base = indent(lines[start]);
+  const ordered = /^\s*\d+[.)]/.test(lines[start]);
+  const items = [];
+  let i = start;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { if (i + 1 < lines.length && /^\s*([-*+]|\d+[.)])\s+/.test(lines[i + 1]) && indent(lines[i + 1]) >= base) { i++; continue; } break; }
+    const m = l.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+    if (m && m[1].length === base) { items.push({ text: [m[3]], sub: "" }); i++; continue; }
+    if (m && m[1].length > base && items.length) { items[items.length - 1].sub += list(lines, i, r => { i = r; }); continue; }
+    if (indent(l) > base && items.length) { items[items.length - 1].text.push(l.trim()); i++; continue; }
+    break;
+  }
+  done(i);
+  const tag = ordered ? "ol" : "ul";
+  return `<${tag}>${items.map(it => `<li>${inline(it.text.join(" ").replace(/^\[( |x)\]\s*/i, (_, x) => x.trim() ? "☑ " : "☐ "))}${it.sub}</li>`).join("")}</${tag}>`;
+}
+
+poll();
+</script>
+</body>
+</html>

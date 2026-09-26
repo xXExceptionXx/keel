@@ -1,6 +1,6 @@
 # keel auf einen Blick
 
-Sieben Sichten auf dasselbe System, Stand 0.9. Alle Diagramme sind Mermaid und rendern direkt auf GitHub; die Quelle ist diese Datei.
+Sieben Sichten auf dasselbe System, Stand 0.12. Alle Diagramme sind Mermaid und rendern direkt auf GitHub; die Quelle ist diese Datei.
 
 ## 1. Rollen und Beziehungen
 
@@ -48,7 +48,7 @@ Auditor und Coach stehen außerhalb der Befehlskette und ändern nichts außer i
 
 ## 2. Zwei Befehle und die Fälligkeiten
 
-`/keel:start` liest den Zustand und tut, was fällig ist. Harte Fälligkeiten sperren per Hook alle Rollen außer der, die sie erledigt. `/keel:hilfe` steht daneben als Beobachter: Es erklärt den Stand aus `lage.py` (Fälligkeiten, Vorhaben, Vorlagen, Ereignisse nach Grund, Reste), nennt den nächsten Befehl und darf nur mit Ja des Menschen Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue melden. Jede Ablehnung, die den Menschen erreicht, verweist darauf (System-ADR 0014).
+`/keel:start` liest den Zustand und tut, was fällig ist. Harte Fälligkeiten sperren per Hook alle Rollen außer der, die sie erledigt. `/keel:hilfe` steht daneben als Beobachter: Es erklärt den Stand aus `lage.py` (Fälligkeiten, Vorhaben, Vorlagen, Ereignisse nach Grund, Reste), nennt den nächsten Befehl und darf nur mit Ja des Menschen Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue melden. Jede Ablehnung, die den Menschen erreicht, verweist darauf (System-ADR 0014). `/keel:monitor` zeigt dieselbe Lage laufend als lokale Webseite, mit einem Ablaufdiagramm (aktiv, bereit, gesperrt), Ereignisstrom, einer Zeitleiste je Vorhaben und allen Übergaben als Dokumente, und schreibt ebenfalls nichts; mit `monitor.autostart: true` starten ihn die Startbefehle mit. Die Startbedingungen der Rollen stehen in `scripts/flow.py`, aus dem Gate und Monitor lesen (System-ADR 0017).
 
 ```mermaid
 flowchart TD
@@ -152,7 +152,7 @@ stateDiagram-v2
 
 ## 6. Was die Hooks um eine Rolle herum tun
 
-Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel.
+Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel. Welcher Status für welche Rolle und welchen Anlass nötig ist und welche Rollen eine harte Fälligkeit freigibt, liest agent-gate aus `scripts/flow.py`, derselben Tabelle, aus der der Monitor „bereit“ und „gesperrt“ ableitet. Ist sie nicht lesbar, startet keine Rolle. `python3 tests/gate/run.py --against main` vergleicht das Gate mit einem früheren Stand.
 
 ```mermaid
 sequenceDiagram
@@ -239,4 +239,4 @@ flowchart LR
 | `.keel/work/hinweise/` | Ich, über `/keel:hilfe` | Coach (prüft, übernimmt nicht) | – |
 | `.keel/decisions/pending/` → `done/` | PO, Lead, Coach, Tagesstart; entschieden vom Supervisor oder Mensch | Supervisor, Briefing, Inbox | agent-stop (Supervisor), briefing_needed.py |
 | `.keel/adr/` | Planer (Entwurf), Architekt (Entwurf), PO (delegiert), Supervisor, Ich | alle | Inbox, Briefing, due.py |
-| `~/.keel-metrics/<projekt>/` | Hooks | Coach, metrics.py, due.py, lage.py (Hilfe) | tool-gate sperrt alle anderen Rollen |
+| `~/.keel-metrics/<projekt>/` | Hooks | Coach, metrics.py, due.py, lage.py (Hilfe, Monitor) | tool-gate sperrt alle anderen Rollen |
