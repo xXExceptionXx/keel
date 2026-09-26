@@ -46,6 +46,9 @@ korridore:
 supervisor:
   model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es
 
+motor:
+  repo: xXExceptionXx/keel  # Repo des Plugins; /keel:hilfe meldet Motor-Befunde dort als Issue
+
 # Fälligkeiten, die /keel:start abarbeitet und die ein Hook bis dahin erzwingt. Nur bei genug Betrieb.
 faelligkeiten:
   coach_tage: 30               # frühestens nach so vielen Tagen …

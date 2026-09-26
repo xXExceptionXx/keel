@@ -15,10 +15,15 @@ if [ "$(field '.tool_input.run_in_background')" = "true" ]; then
   deny "keel-Rollen laufen im Vordergrund und nacheinander. Starte '$type' erneut mit run_in_background: false."
 fi
 sd_early="$(state_dir)"
+# A helper session (/keel:hilfe) only observes; roles run in a fresh session.
+sid="$(field '.session_id')"
+if [ -n "$sid" ] && [ -f "$sd_early/hilfe-$sid" ]; then
+  deny "Diese Session ist eine Hilfe-Session (/keel:hilfe) und beobachtet nur. Rollen arbeiten in einer neuen Session mit /keel:start."
+fi
 if [ -f "$sd_early/pending-$role" ]; then
   age=$(( $(date +%s) - $(stat -f %m "$sd_early/pending-$role" 2>/dev/null || stat -c %Y "$sd_early/pending-$role") ))
   if [ "$age" -lt 600 ]; then
-    deny "Rolle '$role' wurde vor $age Sekunden bereits gestartet und läuft noch. keel arbeitet sequenziell; warte auf ihr Ergebnis."
+    deny "Rolle '$role' wurde vor $age Sekunden bereits gestartet und läuft noch. keel arbeitet sequenziell; warte auf ihr Ergebnis. Läuft nichts mehr: /keel:hilfe zeigt und räumt Reste auf."
   fi
 fi
 
@@ -28,7 +33,7 @@ if [ -n "$due_json" ] && [ "$(printf '%s' "$due_json" | jq -r '.hart')" = "true"
   allowed="$(printf '%s' "$due_json" | jq -r '[.faellig[] | select(.hart) | .art | if . == "briefing" then "supervisor" elif . == "audit" then "auditor" elif . == "coach" then "coach" elif . == "architektur" then "architekt" elif . == "tagesabschluss" then "entwickler reviewer" else "" end] | join(" ")')"
   case " $allowed " in
     *" $role "*) ;;
-    *) deny "Fällig, bevor Rollen arbeiten: $(printf '%s' "$due_json" | jq -r '[.faellig[] | select(.hart) | .art + " (" + .grund + ")"] | join("; ")'). Starte /keel:start, es arbeitet die Fälligkeiten in Reihenfolge ab." ;;
+    *) deny "Fällig, bevor Rollen arbeiten: $(printf '%s' "$due_json" | jq -r '[.faellig[] | select(.hart) | .art + " (" + .grund + ")"] | join("; ")'). Starte /keel:start, es arbeitet die Fälligkeiten in Reihenfolge ab. Unklar, was los ist: /keel:hilfe erklärt den Stand." ;;
   esac
 fi
 

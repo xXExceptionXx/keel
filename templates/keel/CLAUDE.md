@@ -22,3 +22,4 @@ _Noch nicht ausgefüllt. Siehe `.keel/zielbild.md`._
 - „Fertig“ nur mit Nachweis, etwa der Testausgabe.
 - Werkzeuge werden über die Skills bedient, nicht über eigene Befehlsfolgen.
 - Wer viel liest, schreibt wenig.
+- Für den Menschen: `/keel:start` und `/keel:stop` im Alltag, `/keel:hilfe` erklärt den Stand, wenn etwas unklar ist.

@@ -17,8 +17,9 @@ lines="$(printf '%s\n' "$msg" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 tasks="$proj/.keel/work/tasks"
 plans="$proj/.keel/work/plans"
 
-finish() {  # record and allow stop
+finish() {  # record, drop this run's state files, allow stop
   record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$(field '.agent_transcript_path')" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript}')"
+  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout"
   exit 0
 }
 

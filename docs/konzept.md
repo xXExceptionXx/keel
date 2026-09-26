@@ -665,6 +665,10 @@ Erster Coach-Lauf und Kennzahlen am 2026-09-21, nach einem Tag Betrieb im Beispi
 
 Ergänzt am 2026-09-22. Ich merke mir keine Befehle: `/keel:start` liest, was fällig ist, holt Versäumtes nach, wird zum Briefing, wenn eines aussteht, und arbeitet sonst am nächsten Vorhaben; `/keel:stop` schließt den Tag mit Übergabenotiz, Tag und Audit ab. Fälligkeiten wie Coach und Architektur-Runde entstehen aus dem Zustand, mit Schwellen für genug Betrieb, und ein Hook erzwingt sie. Siehe System-ADR 0012.
 
+## Hilfe statt Stützräder
+
+Ergänzt am 2026-09-26. Für die ersten Wochen im echten Projekt stand eine Proxy-Session über keel zur Debatte, die beaufsichtigt, korrigiert und Vorlagen durchreicht. Verworfen: Es gibt genau einen Entscheider, und die Vorlage wartet auf ihn; eine zweite Aufsicht verwischt die Kalibrierung von Supervisor und Coach. Geblieben ist `/keel:hilfe`, eine Skill ohne Befugnisse: Sie erklärt den Stand aus Zustand und Ereignissen, nennt den nächsten Befehl und darf mit meinem Ja Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue im Plugin-Repo melden. Motor-Reparaturen finden dort statt, nie im Projekt. Siehe System-ADR 0014.
+
 ## Supervisor und Morgen-Briefing
 
 Ergänzt am 2026-09-22. Die rechte Hand aus dem Zweck-Abschnitt ist nicht der PO, sondern eine eigene Rolle mit Gesamtbild: Roadmap, Epics, ADR-Historie, Leitlinien und meine früheren Entscheidungen. Tagsüber entscheidet der Supervisor jede Vorlage innerhalb seiner Stufe, damit die Arbeit weiterläuft, und stuft Richtungsfragen als solche ein. Morgens legt er mir in einer eigenen, interaktiven Session vor, was er entschieden hat, hilft beim Kippen, entscheidet mit mir die richtungsweisenden Vorlagen und hält Leitlinien fest, die künftig dieselbe Frage ohne Vorlage beantworten. Ein Gate sperrt alle Rollen, bis das Briefing stattgefunden hat. Die Befugnisse haben damit drei Stufen. Siehe System-ADR 0011.

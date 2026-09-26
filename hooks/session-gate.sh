@@ -15,5 +15,6 @@ if [ "$rc" -ne 0 ]; then
 else
   msg="keel: Hinweise ohne Sperre. $out"
 fi
+msg="$msg Für eine Erklärung des Stands: /keel:hilfe."
 jq -n --arg msg "$msg" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$msg}}'
 exit 0

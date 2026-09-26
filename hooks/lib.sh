@@ -46,6 +46,7 @@ role_limit() {  # role_limit <role> <key> <default>
 prompt_field() { { printf '%s' "$1" | grep -oE "^$2:[[:space:]]*[A-Za-z0-9_.-]+" || true; } | head -1 | sed -E "s/^$2:[[:space:]]*//"; }
 
 deny() {
+  record "denied" "$(jq -n --arg hook "$(basename "$0" .sh)" --arg role "${role:-}" --arg reason "$1" '{hook:$hook,role:$role,reason:$reason}')"
   jq -n --arg reason "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
   exit 0
 }

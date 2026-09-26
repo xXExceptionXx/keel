@@ -13,7 +13,7 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
-scripts/          frontmatter.py, config.py, gate.sh, init.sh
+scripts/          frontmatter.py, config.py, gate.sh, init.sh, due.py, lage.py, metrics.py, backlog.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept und System-ADRs
@@ -21,12 +21,13 @@ docs/             Konzept und System-ADRs
 
 Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen.
 
-## Im Alltag zwei Befehle
+## Im Alltag zwei Befehle, und einer für Fragen
 
 | Befehl | Was passiert |
 | --- | --- |
 | `/keel:start` | Liest, was fällig ist, und tut es in Reihenfolge: vergessener Tagesabschluss, Audit, Coach, Architektur-Runde, dann das Briefing mit dem Supervisor, falls eines aussteht. Sonst Tagesstart und das nächste Vorhaben. |
 | `/keel:stop` | Tagesabschluss mit Übergabenotiz und Tag, Audit, ein Satz zu morgen. |
+| `/keel:hilfe [Frage]` | Erklärt den Stand aus Zustand und Ereignissen und nennt den nächsten Befehl. Beobachtet nur: entscheidet nichts, startet keine Rolle, ändert nichts. Auf Wunsch räumt sie Reste auf, legt einen Hinweis für den Coach ab oder meldet einen Motor-Befund als Issue. |
 
 Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Steht ein Briefing an, muss die Session auf dem Modell des Supervisors laufen; ein Hook prüft das und sagt, wie umgestellt wird. Aus dem Terminal wählt `scripts/keel.sh <projekt>` das Modell selbst und öffnet die Session mit `/keel:start`. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
 
@@ -45,7 +46,7 @@ Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt d
 | `/keel:inbox` | Mensch | Offene Vorlagen, Pläne zur Abnahme, Blockaden, letzter Prüfbericht |
 | `/keel:reparatur` | Lead | Reparaturaufgabe bei rotem Startcheck, läuft auch aus tagesstart und vorhaben heraus |
 | `/keel:kennzahlen` | Mensch | Kennzahlen der Lernschleife mit Korridoren, aus Artefakten und Rohdaten |
-| `/keel:coach` | Coach | Lernschleife: Hypothesen prüfen, Umfeld, Justierungen als Vorlagen; monatlich oder bei Korridorverletzung |
+| `/keel:coach` | Coach | Lernschleife: Hypothesen prüfen, Hinweise des Menschen gegen die Daten prüfen, Umfeld, Justierungen als Vorlagen; monatlich oder bei Korridorverletzung |
 | `/keel:backlog <befehl>` | PO, Auditor | Backlog über die Schnittstelle: next, show, list, propose, status, link; Anbieter Markdown oder GitHub Issues |
 
 Vorlagen entscheidet tagsüber der Supervisor innerhalb seiner Stufe; richtungsweisende reichen bis zum Menschen und werden im Morgen-Briefing entschieden. Unbeaufsichtigte Läufe: `scripts/keel-run.sh <projekt> "/keel:vorhaben <name>"` wartet Nutzungslimits ab und meldet sich, wenn ein Briefing nötig ist. Der Supervisor läuft auf Fable (Claude Code ab 2.1.251).
