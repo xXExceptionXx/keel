@@ -6,6 +6,7 @@ set -uo pipefail
 project="$(cd "${1:-.}" && pwd)"
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project" || exit 2
+python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
 if python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null 2>&1; then
   exec claude "/keel:start"
 else

@@ -18,6 +18,7 @@ notify() {
 }
 
 cd "$project" || exit 2
+python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
 if ! python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null; then
   notify "Briefing nötig, bevor der Lead arbeitet: /keel:briefing"
   exit 3

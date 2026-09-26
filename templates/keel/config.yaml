@@ -49,6 +49,10 @@ supervisor:
 motor:
   repo: xXExceptionXx/keel  # Repo des Plugins; /keel:hilfe meldet Motor-Befunde dort als Issue
 
+monitor:
+  autostart: false          # true: /keel:start, vorhaben, epic, tagesstart, briefing, keel.sh und keel-run.sh starten den Ablauf-Monitor mit
+  port: 8765                # http://127.0.0.1:<port>/; je Projekt ein eigener Port, wenn mehrere Monitore laufen
+
 # Fälligkeiten, die /keel:start abarbeitet und die ein Hook bis dahin erzwingt. Nur bei genug Betrieb.
 faelligkeiten:
   coach_tage: 30               # frühestens nach so vielen Tagen …

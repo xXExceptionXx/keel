@@ -109,6 +109,34 @@ input.search { width: 100%; font: inherit; padding: 5px 8px; border: 1px solid v
 .md hr { border: 0; border-top: 1px solid var(--line); }
 .md pre.mermaid::before { content: "Diagramm (Mermaid-Quelltext)"; display: block; color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; margin-bottom: 4px; }
 #scrim { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 9; display: none; }
+
+/* vorhaben timeline */
+.vh-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; margin-bottom: 4px; }
+.vh-head h2 { margin: 0; font-size: 20px; }
+.vh-links { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.steps { display: flex; flex-wrap: wrap; gap: 10px 4px; margin: 8px 0 10px; padding: 0; list-style: none; counter-reset: step; }
+.steps li { flex: 1 1 100px; hyphens: manual; border-top: 4px solid var(--line); padding: 6px 4px 0; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.steps li b { display: block; color: var(--text); font-weight: 600; }
+.steps li.done { border-color: var(--ok); }
+.steps li.now { border-color: var(--accent); color: var(--text); }
+.steps li.now.blocked { border-color: var(--warn); }
+.next { background: var(--active-bg); border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 13.5px; }
+.next small { color: var(--muted); display: block; font-size: 11.5px; }
+h3.sub { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+table.tasks { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.tasks th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+table.tasks td { border-bottom: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+table.tasks tr.out td { opacity: .55; }
+.tl { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+.tl li { position: relative; padding: 0 0 12px 10px; font-size: 13px; }
+.tl li::before { content: ""; position: absolute; left: -21px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); border: 2px solid var(--panel); }
+.tl li.ok::before { background: var(--ok); }
+.tl li.bad::before { background: var(--bad); }
+.tl li.warn::before { background: var(--warn); }
+.tl li.run::before { background: var(--accent); }
+.tl .when { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.tl .inc { color: var(--bad); font-size: 12.5px; display: block; }
+.vh-list li { display: flex; gap: 6px; align-items: baseline; }
 #scrim.open { display: block; }
 </style>
 </head>
@@ -192,6 +220,8 @@ let lastState = null;
 let lastFiles = null;
 let filters = new Set(["befehl", "rolle", "problem", "sonst"]);
 let polls = 0;
+let allVorhaben = [];
+let viewing = null;   // {kind: "vorhaben", name} while the viewer shows a live view
 
 function ago(sec) {
   if (sec == null) return "?";
@@ -236,12 +266,14 @@ async function poll() {
   try {
     if (polls % FILES_EVERY === 0 || !lastFiles) {
       lastFiles = await getJSON("/api/files");
+      allVorhaben = (await getJSON("/api/vorhaben")).vorhaben;
       buildIndex(lastFiles);
       renderDocs();
       renderMotor();
     }
     lastState = await getJSON("/api/state");
     render(lastState);
+    if (viewing && viewing.kind === "vorhaben") await openVorhaben(viewing.name, true);
     $("live").textContent = "aktualisiert " + new Date().toLocaleTimeString("de-DE");
     $("live").className = "live";
   } catch (e) {
@@ -340,11 +372,15 @@ function renderPlans(l) {
   for (const e of l.epics) rows.push(`<li>Epic ${refLink("epic:" + e.name, e.name)} ${statusBadge(e.status)}</li>`);
   for (const v of l.vorhaben) {
     const tasks = Object.entries(v.aufgaben || {}).map(([k, n]) => `${esc(k)} ${n}`).join(", ") || "keine Aufgaben";
-    rows.push(`<li>${refLink(v.name)} ${statusBadge(v.status)}
+    rows.push(`<li><span class="link" data-vorhaben="${esc(v.name)}">${esc(v.name)}</span> ${statusBadge(v.status)}
       ${v.branch ? `<span class="mono muted">${esc(v.branch)}</span>` : ""}
       <div class="muted">${tasks}</div></li>`);
   }
-  $("plans").innerHTML = rows.length ? `<ul class="plain">${rows.join("")}</ul>` : `<div class="empty">Keine offenen.</div>`;
+  const open = new Set(l.vorhaben.map(v => v.name));
+  const closed = allVorhaben.filter(v => !open.has(v.name));
+  $("plans").innerHTML = (rows.length ? `<ul class="plain">${rows.join("")}</ul>` : `<div class="empty">Keine offenen.</div>`) +
+    (closed.length ? `<details class="group" style="margin-top:6px"><summary>abgeschlossen oder verworfen <span class="count">${closed.length}</span></summary>
+      <ul class="plain vh-list">${closed.map(v => `<li><span class="link" data-vorhaben="${esc(v.name)}">${esc(v.name)}</span> ${statusBadge(v.status)}</li>`).join("")}</ul></details>` : "");
 }
 
 function renderDecisions(v) {
@@ -418,17 +454,25 @@ function renderMotor() {
 }
 
 // ---- viewer
+function showViewer(path, html, keepScroll) {
+  const c = $("v-content");
+  const top = c.scrollTop;
+  $("v-path").textContent = path;
+  c.innerHTML = html;
+  $("viewer").classList.add("open"); $("viewer").setAttribute("aria-hidden", "false");
+  $("scrim").classList.add("open");
+  c.scrollTop = keepScroll ? top : 0;
+}
 async function openDoc(url) {
+  viewing = null;
   try {
     const d = await getJSON(url);
-    $("v-path").textContent = d.pfad;
     const fm = Object.entries(d.frontmatter || {});
-    $("v-content").innerHTML =
+    const plan = d.frontmatter && d.frontmatter.typ === "plan" ? d.pfad.split("/").pop().replace(/\.md$/, "") : null;
+    showViewer(d.pfad,
+      (plan ? `<div class="vh-links"><span class="link" data-vorhaben="${esc(plan)}">Zeitleiste dieses Vorhabens</span></div>` : "") +
       (fm.length ? `<dl class="fm">${fm.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${fmValue(k, v)}</dd>`).join("")}</dl>` : "") +
-      `<div class="md">${markdown(d.body || "")}</div>`;
-    $("viewer").classList.add("open"); $("viewer").setAttribute("aria-hidden", "false");
-    $("scrim").classList.add("open");
-    $("v-content").scrollTop = 0;
+      `<div class="md">${markdown(d.body || "")}</div>`);
   } catch (e) {
     alert(e.message);
   }
@@ -438,7 +482,61 @@ function fmValue(k, v) {
   if (k === "status") return statusBadge(v);
   return refPath(v) ? refLink(v) : esc(v);
 }
+async function openVorhaben(name, refresh) {
+  try {
+    const v = await getJSON("/api/vorhaben?name=" + encodeURIComponent(name));
+    if (refresh && !(viewing && viewing.name === name)) return;
+    viewing = { kind: "vorhaben", name };
+    showViewer(`Vorhaben ${v.name}` + (v.id ? ` (${v.id})` : ""), renderVorhaben(v), refresh);
+  } catch (e) {
+    if (!refresh) alert(e.message);
+  }
+}
+function dur(a, b) {
+  if (!a) return "";
+  const s = Math.round(((b ? new Date(b) : new Date()) - new Date(a)) / 1000);
+  return ago(Math.max(0, s));
+}
+function renderVorhaben(v) {
+  const blocked = v.status === "blockiert";
+  const steps = v.phasen.map((p, i) => {
+    const cls = v.phase == null ? "" : i < v.phase ? "done" : i === v.phase ? "now" + (blocked ? " blocked" : "") : "";
+    const name = esc(p.name).replace("Problemstellung", "Problem&shy;stellung").replace("Abnahmetests", "Abnahme&shy;tests");
+    return `<li class="${cls}"><b>${name}</b>${p.zustaendig ? esc(p.zustaendig) : ""}</li>`;
+  }).join("");
+  const tasks = v.aufgaben.map(t => `<tr class="${t.im_plan ? "" : "out"}">
+      <td class="mono"><span class="link" data-open="${esc(t.pfad)}">${esc(t.id)}</span></td>
+      <td>${esc(t.titel || "")}${t.neuschnitt_runden && t.neuschnitt_runden !== "0" ? ` <span class="badge warn">Neuschnitt</span>` : ""}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>${t.naechste ? esc(t.naechste) : `<span class="muted">–</span>`}</td>
+      <td>${t.reviews.map(r => `<span class="link" data-open="${esc(r.pfad)}" title="${esc(r.status || "")}">${esc(r.name.slice(t.id.length + 1))}${r.status === "bestanden" ? " ✓" : r.status === "befunde" ? " ✗" : ""}</span>`).join(" ")}
+          ${t.compliance_dateien.map(c => `<span class="link" data-open="${esc(c)}">${c.endsWith(".scan.md") ? "Scan" : "Compliance"}</span>`).join(" ")}</td>
+    </tr>`).join("");
+  const runs = v.laeufe.map(r => {
+    const cls = !r.stop ? "run" : r.ergebnis === "ok" && !r.vorfaelle.length ? "ok" : r.ergebnis === "ok" ? "warn" : "bad";
+    return `<li class="${cls}"><span class="when">${esc(clock(r.start))}</span>
+      <b>${esc(roleName(r.rolle))}</b> · ${refLink(r.ref)} · ${r.stop ? `${dur(r.start, r.stop)} ${statusBadge(r.ergebnis)}` : `<span class="badge info">läuft seit ${dur(r.start)}</span>`}
+      ${r.werkzeugaufrufe != null ? `<span class="muted">· ${esc(r.werkzeugaufrufe)} Aufrufe</span>` : ""}
+      ${r.vorfaelle.map(i => `<span class="inc">${i.art === "stop_blocked" ? "⛔ Übergabe blockiert" : "⏱ Budget erschöpft"}: ${esc(i.grund)}</span>`).join("")}</li>`;
+  }).join("");
+  return `<div class="vh-head"><h2>${esc(v.titel || v.name)}</h2>${statusBadge(v.status)}</div>
+    <div class="vh-links"><span class="link" data-open="${esc(v.pfad)}">Plan öffnen</span>
+      ${v.epic ? ` · Epic ${v.epic_pfad ? `<span class="link" data-open="${esc(v.epic_pfad)}">${esc(v.epic)}</span>` : esc(v.epic)}` : ""}
+      ${v.branch ? ` · <span class="mono">${esc(v.branch)}</span>` : ""}</div>
+    <ol class="steps">${steps}</ol>
+    ${v.naechste ? `<div class="next"><small>Als Nächstes laut Ablauf</small>${esc(v.naechste)}</div>` : ""}
+    <h3 class="sub">Aufgaben</h3>
+    ${v.aufgaben.length ? `<table class="tasks"><thead><tr><th>ID</th><th>Titel</th><th>Status</th><th>als Nächstes</th><th>Reviews, Compliance</th></tr></thead><tbody>${tasks}</tbody></table>`
+      : `<div class="empty">Noch keine Aufgaben geschnitten.</div>`}
+    <h3 class="sub">Abnahme</h3>
+    ${v.abnahme ? `<span class="link" data-open="${esc(v.abnahme.pfad)}">Abnahmenachweis</span> ${statusBadge(v.abnahme.status)}` : `<div class="empty">Noch kein Abnahmenachweis.</div>`}
+    ${v.vorlagen.length ? `<h3 class="sub">Vorlagen</h3><ul class="plain">${v.vorlagen.map(d => `<li><span class="link" data-open="${esc(d.pfad)}">${esc(d.titel)}</span>
+        ${d.offen ? (d.eskaliert ? `<span class="badge info">richtungsweisend, offen</span>` : `<span class="badge warn">offen</span>`) : `<span class="badge ok">entschieden${d.entscheider ? " · " + esc(d.entscheider) : ""}</span>`}</li>`).join("")}</ul>` : ""}
+    <h3 class="sub">Rollenläufe</h3>
+    ${runs ? `<ol class="tl">${runs}</ol>` : `<div class="empty">Keine aufgezeichneten Rollenläufe auf diesem Rechner.</div>`}`;
+}
 function closeViewer() {
+  viewing = null;
   $("viewer").classList.remove("open"); $("viewer").setAttribute("aria-hidden", "true");
   $("scrim").classList.remove("open");
 }
@@ -448,6 +546,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeViewer(
 document.addEventListener("click", e => {
   const o = e.target.closest("[data-open]");
   if (o) return openDoc("/api/file?path=" + encodeURIComponent(o.dataset.open));
+  const vh = e.target.closest("[data-vorhaben]");
+  if (vh) return openVorhaben(vh.dataset.vorhaben);
   const d = e.target.closest("[data-doc]");
   if (d) return openDoc("/api/doc?name=" + encodeURIComponent(d.dataset.doc));
 });
