@@ -57,7 +57,7 @@ flowchart TD
     TA --> D
     D -->|Tag ohne Prüfbericht| AU["Auditor"]
     AU --> D
-    D -->|≥ 30 Tage und ≥ 40 Rollenläufe| CO["Coach → Vorlagen"]
+    D -->|≥ 30 Tage und ≥ 40 Rollenläufe,<br/>oder Modellwechsel mit ≥ 10 Läufen| CO["Coach → Vorlagen"]
     CO --> D
     D -->|≥ 7 Tage und ≥ 10 Commits| AR["Architekt, Wochenrunde"]
     AR --> D

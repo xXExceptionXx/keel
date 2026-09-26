@@ -17,8 +17,9 @@ lines="$(printf '%s\n' "$msg" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 tasks="$proj/.keel/work/tasks"
 plans="$proj/.keel/work/plans"
 
-finish() {  # record, drop this run's state files, allow stop
-  record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$(field '.agent_transcript_path')" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript}')"
+finish() {  # record, drop this run's state files, allow stop. The model is what actually ran, for the Coach.
+  local tr; tr="$(field '.agent_transcript_path')"
+  record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$tr" --arg model "$(transcript_model "$tr")" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript,model:$model}')"
   rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout"
   exit 0
 }
@@ -187,6 +188,13 @@ case "$role" in
     rep="$proj/.keel/work/coach/$ref.md"
     $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>/tmp/keel-stop-err \
       || block_stop "Coach-Bericht fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err)"
+    # A model switch with enough runs for a comparison must be assessed (System-ADR 0015).
+    need="$($CFG "$proj" faelligkeiten.coach_nach_modellwechsel_rollenlaeufe 10)"
+    open_sw="$(python3 "$PLUGIN_ROOT/scripts/models.py" "$proj" --json 2>/dev/null | jq -r --argjson n "$need" '[.offene_wechsel[] | select(.laeufe >= $n) | .modell] | join(", ")' 2>/dev/null || true)"
+    [ -z "$open_sw" ] || block_stop "Modellwechsel nicht bewertet: $open_sw. Vergleiche je Rolle altes und neues Modell (metrics.py, Tabelle 'Je Modell'), schreibe den Abschnitt '**Modellzuordnung:**' und setze modell_geprueft=[$open_sw] im Bericht."
+    if [ -n "$($FM get "$rep" modell_geprueft 2>/dev/null || true)" ]; then
+      grep -q "Modellzuordnung" "$rep" || block_stop "modell_geprueft ist gesetzt, aber der Abschnitt '**Modellzuordnung:**' fehlt im Bericht."
+    fi
     ;;
   auditor)
     rep="$proj/.keel/work/audit/$ref.md"

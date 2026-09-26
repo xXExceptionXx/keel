@@ -515,7 +515,7 @@ Die häufigsten Fehlerquellen aus Experimenten mit autonomen Agenten, mit dem St
 | 9 | Unehrliche Berichte, erfundene Ergebnisse | abgedeckt, erprobt | Nachweispflicht, Auditor vergleicht Übergabenotiz und Code. Erster Audit am 2026-09-21 fand eine Erledigt-Zeile, die der Commit nicht deckte |
 | 10 | Tests passend gemacht statt Problem gelöst | abgedeckt | Tests vorab vom Tester, Änderungsverbot für den Entwickler |
 | 11 | Technischer Drift | abgedeckt | Konventionen als Code, Referenzbeispiele, Architekt |
-| 12 | Veraltende Schutzmaßnahmen nach Modellwechsel | abgedeckt | System-Coach prüft bei jedem Modellwechsel und in der Umfeld-Recherche |
+| 12 | Veraltende Schutzmaßnahmen nach Modellwechsel | abgedeckt | Modell je Rollenlauf in den Ereignissen, Wechsel als Hinweis beim Start, Coach vorgezogen nach zehn Läufen auf dem neuen Modell und per Hook zur Bewertung angehalten; Umfeld-Recherche nach neuen Modellen. System-ADR 0015 |
 | 13 | Uneinheitliche Werkzeugnutzung | abgedeckt | Tool-Skills mit Skripten, Architekt als Verantwortlicher |
 | 14 | Festgefahrene Aufgaben ohne Abbruch | abgedeckt | Budget pro Aufgabe per Hook, max. zwei Review-Runden, danach Neuschnitt |
 | 15 | Kumulierte Produktdrift über viele unauffällige Tage | abgedeckt | Wochenlauf des Auditors gegen den Gesamtstand |
@@ -668,6 +668,10 @@ Ergänzt am 2026-09-22. Ich merke mir keine Befehle: `/keel:start` liest, was f�
 ## Hilfe statt Stützräder
 
 Ergänzt am 2026-09-26. Für die ersten Wochen im echten Projekt stand eine Proxy-Session über keel zur Debatte, die beaufsichtigt, korrigiert und Vorlagen durchreicht. Verworfen: Es gibt genau einen Entscheider, und die Vorlage wartet auf ihn; eine zweite Aufsicht verwischt die Kalibrierung von Supervisor und Coach. Geblieben ist `/keel:hilfe`, eine Skill ohne Befugnisse: Sie erklärt den Stand aus Zustand und Ereignissen, nennt den nächsten Befehl und darf mit meinem Ja Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue im Plugin-Repo melden. Motor-Reparaturen finden dort statt, nie im Projekt. Siehe System-ADR 0014.
+
+## Modellwechsel
+
+Ergänzt am 2026-09-26, als Opus 5.5 seit Tagen verfügbar war und keel es nicht bemerkt hatte. Jeder Rollenlauf schreibt jetzt sein Modell mit. Läuft eine Rolle auf einem neuen Modell, nennt der Sessionstart das als Hinweis. Nach zehn Läufen auf dem neuen Modell wird der Coach fällig, auch vor Ablauf seiner 30 Tage, vergleicht je Rolle altes und neues Modell und schlägt Änderungen als Vorlage vor. Welches Modell eine Rolle bekommt, steuert keel noch nicht; als nächsten Schritt schlägt System-ADR 0016 Komplexitätsstufen vor: Der Planer stuft jede Aufgabe ein, die Konfiguration ordnet Stufen Modellen zu, und bei Belegen wird eine Stufe höher eskaliert. Siehe System-ADR 0015 und 0016.
 
 ## Supervisor und Morgen-Briefing
 

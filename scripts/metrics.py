@@ -6,6 +6,7 @@ Usage: metrics.py <project-dir> [--since YYYY-MM-DD] [--json]
 Sources: ~/.keel-metrics/<project>/events.jsonl (role starts/stops, blocked stops, budgets),
 subagent transcripts (tokens), git log (task diffs), .keel/work (tasks, reviews, audits),
 .keel/decisions and .keel/adr. Corridors come from .keel/config.yaml under `korridore`.
+A second table splits run outcomes by the model that ran them (System-ADR 0015), for the Coach after a model switch.
 Working roles never call this; it is for the human and the Coach.
 """
 import json
@@ -20,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import read as read_config  # noqa: E402
 from frontmatter import parse as parse_fm  # noqa: E402
+from models import runs as model_runs, switches as model_switches  # noqa: E402
 
 DEFAULT_CORRIDORS = {
     "vorlagen_pro_woche": "2-5",
@@ -101,6 +103,7 @@ def main():
             ts = datetime.fromisoformat(e["ts"].replace("Z", ""))
             if since and ts < since:
                 continue
+            e["_ts"] = ts
             events.append(e)
     stops = [e for e in events if e["event"] == "agent_stop"]
     blocked = [e for e in events if e["event"] == "stop_blocked"]
@@ -196,6 +199,44 @@ def main():
             audits.append((data, n))
     audit_avg = round(sum(n for _, n in audits) / len(audits), 1) if audits else None
 
+    # ---- per model: outcomes of the runs each model did; review results count for the developer's model
+    per_model = defaultdict(lambda: {"laeufe": 0, "rollen": set(), "blockiert": 0, "budget": 0, "tokens": 0, "reviews": 0, "befunde": 0, "runden": []})
+    runs = model_runs(events)
+    model_of_agent = {r["agent_id"]: r["model"] for r in runs}
+    dev_model = {}
+    for r in runs:
+        m = per_model[r["model"]]
+        m["laeufe"] += 1
+        m["rollen"].add(r["role"])
+        m["budget"] += r["result"] == "budget-erschoepft"
+        if r["transcript"]:
+            m["tokens"] += token_usage(r["transcript"])[0]
+        if r["role"] == "entwickler" and r["ref"]:
+            dev_model[r["ref"]] = r["model"]
+    for e in blocked:
+        if e.get("agent_id") in model_of_agent:
+            per_model[model_of_agent[e["agent_id"]]]["blockiert"] += 1
+    for r in reviews:
+        mdl = dev_model.get(r.get("aufgabe"))
+        if mdl:
+            per_model[mdl]["reviews"] += 1
+            per_model[mdl]["befunde"] += r.get("status") == "befunde"
+    for ref, n in rounds.items():
+        if ref in dev_model:
+            per_model[dev_model[ref]]["runden"].append(n)
+    modelle = []
+    for name, m in sorted(per_model.items()):
+        modelle.append({
+            "modell": name,
+            "rollenlaeufe": m["laeufe"],
+            "rollen": sorted(m["rollen"]),
+            "blockierte_uebergaben_prozent": round(100 * m["blockiert"] / m["laeufe"]) if m["laeufe"] else None,
+            "budget_erschoepft": m["budget"],
+            "tokens_pro_lauf_k": round(m["tokens"] / m["laeufe"] / 1000, 1) if m["laeufe"] else None,
+            "ruecklaufquote_review_prozent": round(100 * m["befunde"] / m["reviews"]) if m["reviews"] else None,
+            "review_runden_pro_aufgabe": round(sum(m["runden"]) / len(m["runden"]), 2) if m["runden"] else None,
+        })
+
     rows = [
         ("Meine Aufmerksamkeit", "vorlagen_pro_woche", "Vorlagen an den Menschen pro Woche", vorlagen_pro_woche),
         ("Meine Aufmerksamkeit", "entscheidungsdauer_tage", "Zeit bis zur Entscheidung (Tage)", entscheidungsdauer),
@@ -221,7 +262,7 @@ def main():
         if ok is False:
             violations += 1
         report.append({"bereich": area, "kennzahl": key, "label": label, "wert": value, "korridor": corridor, "status": "n/a" if ok is None else ("ok" if ok else "verletzt")})
-    summary = {"projekt": project.name, "seit": since.date().isoformat() if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report}
+    summary = {"projekt": project.name, "seit": since.date().isoformat() if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report, "modelle": modelle, "offene_modellwechsel": model_switches(project)}
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return
@@ -231,6 +272,15 @@ def main():
     for r in report:
         v = "–" if r["wert"] is None else r["wert"]
         print(f"| {r['bereich']} | {r['label']} | {v} | {r['korridor'] or '–'} | {r['status']} |")
+    if modelle:
+        dash = lambda x: "–" if x is None else x  # noqa: E731
+        print("\n## Je Modell\n")
+        print("| Modell | Rollenläufe | Rollen | Blockierte Übergaben (%) | Budget erschöpft | Ausgabe-Tokens pro Lauf (k) | Reviews mit Befunden (%) | Review-Runden (Ø) |")
+        print("| --- | --- | --- | --- | --- | --- | --- | --- |")
+        for m in modelle:
+            print(f"| {m['modell']} | {m['rollenlaeufe']} | {', '.join(m['rollen'])} | {dash(m['blockierte_uebergaben_prozent'])} | {m['budget_erschoepft']} | {dash(m['tokens_pro_lauf_k'])} | {dash(m['ruecklaufquote_review_prozent'])} | {dash(m['review_runden_pro_aufgabe'])} |")
+    for sw in summary["offene_modellwechsel"]:
+        print(f"\nOffener Modellwechsel: {sw['modell']} seit {sw['seit']} (vorher {', '.join(sw['vorher'])}; Rollen: {', '.join(sw['rollen'])}; {sw['laeufe']} Läufe). Der Coach setzt modell_geprueft im Bericht.")
     sys.exit(3 if violations else 0)
 
 

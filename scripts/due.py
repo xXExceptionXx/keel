@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What is due in a keel project, derived from state: briefing, day close-out, audit, coach, architecture round.
+"""What is due in a keel project, derived from state: briefing, day close-out, audit, coach, architecture round, model switch.
 
 Usage: due.py <project-dir> [--json]
 Hard items block all roles except the one that satisfies them; /keel:start runs them in order.
@@ -15,8 +15,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import read as read_config  # noqa: E402
 from frontmatter import parse as parse_fm  # noqa: E402
+from models import switches as model_switches  # noqa: E402
 
-DEFAULTS = {"coach_tage": 30, "coach_min_rollenlaeufe": 40, "architektur_tage": 7, "architektur_min_commits": 10}
+DEFAULTS = {"coach_tage": 30, "coach_min_rollenlaeufe": 40, "coach_nach_modellwechsel_rollenlaeufe": 10, "architektur_tage": 7, "architektur_min_commits": 10}
 
 
 def fm(p):
@@ -95,6 +96,22 @@ def main():
         items.append({"art": "coach", "hart": True, "rolle": "coach", "grund": f"{days if days is not None else 'noch kein'} Tage seit dem letzten Coach-Lauf, {runs} Rollenläufe seitdem", "befehl": "/keel:start führt ihn aus"})
     elif runs >= th["coach_min_rollenlaeufe"] and days is not None:
         items.append({"art": "coach", "hart": False, "rolle": "coach", "grund": f"{runs} Rollenläufe seit dem letzten Lauf, fällig in {th['coach_tage'] - days} Tagen", "befehl": "/keel:coach"})
+
+    # model switch: a role runs on a new model. Hint right away; the Coach is due early once enough runs on the
+    # new model allow a comparison, regardless of coach_tage. Settled by `modell_geprueft` in a Coach report.
+    for sw in model_switches(project):
+        what = f"Modellwechsel auf {sw['modell']} seit {sw['seit']} (vorher {', '.join(sw['vorher'])}; Rollen: {', '.join(sw['rollen'])})"
+        need = th["coach_nach_modellwechsel_rollenlaeufe"]
+        if sw["laeufe"] >= need:
+            coach = next((i for i in items if i["art"] == "coach"), None)
+            if coach and coach["hart"]:
+                coach["grund"] += f"; {what}"
+            else:
+                if coach:
+                    items.remove(coach)
+                items.append({"art": "coach", "hart": True, "rolle": "coach", "grund": f"{what}, {sw['laeufe']} Rollenläufe auf dem neuen Modell", "befehl": "/keel:start führt ihn aus"})
+        else:
+            items.append({"art": "modellwechsel", "hart": False, "rolle": "coach", "grund": f"{what}; {sw['laeufe']} von {need} Rollenläufen für den Vergleich, danach wird der Coach fällig", "befehl": "weiterarbeiten"})
 
     # architecture round: days and commits since the last report
     last_arch = newest(project / ".keel" / "work" / "architektur")

@@ -42,6 +42,14 @@ role_limit() {  # role_limit <role> <key> <default>
   $CFG "$p" "budget.$2" "$3"
 }
 
+# Model of the latest assistant turn in a transcript; empty when unknown. Reads the tail only and skips
+# the partial first line and non-JSON lines, so large transcripts stay cheap.
+transcript_model() {  # transcript_model <path>
+  [ -f "$1" ] || return 0
+  tail -c 400000 "$1" | jq -rR 'fromjson? | select(.type=="assistant") | .message.model // empty' 2>/dev/null \
+    | grep -v '^<synthetic>$' | tail -1 || true
+}
+
 # Extract "Aufgabe: V1-T01" or "Vorhaben: rechnung" from a prompt.
 prompt_field() { { printf '%s' "$1" | grep -oE "^$2:[[:space:]]*[A-Za-z0-9_.-]+" || true; } | head -1 | sed -E "s/^$2:[[:space:]]*//"; }
 
