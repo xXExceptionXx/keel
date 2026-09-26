@@ -1,6 +1,6 @@
 # keel auf einen Blick
 
-Sieben Sichten auf dasselbe System, Stand 0.9. Alle Diagramme sind Mermaid und rendern direkt auf GitHub; die Quelle ist diese Datei.
+Sieben Sichten auf dasselbe System, Stand 0.12. Alle Diagramme sind Mermaid und rendern direkt auf GitHub; die Quelle ist diese Datei.
 
 ## 1. Rollen und Beziehungen
 
@@ -152,7 +152,7 @@ stateDiagram-v2
 
 ## 6. Was die Hooks um eine Rolle herum tun
 
-Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel.
+Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel. Welcher Status für welche Rolle und welchen Anlass nötig ist und welche Rollen eine harte Fälligkeit freigibt, liest agent-gate aus `scripts/flow.py`, derselben Tabelle, aus der der Monitor „bereit“ und „gesperrt“ ableitet. Ist sie nicht lesbar, startet keine Rolle. `python3 tests/gate/run.py --against main` vergleicht das Gate mit einem früheren Stand.
 
 ```mermaid
 sequenceDiagram

@@ -19,7 +19,8 @@ the address and exits. With --if-autostart it does nothing unless monitor.autost
 .keel/config.yaml; the start commands (skill-gate hook, keel.sh, keel-run.sh) call it that way.
 --stop ends a monitor that --ensure started for this project.
 
-Observer only (System-ADR 0017): reads state, events and files, writes nothing, starts nothing.
+Observer only (System-ADR 0017): reads state, events and files, never writes to the project and starts no
+role. --ensure keeps its log and PID under ~/.keel-metrics/<project>/logs/.
 Binds to 127.0.0.1 and answers only requests addressed to localhost.
 """
 import json
