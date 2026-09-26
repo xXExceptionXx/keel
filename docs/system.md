@@ -48,7 +48,7 @@ Auditor und Coach stehen außerhalb der Befehlskette und ändern nichts außer i
 
 ## 2. Zwei Befehle und die Fälligkeiten
 
-`/keel:start` liest den Zustand und tut, was fällig ist. Harte Fälligkeiten sperren per Hook alle Rollen außer der, die sie erledigt. `/keel:hilfe` steht daneben als Beobachter: Es erklärt den Stand aus `lage.py` (Fälligkeiten, Vorhaben, Vorlagen, Ereignisse nach Grund, Reste), nennt den nächsten Befehl und darf nur mit Ja des Menschen Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue melden. Jede Ablehnung, die den Menschen erreicht, verweist darauf (System-ADR 0014).
+`/keel:start` liest den Zustand und tut, was fällig ist. Harte Fälligkeiten sperren per Hook alle Rollen außer der, die sie erledigt. `/keel:hilfe` steht daneben als Beobachter: Es erklärt den Stand aus `lage.py` (Fälligkeiten, Vorhaben, Vorlagen, Ereignisse nach Grund, Reste), nennt den nächsten Befehl und darf nur mit Ja des Menschen Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue melden. Jede Ablehnung, die den Menschen erreicht, verweist darauf (System-ADR 0014). `/keel:monitor` zeigt dieselbe Lage laufend als lokale Webseite, mit aktiver Rolle, Ereignisstrom und allen Übergaben als Dokumente, und schreibt ebenfalls nichts (System-ADR 0017).
 
 ```mermaid
 flowchart TD
@@ -239,4 +239,4 @@ flowchart LR
 | `.keel/work/hinweise/` | Ich, über `/keel:hilfe` | Coach (prüft, übernimmt nicht) | – |
 | `.keel/decisions/pending/` → `done/` | PO, Lead, Coach, Tagesstart; entschieden vom Supervisor oder Mensch | Supervisor, Briefing, Inbox | agent-stop (Supervisor), briefing_needed.py |
 | `.keel/adr/` | Planer (Entwurf), Architekt (Entwurf), PO (delegiert), Supervisor, Ich | alle | Inbox, Briefing, due.py |
-| `~/.keel-metrics/<projekt>/` | Hooks | Coach, metrics.py, due.py, lage.py (Hilfe) | tool-gate sperrt alle anderen Rollen |
+| `~/.keel-metrics/<projekt>/` | Hooks | Coach, metrics.py, due.py, lage.py (Hilfe, Monitor) | tool-gate sperrt alle anderen Rollen |

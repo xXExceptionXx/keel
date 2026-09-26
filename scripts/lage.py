@@ -191,6 +191,48 @@ def events(metrics_dir, hours):
     }
 
 
+def read_text(p):
+    try:
+        return p.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def agent_runs(state_dir, stops, now=None):
+    """Per-agent state files grouped by agent id. zustand: laeuft (no stop event, younger than a day),
+    beendet (stop event recorded) or liegengeblieben (no stop event, older than a day or no start time)."""
+    now = now or time.time()
+    agents = defaultdict(list)
+    if state_dir.exists():
+        for p in state_dir.glob("agent-*.*"):
+            agents[p.name.split(".")[0][len("agent-"):]].append(p)
+    out = []
+    for aid, files in agents.items():
+        try:
+            started = int(read_text(state_dir / f"agent-{aid}.start"))
+        except ValueError:
+            started = None
+        age = int(now - started) if started else None
+        if aid in stops:
+            zustand = "beendet"
+        elif age is None or age > STALE_AGENT_SECONDS:
+            zustand = "liegengeblieben"
+        else:
+            zustand = "laeuft"
+        out.append({
+            "agent_id": aid,
+            "rolle": read_text(state_dir / f"agent-{aid}.role") or "?",
+            "ref": read_text(state_dir / f"agent-{aid}.ref"),
+            "start": started,
+            "seit_sekunden": age,
+            "werkzeugaufrufe": read_text(state_dir / f"agent-{aid}.calls") or None,
+            "zeitbudget_erschoepft": (state_dir / f"agent-{aid}.timeout").exists(),
+            "zustand": zustand,
+            "_files": files,
+        })
+    return out
+
+
 def state_files(state_dir, starts, stops):
     """Leftover state: pending markers, per-agent files, context markers. Returns findings and cleanup candidates."""
     now = time.time()
@@ -206,27 +248,16 @@ def state_files(state_dir, starts, stops):
             cleanup.append(p)
         else:
             findings.append(f"pending-{role}: Rolle startet gerade ({int(age)} s)")
-    agents = defaultdict(list)
-    for p in state_dir.glob("agent-*.*"):
-        agents[p.name.split(".")[0][len("agent-"):]].append(p)
     running, stale, finished = [], 0, 0
-    for aid, files in agents.items():
-        start_f = state_dir / f"agent-{aid}.start"
-        try:
-            started = int(start_f.read_text().strip()) if start_f.exists() else None
-        except ValueError:
-            started = None
-        age = now - started if started else None
-        if aid in stops or age is None or age > STALE_AGENT_SECONDS:
-            if aid in stops:
-                finished += 1
-            else:
-                stale += 1
-            cleanup.extend(files)
+    for a in agent_runs(state_dir, stops, now):
+        if a["zustand"] == "laeuft":
+            running.append(f"{a['rolle']} {a['ref']} seit {a['seit_sekunden'] // 60} Minuten (kein Stopp-Ereignis)")
+            continue
+        if a["zustand"] == "beendet":
+            finished += 1
         else:
-            role = (state_dir / f"agent-{aid}.role").read_text().strip() if (state_dir / f"agent-{aid}.role").exists() else "?"
-            ref = (state_dir / f"agent-{aid}.ref").read_text().strip() if (state_dir / f"agent-{aid}.ref").exists() else ""
-            running.append(f"{role} {ref} seit {int(age // 60)} Minuten (kein Stopp-Ereignis)")
+            stale += 1
+        cleanup.extend(a["_files"])
     if running:
         findings.append("Läuft oder liegengeblieben: " + "; ".join(running))
     if finished or stale:
@@ -248,31 +279,19 @@ def newest_dated(dirpath):
     return best
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(2)
-    project = Path(sys.argv[1]).resolve()
-    hours = int(arg("--hours", "24"))
-    plugin_root = arg("--plugin-root") or os.environ.get("CLAUDE_PLUGIN_ROOT")
+def metrics_dir_of(project):
+    return Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name
+
+
+def build_report(project, hours=24, plugin_root=None):
+    """The situation report as a dict, plus the state files --clean would remove. Shared with monitor.py."""
     cfg_path = project / ".keel" / "config.yaml"
     cfg = read_config(cfg_path) if cfg_path.exists() else {}
-    metrics_dir = Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name
+    metrics_dir = metrics_dir_of(project)
     state_dir = metrics_dir / "state"
 
     ev = events(metrics_dir, hours)
     findings, cleanup = state_files(state_dir, ev.pop("_starts"), ev.pop("_stops"))
-
-    if "--clean" in sys.argv:
-        n = 0
-        for p in cleanup:
-            try:
-                p.unlink()
-                n += 1
-            except OSError:
-                pass
-        print(f"{n} Zustandsdateien entfernt")
-        sys.exit(0)
 
     report = {
         "projekt": project.name,
@@ -290,6 +309,28 @@ def main():
         "letzte_uebergabe": newest_dated(project / ".keel" / "work" / "handoff"),
         "letzter_pruefbericht": newest_dated(project / ".keel" / "work" / "audit"),
     }
+    return report, cleanup
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(2)
+    project = Path(sys.argv[1]).resolve()
+    hours = int(arg("--hours", "24"))
+    plugin_root = arg("--plugin-root") or os.environ.get("CLAUDE_PLUGIN_ROOT")
+    report, cleanup = build_report(project, hours, plugin_root)
+
+    if "--clean" in sys.argv:
+        n = 0
+        for p in cleanup:
+            try:
+                p.unlink()
+                n += 1
+            except OSError:
+                pass
+        print(f"{n} Zustandsdateien entfernt")
+        sys.exit(0)
 
     if "--json" in sys.argv:
         print(json.dumps(report, ensure_ascii=False, indent=2, default=str))
