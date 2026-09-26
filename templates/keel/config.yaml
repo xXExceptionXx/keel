@@ -53,6 +53,7 @@ motor:
 faelligkeiten:
   coach_tage: 30               # frühestens nach so vielen Tagen …
   coach_min_rollenlaeufe: 40   # … und nur, wenn seitdem so viele Rollenläufe stattfanden
+  coach_nach_modellwechsel_rollenlaeufe: 10   # Modellwechsel: Coach vorgezogen, sobald so viele Läufe auf dem neuen Modell vorliegen
   architektur_tage: 7
   architektur_min_commits: 10
 
