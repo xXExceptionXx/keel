@@ -37,6 +37,7 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).parent))
 from config import read as read_config  # noqa: E402
+from flow import BY_DUE, DUE_ROLES, NEXT_PLAN, NEXT_TASK, PHASES, ROLES, bereit  # noqa: E402
 from frontmatter import parse as parse_fm  # noqa: E402
 from lage import agent_runs, build_report, metrics_dir_of  # noqa: E402
 
@@ -45,43 +46,6 @@ EVENT_TAIL = 200            # events.jsonl lines shown in the stream
 HOOKS_TAIL_BYTES = 512_000  # tail of hooks.jsonl scanned for commands and skill calls
 STATE_TTL = 2.0             # seconds a computed state is reused across polls and tabs
 DEFAULT_PORT = 8765
-
-# The flow of a Vorhaben as skills/vorhaben/SKILL.md runs it: phases by plan status, and who acts next
-# for a plan or task status. Mirrors the skill; the Lead still decides, this only reads the rule.
-PHASES = [
-    ("Problemstellung", ["entwurf"], "PO und Architekt"),
-    ("Abnahmetests", ["problemstellung"], "Tester"),
-    ("Planung", ["abnahmetests-bereit", "strukturaenderung"], "Planer"),
-    ("Umsetzung", ["geplant", "in-arbeit", "nacharbeit"], "Tester, Entwickler, Compliance, Reviewer"),
-    ("Abnahme", ["abnahme-bereit", "abnahme-rot"], "PO"),
-    ("Integration", ["abgenommen"], "Lead"),
-    ("Integriert", ["integriert", "abgeschlossen"], ""),
-]
-NEXT_PLAN = {
-    "entwurf": "Architekt bewertet, PO stimmt ab (höchstens zwei Runden)",
-    "problemstellung": "Tester schreibt die Abnahmetests",
-    "abnahmetests-bereit": "Planer schneidet die Aufgaben",
-    "strukturaenderung": "Lead schreibt eine Vorlage zur Strukturfrage",
-    "geplant": "Aufgabenzyklus: erste offene Aufgabe",
-    "in-arbeit": "Aufgabenzyklus: erste offene Aufgabe",
-    "nacharbeit": "Planer schneidet Aufgaben aus der Nacharbeit des PO",
-    "abnahme-bereit": "PO nimmt ab",
-    "abnahme-rot": "PO schreibt Nacharbeit aus den roten Abnahmetests",
-    "abgenommen": "Lead integriert in die Basis beim nächsten Aufruf",
-    "blockiert": "wartet auf eine Entscheidung (Supervisor oder Briefing)",
-}
-NEXT_TASK = {
-    "geplant": "Tester",
-    "tests-bereit": "Entwickler",
-    "in-arbeit": "Entwickler",
-    "nacharbeit": "Entwickler",
-    "fertig-gemeldet": "Compliance-Scan, dann Reviewer",
-    "review": "Reviewer",
-    "testeinspruch": "Planer (Neuschnitt)",
-    "budget-erschoepft": "Planer (Neuschnitt)",
-    "neuschnitt": "Planer (Neuschnitt) oder PO (Klärung)",
-}
-
 
 def arg(name, default=None):
     if name in sys.argv:
@@ -180,12 +144,14 @@ def state(project, plugin_root, hours):
                 starting.append({"rolle": p.name[len("pending-"):], "ref": p.read_text(encoding="utf-8").strip(), "seit_sekunden": int(age)})
 
     stream = sorted(events[-EVENT_TAIL:] + cmds[-50:], key=lambda e: e.get("ts") or "")
+    roles = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])
     for e in stream:
         e.pop("transcript", None)
     return {
         "lage": report,
         "aktiv": active,
         "startet": starting,
+        "rollen": roles,
         "ereignisse": stream[-EVENT_TAIL:],
         "zeit": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
@@ -293,6 +259,35 @@ def vorhaben_detail(project, name):
         "vorlagen": vorlagen,
         "laeufe": runs_for(load_events(metrics_dir_of(project)), refs),
     }
+
+
+def role_states(project, due, running):
+    """Per role: aktiv, gesperrt (a hard due item only another role may satisfy), bereit (an object meets
+    its entry condition in scripts/flow.py, or its due item is listed) or ruht. keel runs roles one at a
+    time, so a ready role waits while another runs."""
+    items = due.get("faellig") or []
+    hard = [i for i in items if i.get("hart")]
+    allowed = {r for i in hard for r in DUE_ROLES.get(i.get("art"), [])}
+    ready = bereit(project)
+    for role, art in list(BY_DUE.items()) + [("architekt", "architektur")]:
+        for i in items:
+            if i.get("art") == art:
+                ready[role].append({"anlass": art, "ref": i.get("grund"), "pfad": None, "faellig": True})
+    out = {}
+    for role in ROLES:
+        r = {"bereit": ready.get(role, [])}
+        if role in running:
+            r["zustand"] = "aktiv"
+        elif hard and role not in allowed:
+            r["zustand"] = "gesperrt"
+            r["grund"] = "Fällig: " + "; ".join(f"{i.get('art')} ({i.get('grund')})" for i in hard)
+        elif r["bereit"]:
+            r["zustand"] = "bereit"
+            r["wartet"] = bool(running)
+        else:
+            r["zustand"] = "ruht"
+        out[role] = r
+    return out
 
 
 def keel_root(project):

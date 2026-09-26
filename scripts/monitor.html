@@ -48,6 +48,32 @@ a:hover, .link:hover { text-decoration: underline; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 
+/* flow diagram */
+.flow-section { grid-column: 1 / -1; margin-bottom: 0; }
+.legend { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12px; display: flex; gap: 4px 10px; align-items: center; flex-wrap: wrap; }
+.lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; border: 2px solid; margin-right: -6px; }
+.lg.aktiv { border-color: var(--accent); background: var(--active-bg); }
+.lg.bereit { border-color: var(--ok); }
+.lg.gesperrt { border-color: var(--bad); }
+.lg.ruht { border-color: var(--line); }
+.lane { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; padding: 8px 0; border-top: 1px dashed var(--line); }
+.lane:first-child { border-top: 0; padding-top: 0; }
+.lane-label { flex: 0 0 110px; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding-top: 8px; }
+@media (max-width: 720px) { .lane-label { flex-basis: 100%; padding-top: 0; } }
+.node { border: 2px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 112px; max-width: 220px; font-size: 12.5px; line-height: 1.35; background: var(--panel); }
+.node b { font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+.node .st { color: var(--muted); display: block; }
+.node .refs { display: block; margin-top: 2px; overflow-wrap: anywhere; }
+.node .last { display: block; color: var(--muted); font-size: 11.5px; }
+.node.aktiv { border-color: var(--accent); background: var(--active-bg); }
+.node.bereit { border-color: var(--ok); }
+.node.bereit .st { color: var(--ok); }
+.node.gesperrt { border-color: var(--bad); border-style: dashed; }
+.node.gesperrt .st { color: var(--bad); }
+.node.ruht { opacity: .75; }
+.node.pseudo { border-style: dotted; color: var(--muted); display: flex; align-items: center; }
+.arrow { align-self: center; color: var(--muted); font-size: 16px; }
+
 /* roles */
 .roles { display: flex; flex-wrap: wrap; gap: 6px; }
 .rolechip { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--chip); font-size: 12.5px; line-height: 1.3; }
@@ -107,6 +133,8 @@ input.search { width: 100%; font: inherit; padding: 5px 8px; border: 1px solid v
 .md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
 .md blockquote { margin: 0; padding: 2px 12px; border-left: 3px solid var(--line); color: var(--muted); }
 .md hr { border: 0; border-top: 1px solid var(--line); }
+.md .diagram { overflow: auto; margin: 8px 0; }
+.md .diagram svg { max-width: 100%; height: auto; }
 .md pre.mermaid::before { content: "Diagramm (Mermaid-Quelltext)"; display: block; color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; margin-bottom: 4px; }
 #scrim { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 9; display: none; }
 
@@ -148,14 +176,16 @@ table.tasks tr.out td { opacity: .55; }
 </header>
 
 <main>
+  <section class="flow-section">
+    <h2>Ablauf
+      <span class="legend"><i class="lg aktiv"></i>aktiv <i class="lg bereit"></i>bereit <i class="lg gesperrt"></i>gesperrt <i class="lg ruht"></i>ruht</span>
+    </h2>
+    <div id="flow"></div>
+  </section>
   <div class="col-now">
     <section>
       <h2>Jetzt</h2>
       <div id="now"></div>
-    </section>
-    <section>
-      <h2>Rollen</h2>
-      <div class="roles" id="roles"></div>
     </section>
     <section>
       <h2>Fällig <span class="count" id="due-count"></span></h2>
@@ -304,7 +334,7 @@ function render(s) {
     `keel ${esc(pv.genutzt || "?")}` + (pv.installiert && pv.marketplace && pv.installiert !== pv.marketplace ? ` <span class="badge warn">Update ${esc(pv.marketplace)}</span>` : ""),
   ].join(" · ");
   renderNow(s);
-  renderRoles(s);
+  renderFlow(s);
   renderDue(l.faellig);
   renderPlans(l);
   renderDecisions(l.vorlagen);
@@ -337,19 +367,73 @@ function renderNow(s) {
   $("now").innerHTML = out.join("");
 }
 
-function renderRoles(s) {
-  const active = new Set(s.aktiv.map(a => a.rolle).concat(s.startet.map(p => p.rolle)));
+// Nodes of the flow diagram. A role can appear twice (Tester for acceptance tests and per task, PO for
+// the problem statement and the acceptance); "anlass" picks which of its ready objects a node shows.
+const FLOW = [
+  { label: "Entscheiden", nodes: [
+    { human: true, name: "Mensch", sub: "Backlog, Briefing" }, "⇄",
+    { role: "supervisor", name: "Supervisor", anlass: ["entscheiden"] }, " ",
+    { lead: true, name: "Lead", sub: "taktet in der Haupt-Session" } ] },
+  { label: "Vorhaben", nodes: [
+    { role: "po", name: "PO", anlass: ["problemstellung", "abstimmung", "klaerung", "epic-abstimmung", "epic-abnahme"], notPlanStatus: ["abnahme-bereit", "abnahme-rot"] }, "⇄",
+    { role: "architekt", name: "Architekt", anlass: ["bewertung", "strukturfrage", "epic-bewertung", "epic-retrospektive", "architektur"] }, "→",
+    { role: "tester", name: "Tester", sub: "Abnahmetests", anlass: ["abnahmetests"], refKind: "plan" }, "→",
+    { role: "planer", name: "Planer", anlass: ["planung", "neuschnitt"] }, "→",
+    { pseudo: true, name: "Aufgabenzyklus ↓" }, "→",
+    { role: "po", name: "PO", sub: "Abnahme", anlass: ["abnahme"], planStatus: ["abnahme-bereit", "abnahme-rot"] }, "→",
+    { human: true, name: "Lead", sub: "Integration in die Basis" } ] },
+  { label: "Aufgabenzyklus", nodes: [
+    { role: "tester", name: "Tester", sub: "Tests je Aufgabe", anlass: ["aufgabe"], refKind: "aufgabe" }, "→",
+    { role: "entwickler", name: "Entwickler", anlass: ["aufgabe", "reparatur"] }, "→",
+    { role: "compliance", name: "Compliance", anlass: ["aufgabe"] }, "→",
+    { role: "reviewer", name: "Reviewer", anlass: ["aufgabe"] }, "↺" ] },
+  { label: "Prüfen, lernen", nodes: [
+    { role: "auditor", name: "Auditor", anlass: ["audit"] },
+    { role: "coach", name: "Coach", anlass: ["coach"] } ] },
+];
+
+function isTaskRef(ref) { const p = refPath(ref); return !!p && p.includes("/work/tasks/"); }
+
+function renderFlow(s) {
+  const roles = s.rollen || {};
   const lastStop = {};
   for (const e of s.ereignisse) if (e.event === "agent_stop") lastStop[e.role] = e;
-  const chips = [`<div class="rolechip ${s.aktiv.length ? "" : "on"}"><b>Lead</b><small>Haupt-Session</small></div>`];
-  for (const r of ROLES) {
-    const st = lastStop[r];
-    const on = active.has(r);
-    const bad = st && st.result && st.result !== "ok";
-    const sub = on ? "aktiv" : st ? `${esc(st.result || "fertig")} · vor ${ago(since(st.ts))}` : "–";
-    chips.push(`<div class="rolechip ${on ? "on" : ""} ${bad && !on ? "bad" : ""}" title="${st ? esc("letzter Lauf: " + (st.ref || "") + " " + (st.result || "")) : ""}"><b>${esc(roleName(r))}</b><small>${sub}</small></div>`);
-  }
-  $("roles").innerHTML = chips.join("");
+  const planStatus = Object.fromEntries((s.lage.vorhaben || []).map(v => [v.name, v.status]));
+  const running = [...s.aktiv, ...s.startet];
+  const lastCmd = [...s.ereignisse].reverse().find(e => e.event === "befehl");
+
+  const node = n => {
+    if (typeof n === "string") return n.trim() ? `<span class="arrow">${n}</span>` : "";
+    if (n.pseudo) return `<div class="node pseudo">${esc(n.name)}</div>`;
+    if (n.human) return `<div class="node ruht"><b>${esc(n.name)}</b><span class="st">${esc(n.sub)}</span></div>`;
+    if (n.lead) {
+      const on = running.length > 0 || false;
+      return `<div class="node ${on ? "" : "ruht"}"><b>${esc(n.name)}</b><span class="st">${esc(n.sub)}</span>
+        ${lastCmd ? `<span class="last">zuletzt <span class="mono">${esc(lastCmd.befehl)}</span> vor ${ago(since(lastCmd.ts))}</span>` : ""}</div>`;
+    }
+    const r = roles[n.role] || { zustand: "ruht", bereit: [] };
+    const refs = r.bereit.filter(b => n.anlass.includes(b.anlass));
+    const run = running.find(a => a.rolle === n.role && (
+      !n.refKind || (n.refKind === "aufgabe") === isTaskRef(a.ref)) && (
+      !n.planStatus || n.planStatus.includes(planStatus[a.ref])) && (
+      !n.notPlanStatus || !n.notPlanStatus.includes(planStatus[a.ref])));
+    let z = run ? "aktiv" : r.zustand === "gesperrt" ? "gesperrt" : refs.length ? "bereit" : "ruht";
+    const label = z === "aktiv" ? `arbeitet${run.ref ? " an " + refLink(run.ref) : ""}`
+      : z === "gesperrt" ? "gesperrt"
+      : z === "bereit" ? (running.length ? "bereit, wartet" : "bereit") : "ruht";
+    const shown = z === "bereit" || z === "gesperrt" ? refs.slice(0, 3) : [];
+    const refHtml = shown.map(b => b.pfad ? `<span class="link" data-open="${esc(b.pfad)}">${esc(b.ref)}</span>` : esc(b.ref)).join(", ")
+      + (refs.length > shown.length && shown.length ? ` +${refs.length - shown.length}` : "");
+    const st = lastStop[n.role];
+    return `<div class="node ${z}" title="${esc(r.grund || "")}">
+      <b>${z === "aktiv" ? `<span class="pulse"></span>` : ""}${esc(n.name)}</b>
+      ${n.sub ? `<span class="st">${esc(n.sub)}</span>` : ""}
+      <span class="st">${label}</span>
+      ${refHtml ? `<span class="refs">${z === "gesperrt" ? "wartet: " : "für "}${refHtml}</span>` : ""}
+      ${st && z !== "aktiv" ? `<span class="last">zuletzt ${esc(st.result || "fertig")}, vor ${ago(since(st.ts))}</span>` : ""}
+    </div>`;
+  };
+  $("flow").innerHTML = FLOW.map(l => `<div class="lane"><span class="lane-label">${esc(l.label)}</span>${l.nodes.map(node).join("")}</div>`).join("");
 }
 
 function renderDue(d) {
@@ -462,6 +546,33 @@ function showViewer(path, html, keepScroll) {
   $("viewer").classList.add("open"); $("viewer").setAttribute("aria-hidden", "false");
   $("scrim").classList.add("open");
   c.scrollTop = keepScroll ? top : 0;
+  renderMermaid(c);
+}
+// Diagrams render with mermaid from jsdelivr, loaded on first use; offline the source stays visible.
+let mermaidLoad = null;
+async function renderMermaid(root) {
+  const blocks = [...root.querySelectorAll("pre.mermaid")];
+  if (!blocks.length) return;
+  try {
+    mermaidLoad ||= import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs").then(m => {
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      m.default.initialize({ startOnLoad: false, theme: dark ? "dark" : "default", securityLevel: "strict" });
+      return m.default;
+    });
+    const mermaid = await mermaidLoad;
+    for (const [i, pre] of blocks.entries()) {
+      if (!pre.isConnected) return;
+      try {
+        const { svg } = await mermaid.render(`mmd-${Date.now()}-${i}`, pre.textContent);
+        const div = document.createElement("div");
+        div.className = "diagram";
+        div.innerHTML = svg;
+        pre.replaceWith(div);
+      } catch (e) { /* keep the source of a diagram mermaid cannot parse */ }
+    }
+  } catch (e) {
+    mermaidLoad = null;
+  }
 }
 async function openDoc(url) {
   viewing = null;
