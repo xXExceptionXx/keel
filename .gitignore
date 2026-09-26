@@ -2,3 +2,4 @@ evals/**/results/
 report.html
 aggregate-result.json
 .DS_Store
+__pycache__/
