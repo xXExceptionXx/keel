@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
-# PreToolUse on Skill, two duties:
+# PreToolUse on Skill and UserPromptSubmit (a typed "/keel:<skill>" never passes the Skill tool), two duties:
 # 1. /keel:hilfe marks the session as a helper session; agent-gate then denies every role start in it.
 # 2. The briefing is a conversation with the Supervisor and must run on the Supervisor's model. When
 #    /keel:briefing or /keel:start (with a briefing due) is invoked, read the session's model from the
-#    transcript and deny with instructions if it is not the configured one.
+#    transcript and refuse with instructions if it is not the configured one.
 set -uo pipefail
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-skill="$(field '.tool_input.skill')"
+event="$(field '.hook_event_name')"
+if [ "$event" = "UserPromptSubmit" ]; then
+  skill="$(field '.prompt' | grep -oE '^[[:space:]]*/keel:[a-z]+' | tr -d '[:space:]' | sed 's#^/##')"
+  [ -n "$skill" ] || exit 0
+  # a prompt is refused with decision:block, a tool call with a permission deny
+  deny() {
+    record "denied" "$(jq -n --arg hook "skill-gate" --arg reason "$1" '{hook:$hook,role:"",reason:$reason}')"
+    jq -n --arg reason "$1" '{decision:"block",reason:$reason}'
+    exit 0
+  }
+else
+  skill="$(field '.tool_input.skill')"
+fi
 case "$skill" in
   keel:hilfe|hilfe)
     sid="$(field '.session_id')"
