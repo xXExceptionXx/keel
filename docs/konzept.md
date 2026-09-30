@@ -153,9 +153,9 @@ Jede Rolle hat einen klaren Auftrag und eine klare Grenze. Die Grenze ist genaus
 ### Reviewer
 
 - **Auftrag:** Prüft, ob die Aufgabe richtig gelöst ist, und prüft den Nachweis des Entwicklers.
-- **Input:** Nur Diff, Aufgabe, Fertig-Kriterien und die ursprünglichen Akzeptanzkriterien des PO. Nicht die Gedankengänge des Entwicklers. Der Diff enthält ausdrücklich auch die Tests des Testers: Tests sind Code und werden sonst von niemandem geprüft. In Runde zwei zusätzlich seine eigenen Befunde aus Runde eins, damit er deren Behebung prüft statt jedes Mal Neues zu finden.
-- **Output:** Befunde in festem Format: Schweregrad, Fundstelle, Beschreibung. Das Format dient dem Entwickler und ist zugleich maschinell auswertbar.
-- **Grenze:** Nur Lesezugriff. Widerspricht ein PR einem angenommenen ADR, ist das kein Kommentar, sondern erzwingt ein neues ADR. Neue Befunde in Runde zwei sind erlaubt, aber nur mit hohem Schweregrad; alles andere wird als Anmerkung protokolliert und blockiert nicht.
+- **Input:** Nur Diff, Aufgabe, Fertig-Kriterien und die ursprünglichen Akzeptanzkriterien des PO. Nicht die Gedankengänge des Entwicklers. Der Diff enthält ausdrücklich auch die Tests des Testers: Tests sind Code und werden sonst von niemandem geprüft. Ab Runde zwei zusätzlich die Befunde der Vorrunde und das Delta der Nacharbeit als eigenen Diff: Ein Fix ist Code wie jeder andere und wird so gründlich geprüft wie die erste Umsetzung.
+- **Output:** Befunde in festem Format: Schweregrad, Herkunft, Fundstelle, Beschreibung, dazu die Zahl je Schweregrad. Das Format dient dem Entwickler und ist zugleich maschinell auswertbar: Ob die Aufgabe besteht, rechnet ein Hook gegen eine Schwelle aus der Konfiguration.
+- **Grenze:** Nur Lesezugriff. Widerspricht ein PR einem angenommenen ADR, ist das kein Kommentar, sondern erzwingt ein neues ADR. Neue Befunde in Code, den die Nacharbeit nicht angefasst hat, sind nur mit hohem Schweregrad erlaubt, alles andere wird Anmerkung; neue Befunde im Delta der Nacharbeit zählen voll. Anmerkungen blockieren nicht, landen aber in der Pflegeliste, die der Architekt wöchentlich sichtet.
 
 ### Compliance
 
@@ -178,9 +178,10 @@ stateDiagram-v2
     Umsetzung --> Review: fertig mit Nachweis
     Umsetzung --> Neuschnitt: Testeinspruch
     Umsetzung --> Neuschnitt: Budget erschöpft
-    Review --> Compliance: keine blockierenden Befunde
-    Review --> Umsetzung: Befunde, Runde 1 oder 2
-    Review --> Neuschnitt: Befunde nach Runde 2
+    Review --> Compliance: unter der Schwelle
+    Review --> Umsetzung: über der Schwelle, Befunde sinken
+    Review --> Vorlage: Befunde sinken nicht
+    Vorlage --> Neuschnitt: Supervisor
     Compliance --> Fertig: Tore grün
     Compliance --> Umsetzung: Verstoß
     Neuschnitt --> Tests: Planer hat neu geschnitten
@@ -191,7 +192,7 @@ Regeln:
 
 - **Aufgaben-ID.** Jede Aufgabe bekommt vom Planer eine ID, z. B. `V12-T03` für Vorhaben 12, Aufgabe 3. Sie steht im Plan, im Branch-Namen, als Commit-Trailer, in der Review-Datei und in den Hook-Logs. Sie ist der Schlüssel, über den Kennzahlen aus Artefakten abgeleitet werden. Ohne sie ist „Tokens pro Aufgabe“ nicht berechenbar. Die Vorhaben-Nummer ist systemintern und nicht die Nummer des Backlog-Elements; die Plan-Datei verweist im Frontmatter auf das Element, z. B. `backlog: github#12`. So überleben alle Verweise einen Anbieterwechsel.
 - **Nacharbeit immer mit frischem Entwickler.** Er bekommt die Aufgabe, den bisherigen Diff und die Befunde des Reviewers. Nicht den Kontext des Vorgängers: Der hat die Aufgabe schon einmal falsch verstanden.
-- **Höchstens zwei Review-Runden.** Danach geht die Aufgabe an den Planer zurück. Eine Aufgabe, die nach zwei Runden nicht steht, ist falsch geschnitten oder falsch spezifiziert. Eine dritte Runde behebt weder das eine noch das andere.
+- **Review-Runden, solange die Befunde sinken.** Jede Nacharbeit wird erneut reviewt, denn Fixes bauen selbst Fehler ein. Eine weitere Runde gibt es nur, wenn (blockierend, wichtig) gegenüber der Vorrunde sinkt, höchstens vier. Sinken die Befunde nicht, ist die Aufgabe falsch geschnitten oder falsch spezifiziert, und eine weitere Runde behebt weder das eine noch das andere: Der Supervisor gibt sie in den Neuschnitt oder eskaliert. Siehe System-ADR 0018. Ursprünglich galten höchstens zwei Runden; das hat Fehler aus der zweiten Nacharbeit ungeprüft durchgelassen.
 - **Testeinspruch geht über den Planer.** Der Entwickler meldet den Widerspruch mit Begründung, der Planer klärt mit dem Tester, ob Test oder Kriterium falsch ist. Ist das Kriterium unklar, geht die Frage zum PO. Tester und Entwickler sprechen nie direkt.
 - **Budget pro Aufgabe.** Startwerte: 60 Werkzeugaufrufe, 30 Minuten, 300 Diff-Zeilen ohne Tests. Erreicht der Entwickler eine Grenze, schreibt er den Stand in die Aufgaben-Datei und beendet sich. Die Grenze wird per Hook durchgesetzt, nicht per Bitte. Die Werte werden vom Coach kalibriert. Regelmäßige Überschreitungen heißen: Der Planer schneidet zu groß.
 - **Verworfene Ansätze schreibt, wer sie verworfen hat.** Entwickler und Planer tragen Irrwege direkt in die Datei ein. Der Lead kennt sie nicht, weil er keine vollständigen Berichte liest.
@@ -678,6 +679,10 @@ Ergänzt am 2026-09-26, als Opus 5.5 seit Tagen verfügbar war und keel es nicht
 ## Ablauf-Monitor
 
 Ergänzt am 2026-09-26. keel lief still im Hintergrund: Wer gerade arbeitet, wer als Nächstes dran ist und warum etwas steht, war nur über `/keel:hilfe` oder durch Lesen der Dateien zu erfahren. `/keel:monitor` zeigt das laufend als lokale Webseite: ein Ablaufdiagramm mit jeder Rolle als aktiv, bereit oder gesperrt, die laufende Rolle mit dem Befehl, in dem der Lead sie rief, Fälligkeiten, Vorlagen, einen Ereignisstrom mit den Gründen für Blockaden, je Vorhaben eine Zeitleiste von der Problemstellung bis zur Abnahme und alle Übergaben als lesbare Dokumente. Er beobachtet nur, wie die Hilfe. „Wer kommt als Nächstes“ beantwortet er als Regel, nicht als Vorhersage: bereit ist eine Rolle, deren Startbedingung erfüllt ist; welche davon der Lead ruft, bleibt seine Entscheidung. Damit Anzeige und Gate nicht auseinanderlaufen, stehen die Startbedingungen jetzt in einer Tabelle (`scripts/flow.py`), aus der beide lesen, und ein Regressionstest (`tests/gate/`) vergleicht das Gate vor jeder Änderung mit dem vorigen Stand. Mit `monitor.autostart: true` starten ihn die Befehle, die das System arbeiten lassen, von selbst mit. Siehe System-ADR 0017.
+
+## Review mit Schwelle und Pflegeliste
+
+Ergänzt am 2026-09-30. Fixes nach einem Review haben oft selbst Fehler eingebaut. Weil die Befunde als behoben galten, gingen diese Fehler ohne echtes Review durch. Jetzt gilt eine Umsetzung erst als umgesetzt, wenn das Review unter einer Schwelle bleibt. Jede Nacharbeit wird als eigenes Delta erneut reviewt, und weitere Runden gibt es nur, solange die Befunde sinken, sonst entscheidet der Supervisor. Anmerkungen unter der Schwelle bleiben nicht liegen: Sie landen in einer Pflegeliste. Der Architekt macht in der Wochenrunde daraus Prüfregeln oder gebündelte Pflegeaufgaben, höchstens zwei je Runde, und was niemand aufgreift, verfällt. Siehe System-ADR 0018.
 
 ## Supervisor und Morgen-Briefing
 

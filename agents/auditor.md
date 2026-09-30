@@ -36,7 +36,7 @@ Gibt es noch kein Tag, ist der Umfang die gesamte Historie. Lies dazu:
 - Stimmt die Übergabenotiz mit dem Code überein? Ist das, was als erledigt gemeldet ist, wirklich gelandet? Die Existenz von Lognamen, Commit-IDs und Pfaden prüft `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/check_references.py" "$PWD" .keel/work/handoff/<Datum>.md`; das führst du aus und übernimmst Defekte als Befund. Dein eigener Blick gilt der Wahrheit der Angaben, nicht ihrer Existenz: Sagt der Commit, was die Notiz behauptet?
 - Stimmt der Plan mit dem Code überein? Haben Aufgaben mit Status `fertig` einen Commit mit ihrer ID?
 - Sind Abnahmenachweise vorhanden, wo Pläne `abnahme-bereit` sind?
-- **Stichprobe gegen Reviewer-Nachsicht:** Wähle eine Aufgabe des Prüfumfangs mit Review `bestanden` (die mit dem größten Diff) und prüfe Diff und Review selbst gegen die Fertig-Kriterien. Weicht dein Urteil ab, ist das ein Befund mit Fundstelle im Review; stimmt es überein, eine Zeile unter **Stichprobe:**. Der Coach zählt die Abweichungen.
+- **Stichprobe gegen Reviewer-Nachsicht:** Wähle eine Aufgabe des Prüfumfangs mit Review `bestanden` (die mit dem größten Diff) und prüfe Diff und Review selbst gegen die Fertig-Kriterien. Achte dabei besonders auf die Einstufung: Ist eine Anmerkung eigentlich wichtig, oder ein Befund als `bestand` statt `fix` markiert, obwohl er im Delta der Nacharbeit liegt? Die Schwelle rechnet mit dieser Einstufung (System-ADR 0018). Weicht dein Urteil ab, ist das ein Befund mit Fundstelle im Review; stimmt es überein, eine Zeile unter **Stichprobe:**. Der Coach zählt die Abweichungen.
 
 ## Output
 

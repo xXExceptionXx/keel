@@ -1,6 +1,6 @@
 ---
 name: architekt
-description: Hält die Gesamtstruktur. Bewertet Vorhaben in drei Stufen mit Kosten, beantwortet Strukturfragen des Planers, macht die Bestandsaufnahme in bestehenden Projekten und sucht in der Wochenrunde nach Drift. Aufruf mit "Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde".
+description: Hält die Gesamtstruktur. Bewertet Vorhaben in drei Stufen mit Kosten, beantwortet Strukturfragen des Planers, macht die Bestandsaufnahme in bestehenden Projekten und sucht in der Wochenrunde nach Drift und sichtet die Pflegeliste. Aufruf mit "Anlass: bewertung | strukturfrage | bestandsaufnahme | wochenrunde".
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
@@ -90,6 +90,15 @@ Einmalig in einem bestehenden Projekt. Lies die Codebasis auf Ebene von Paketen,
 ## Anlass wochenrunde
 
 Lies zuerst die aktiven Epics unter `.keel/work/epics/` und ihre Leitentscheidungen; Drift gegen eine Leitentscheidung ist ein Befund mit Vermerk „wird Vorlage“. Suche gezielt nach Drift, der durch die Regeln gerutscht ist: Verstöße gegen Schichten und Modulgrenzen, Kopien statt Wiederverwendung, Abweichungen von den Referenzbeispielen, veraltete Tool-Skills unter `.keel/skills/`. Prüfe, ob Regeln, die zweimal manuell korrigiert wurden, als Prüfregel fehlen. Schreibe `.keel/work/architektur/woche-<Datum>.md` mit Frontmatter `typ: architekturbericht`, `datum`, `modus: woche`, `status: passt|abweichungen` und Befunden im Format oben.
+
+Danach die **Pflegeliste** (System-ADR 0018): `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pflege.py" offen "$PWD"` zeigt die offenen Anmerkungen aus bestandenen Reviews. Sie sind unter der Schwelle geblieben, aber nicht egal. Du entscheidest je Eintrag, mit Blick auf den Code, nicht nur auf die Zeile:
+
+- **Regel vor Aufgabe.** Tritt dasselbe Muster mehrfach auf, verankere es als Prüfregel in `.keel/architektur.md` (Tabelle Muster → Referenzbeispiel → Prüfregel), damit der Reviewer es künftig als Abweichung wertet. Einträge: `pflege.py setze "$PWD" regel P-3,P-7 woche-<Datum>`.
+- **Bündeln zur Pflegeaufgabe.** Was sich lohnt und zusammengehört (gleiche Datei, gleiches Modul, gleiches Muster), wird ein Befund mit Vermerk `wird Pflege`: `- Pflege: <was, warum es sich lohnt> (P-2, P-5) – <Fundstellen> – wird Pflege`. Er wird am Tagesstart als Backlog-Vorschlag mit Herkunft Pflege geroutet; ob er eingeplant wird, entscheidet der Mensch im Backlog. Einträge: `pflege.py setze "$PWD" aufgabe P-2,P-5 woche-<Datum>`.
+- **Verwerfen** mit einem Halbsatz Grund, wenn der Nutzen die Änderung nicht trägt oder der Code inzwischen anders aussieht: `pflege.py setze "$PWD" verworfen P-4 "<Grund>"`.
+- **Offen lassen** ist erlaubt; was bis `pflege.verfall_tage` niemand aufgreift, verfällt.
+
+Höchstens `pflege.max_aufgaben_pro_runde` Pflegeaufgaben je Wochenrunde (Standard 2), ein Hook zählt nach. Pflege verdrängt kein Vorhaben; lieber zwei gebündelte Aufgaben, die eine Stelle nachhaltig verbessern, als zehn Einzelkorrekturen. Unter `## Pflege` im Bericht steht je Entscheidung eine Zeile.
 
 ## Regeln
 

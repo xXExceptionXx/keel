@@ -40,7 +40,7 @@ GATES = {
     "tester.abnahmetests": {"objekt": "plan", "status": ["problemstellung"]},
     "tester.aufgabe": {"objekt": "aufgabe", "status": ["geplant", "neuschnitt"]},
     "entwickler.aufgabe": {"objekt": "aufgabe", "status": ["tests-bereit", "nacharbeit"], "nonempty": ["tests", "dateien"]},
-    "entwickler.reparatur": {"objekt": "aufgabe", "status": ["reparatur"]},
+    "entwickler.reparatur": {"objekt": "aufgabe", "status": ["reparatur", "nacharbeit"]},
     "reviewer.aufgabe": {"objekt": "aufgabe", "status": ["review"], "nonempty": ["review_runde"]},
     "compliance.aufgabe": {"objekt": "aufgabe", "feld": {"compliance": "pruefen"}, "datei": "work/compliance/{name}.scan.md"},
     "supervisor.entscheiden": {"objekt": "vorlage", "status": ["offen"], "nicht": ["eskaliert"]},
