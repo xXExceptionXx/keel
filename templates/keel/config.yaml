@@ -8,6 +8,7 @@ git:
 test:
   command: npm test --silent       # Prüftor pro Aufgabe; Abnahmetests ausgenommen
   acceptance: npm test --silent    # Abnahmetests eines Vorhabens
+  timeout: 480                     # Sekunden je Prüftor-Lauf; muss unter dem Hook-Timeout (600) bleiben
 
 budget:
   tool_calls: 60           # Standard je Rollenlauf

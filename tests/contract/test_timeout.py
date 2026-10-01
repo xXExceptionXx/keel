@@ -19,7 +19,6 @@ def config_default(key):
 
 
 class GateTimeoutTest(ContractTest):
-    @unittest.expectedFailure
     def test_slow_test_suite_is_stopped(self):
         p = project()
         with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:
@@ -30,7 +29,6 @@ class GateTimeoutTest(ContractTest):
         self.assertNotEqual(r.rc, 0, r)
         self.assertIn("abgebrochen", r.out)
 
-    @unittest.expectedFailure
     def test_hook_timeout_is_longer_than_the_test_limit(self):
         hooks = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
         stop = [h for entry in hooks["SubagentStop"] for h in entry["hooks"] if "agent-stop" in h["command"]][0]
