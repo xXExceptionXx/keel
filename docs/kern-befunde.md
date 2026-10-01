@@ -93,6 +93,21 @@ Jedes `field` ist ein eigener `jq`-Prozess, `role_limit` startet `config.py` bis
 - Es gibt keine CI.
 - Mit wenig Aufwand testbar, weil schon reine Funktionen: `flow.satisfied`, `models.switches`, `review.findings`, `pflege.rows`.
 
+## Offen aus dem Probelauf 2026-10-01
+
+Probelauf im Beispielprojekt mit 0.14.0, Lead auf Opus 5.5, Briefing auf Fable. Die Teile, die Projekt-ADR 0022 und 0023 betreffen, sind in `docs/arbeitspakete/03-wiedervorlagen.md` übernommen. Diese drei Motor-Themen stehen nur hier; das Beispielprojekt wird gelöscht.
+
+| Nr. | Befund | Quelle | Stand |
+| --- | --- | --- | --- |
+| P1 | **Korridor „Einwände des Supervisors“ verlangt Einwände ohne Anlass.** Ein Einwand entsteht laut `agents/supervisor.md` nur, wenn der Mensch gegen die Empfehlung des Supervisors entscheidet. Ist das nie passiert, ist 0 richtig, der Korridor `1-10` meldet trotzdem eine Verletzung und erzeugt Druck zu erfundenem Widerspruch. Optionen des Coaches: (1) Kennzahl je Abweichung von der Empfehlung, Feld `empfehlung` im Frontmatter der Vorlage, ohne Abweichung „n/a“, Korridor 50–100 %; (2) Untergrenze 0, das Warnsignal entfällt; (3) nichts ändern. Empfehlung des Coaches: Option 1. | Coach-Vorlage `2026-10-01-coach-einwand-korridor.md` | vom Menschen bewusst offen gelassen, ist noch zu entscheiden |
+| P2 | **Zähllücke beim Modellwechsel des Supervisors.** Briefings laufen als Hauptsitzung, nicht als Rollenlauf, und zählen deshalb nicht für die zehn Läufe aus System-ADR 0015. Nach zehn Tagen standen 2 von 10; ein Vergleich wäre frühestens nach Wochen möglich. Zu klären: Briefing-Sitzungen als Läufe des Supervisors zählen (Ereignis aus dem Skill oder aus `session-gate`), oder für den Supervisor eine eigene, niedrigere Schwelle. | Coach-Bericht 2026-10-01, Abschnitt System-ADR 0015 | offen |
+| P3 | **`budget.context_window` steht auf 200 000, Opus 5.5 und Fable 5.1 haben 1M.** Der Kontext-Alarm kommt damit bei 10 % des echten Fensters. Der Coach hält 100 000 Tokens als absolute Grenze für Kontextpflege weiter für vernünftig und schlägt eine Anhebung erst vor, wenn der Alarm messbar zu früh kommt. Zu entscheiden: den Schlüssel bewusst als absolute Grenze umbenennen und beschreiben (etwa `budget.context_tokens: 100000`) statt als Fenstergröße mit Prozent. | Coach-Bericht 2026-10-01, Abschnitt Modellzuordnung | offen |
+
+Weitere Beobachtungen aus dem Lauf, ohne eigenen Befund:
+- Die Fälligkeit des Coaches nach einem Modellwechsel greift mitten im Vorhaben und unterbricht die Arbeit (im Lauf 76 Werkzeugaufrufe). Kandidat für eine spätere Justierung: die Fälligkeit erst nach der laufenden Aufgabe greifen lassen.
+- Der Coach weist auf `/doctor prompt-audit` (Claude Code 2.1.283) hin, das Agents und Skills auf Prompt-Muster für ältere Modelle prüft; ein sinnvoller Begleitschritt zum Wechsel auf Opus 5.5, ohne gemessenes Problem.
+- Zwei Leitlinien hat der Supervisor vorgeschlagen, sie sind nicht bestätigt: „Eine wartende Frage braucht einen Träger, den ein Skript sieht; ein Vermerk im Protokoll ist keiner.“ und „Eine Schutzmaßnahme, die nie ausgelöst hat, wird erst auf Melden zurückgestuft und erst nach belegtem Auslösen entfernt.“ Beide sind als Grundsätze für den Motor brauchbar, unabhängig vom Projekt.
+
 ## Vorschlag zur Reihenfolge
 
 **Vor dem Merge von PR #3:** F4 (Review-Schwelle) und F2 (leere Werte in `review.py`).
