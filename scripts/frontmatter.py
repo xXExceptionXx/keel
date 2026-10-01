@@ -2,7 +2,8 @@
 """Read, write and validate YAML frontmatter of keel handoff files.
 
 No PyYAML dependency: supports scalars, inline lists `[a, b]` and block lists
-(`- item`). Values are kept as strings; lists as lists of strings.
+(`- item`). Values are kept as strings; lists as lists of strings. An empty value,
+or one that is only a comment, is empty text unless block list items follow.
 
 Usage:
   frontmatter.py get <file> <key>
@@ -38,8 +39,11 @@ def parse(text):
         line = raw.rstrip()
         if not line.strip() or line.strip().startswith("#"):
             continue
-        if current_list is not None and re.match(r"^\s+-\s*", line):
-            data[current_list].append(_scalar(re.sub(r"^\s+-\s*", "", line)))
+        if current_list is not None and re.match(r"^\s*-(\s|$)", line):
+            # an empty key followed by "- item" lines (indented or not) is a block list
+            if not isinstance(data[current_list], list):
+                data[current_list] = []
+            data[current_list].append(_scalar(re.sub(r"^\s*-\s*", "", line)))
             continue
         current_list = None
         m = re.match(r"^([A-Za-z0-9_.-]+):\s*(.*)$", line)
@@ -47,8 +51,9 @@ def parse(text):
             continue
         key, value = m.group(1), m.group(2)
         order.append(key)
-        if value == "":
-            data[key] = []
+        if value == "" or value.startswith("#"):
+            # empty, or only a comment: empty text unless block list items follow
+            data[key] = ""
             current_list = key
         elif value.startswith("[") and value.endswith("]"):
             inner = value[1:-1].strip()

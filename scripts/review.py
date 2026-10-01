@@ -129,7 +129,7 @@ def findings(body):
 def counts(data):
     try:
         return {s: int(data.get(s, "")) for s in SEVERITIES}
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
 

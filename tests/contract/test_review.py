@@ -52,7 +52,6 @@ class ReviewVerdictTest(ContractTest):
     def test_rising_findings_go_to_a_decision(self):
         self.assertEqual(self.verdict((1, 1), (1, 2)), "vorlage")
 
-    @unittest.expectedFailure
     def test_empty_count_field_is_a_validation_error_not_a_crash(self):
         text = review_file("T1", 2, [("wichtig", "fix")]).replace("anmerkung: 0\n", "anmerkung:\n")
         write(self.reviews / "T1-r2.md", text)
