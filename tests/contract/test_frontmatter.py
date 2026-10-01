@@ -36,6 +36,15 @@ class FrontmatterTest(ContractTest):
 
 
 
+class BrokenFileTest(ContractTest):
+    @unittest.expectedFailure
+    def test_file_that_is_not_utf8_is_an_error_not_a_missing_key(self):
+        f = self.tmp / "a.md"
+        f.write_bytes(b"---\ntyp: x\ntests: [a.py]\n---\nK\xe4se\n")
+        r = self.script("frontmatter.py", "get", f, "tests")
+        self.assertEqual(r.rc, 2, r)
+
+
 class RoundTripTest(ContractTest):
     VALUES = ['Er sagt "hi": a #b \\ x', '"zitiert" am Anfang', "it's: fine", "a: b", "C:\\pfad\\datei", "#kein Kommentar"]
 

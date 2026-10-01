@@ -53,6 +53,36 @@ class BrokenInputTest(ContractTest):
                 self.assertEqual(r.rc, 2, r)
 
 
+class BrokenStateTest(ContractTest):
+    def developer(self, p, task_bytes, config=""):
+        f = p / ".keel" / "work" / "tasks" / "T-x.md"
+        f.write_bytes(task_bytes)
+        if config:
+            with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as c:
+                c.write(config)
+        sd = self.metrics / p.name / "state"
+        sd.mkdir(parents=True, exist_ok=True)
+        (sd / "agent-a1.ref").write_text("T-x\n")
+        return sd
+
+    @unittest.expectedFailure
+    def test_unreadable_task_file_does_not_unlock_the_testers_files(self):
+        p = project()
+        self.developer(p, b"---\ntyp: aufgabe\nid: T-x\ntests: [tests/a.test.js]\n---\nK\xe4se\n")
+        r = self.hook("tool-gate", tool_call(p, "Write", {"file_path": str(p / "tests" / "a.test.js")},
+                                             agent_type="keel:entwickler"), proj=p)
+        self.assertBlocked(r)
+
+    @unittest.expectedFailure
+    def test_budget_that_is_not_a_number_blocks(self):
+        p = project()
+        sd = self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")
+        (sd / "agent-a1.calls").write_text("500\n")
+        r = self.hook("tool-gate", tool_call(p, "Read", {"file_path": str(p / "a.py")}, agent_type="keel:entwickler"),
+                      proj=p)
+        self.assertBlocked(r)
+
+
 class ObserverTest(ContractTest):
     def test_observers_let_go_and_record_a_hook_error(self):
         p = project()

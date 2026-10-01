@@ -1,6 +1,7 @@
 """Prüftor with a time limit: an internal limit shorter than the hook timeout, because a hook that times out lets
 the call through (System-ADR 0019)."""
 import json
+import subprocess
 import time
 import unittest
 
@@ -19,6 +20,40 @@ def config_default(key):
 
 
 class GateTimeoutTest(ContractTest):
+    @unittest.expectedFailure
+    def test_grandchildren_are_killed(self):
+        cmd = 'bash -c \'(trap "" TERM; exec sleep 3713) & sleep 3712\''
+        r = self.script("timeout.py", "1", "--", "bash", "-c", cmd, timeout=30)
+        self.assertEqual(r.rc, 124, r)
+        time.sleep(0.5)
+        left = subprocess.run(["pgrep", "-f", "sleep 3713"], capture_output=True, text=True).stdout.split()
+        for pid in left:
+            subprocess.run(["kill", "-9", pid])
+        self.assertEqual(left, [])
+
+    @unittest.expectedFailure
+    def test_limit_above_the_hook_timeout_is_capped(self):
+        p = project()
+        with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:
+            f.write("\ntest:\n  command: true\n  timeout: 900\n")
+        r = self.script("gate.sh", p, "probe", proj=p)
+        self.assertEqual(r.rc, 0, r)
+        self.assertIn("540", r.out)
+
+    def test_developer_stop_is_refused_when_the_suite_runs_too_long(self):
+        p = project()
+        with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:
+            f.write("\ntest:\n  command: sleep 30\n  timeout: 2\n")
+        (p / ".keel" / "work" / "tasks" / "T-d.md").write_text(
+            "---\ntyp: aufgabe\nid: T-d\nvorhaben: V9\ntitel: D\nstatus: fertig-gemeldet\nnachweis: grün\ntests: []\n---\n")
+        sd = self.metrics / p.name / "state"
+        sd.mkdir(parents=True)
+        (sd / "agent-a1.ref").write_text("T-d\n")
+        r = self.hook("agent-stop", {"hook_event_name": "SubagentStop", "agent_type": "keel:entwickler",
+                                     "agent_id": "a1", "cwd": str(p), "last_assistant_message": "fertig"}, proj=p)
+        self.assertEqual((r.json or {}).get("decision"), "block", r)
+        self.assertIn("abgebrochen", r.json["reason"])
+
     def test_slow_test_suite_is_stopped(self):
         p = project()
         with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:

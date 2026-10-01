@@ -1,7 +1,7 @@
 """agent-stop.sh: a role may only end when its handoff is complete; missing data blocks, it never passes."""
 import unittest
 
-from harness import CRASH_PY, REPO, ContractTest, plugin_copy, project, write
+from harness import CRASH_PY, REPO, ContractTest, agent_call, plugin_copy, project, write
 
 
 class AgentStopTest(ContractTest):
@@ -61,6 +61,21 @@ class AgentStopTest(ContractTest):
               "---\ntyp: coachbericht\ndatum: 2026-10-01\nkennzahlen_verletzt: 0\nvorschlaege: 0\n---\n")
         root = plugin_copy({"scripts/models.py": CRASH_PY})
         self.assertBlocked(self.stop(p, "coach", "2026-10-01", root=root))
+
+    @unittest.expectedFailure
+    def test_repeated_internal_failure_lets_the_role_end_and_stops_all_roles(self):
+        p = project()
+        write(p / ".keel" / "work" / "coach" / "2026-10-01.md",
+              "---\ntyp: coachbericht\ndatum: 2026-10-01\nkennzahlen_verletzt: 0\nvorschlaege: 0\n---\n")
+        root = plugin_copy({"scripts/models.py": CRASH_PY})
+        for _ in range(2):
+            self.assertEqual(self.stop(p, "coach", "2026-10-01", root=root).rc, 2)
+        last = self.stop(p, "coach", "2026-10-01", root=root)
+        self.assertEqual(last.rc, 0, last)
+        self.assertIn("hook_error", [e["event"] for e in last.events])
+        r = self.hook("agent-gate", agent_call(p, "keel:entwickler", "Aufgabe: T-tb"), proj=p, root=root)
+        self.assertBlocked(r)
+        self.assertIn("Notbremse", r.out)
 
     def test_complete_planning_passes(self):
         p = project()
