@@ -31,9 +31,17 @@ class ReviewVerdictTest(ContractTest):
         self.assertEqual(r.rc, 0, r)
         return self.script("frontmatter.py", "get", self.tasks / "T1.md", "review_ergebnis").out.strip()
 
-    @unittest.expectedFailure
     def test_shift_from_blocking_to_important_does_not_count_as_sinking(self):
         self.assertEqual(self.verdict((1, 0), (0, 9)), "vorlage")
+
+    def test_blocking_turned_into_fewer_important_findings_means_rework(self):
+        self.assertEqual(self.verdict((4, 0), (0, 2)), "nacharbeit")
+
+    def test_blocking_turned_into_one_important_finding_means_rework(self):
+        self.assertEqual(self.verdict((1, 0), (0, 1)), "nacharbeit")
+
+    def test_rising_sum_despite_fewer_blockers_goes_to_a_decision(self):
+        self.assertEqual(self.verdict((1, 1), (0, 5)), "vorlage")
 
     def test_fewer_findings_in_one_category_means_rework(self):
         self.assertEqual(self.verdict((2, 1), (1, 1)), "nacharbeit")
