@@ -5,8 +5,8 @@ A test keeps SCHEMA and templates/keel/config.yaml in step.
 """
 import re
 
+from keel.domain.errors import ReadError
 from keel.store import codec
-from keel.store.frontmatter import read_text
 from keel.store.paths import Paths
 
 ROLES = ("architekt", "auditor", "coach", "entwickler", "lead", "planer", "po", "reviewer", "supervisor", "tester")
@@ -87,9 +87,13 @@ def default(key):
 
 def load_file(path):
     """The tree of a config file; {} when it does not exist. Raises ReadError or ParseError."""
-    if not path.exists():
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
         return {}
-    return codec.loads(read_text(path), source=str(path))
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ReadError(f"{path} nicht lesbar: {exc}") from exc
+    return codec.loads(text, source=str(path))
 
 
 def load(project):

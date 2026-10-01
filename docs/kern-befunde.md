@@ -17,7 +17,18 @@ Arbeitspaket 1 (`docs/arbeitspakete/01-sicherheitsnetz.md`, System-ADR 0019, Ver
 | F4 | geklärt und behoben: Der lexikografische Vergleich war in ADR 0018 bewusst festgelegt. Ergänzt um die Bedingung, dass die Summe aus blockierend und wichtig nicht steigt; das ADR-Beispiel 4/0 → 0/2 bleibt Fortschritt, 1/0 → 0/9 nicht mehr |
 | N3, N5 | behoben; dazu neu N7: getippte `/keel:`-Befehle erreichten das Hook-Protokoll nie, obwohl der Monitor sie dort sucht |
 | Beim Umsetzen zusätzlich gefunden | `guard.sh` ließ wegen SIGPIPE unter `pipefail` lange Befehle durch; ungebundene Variablen und Abbrüche innerhalb von Funktionen endeten ohne Exit 2; `deny` protokollierte vor der Ausgabe der Entscheidung; `guard.sh` protokollierte seine Ablehnungen nicht. Alles behoben |
-| U1 bis U4, N1, N2, N4, N6, F5 bis F9 | offen, gehören zum Umbau (M1, M2 in `docs/kern-architektur.md`) |
+| U1 bis U4, N1, N2 | offen, gehören zu M2 in `docs/kern-architektur.md` |
+
+Arbeitspaket 2 (`docs/arbeitspakete/02-kern-fundament.md`, System-ADR 0020, Version 0.15.0), 2026-10-01:
+
+| Befund | Stand |
+| --- | --- |
+| F5 | behoben: Der Markdown-Backlog ändert nur die Zeilen des betroffenen Eintrags; Vertragstest `test_backlog.py` |
+| F6 | behoben: Das Routing schreibt den Bericht nach jedem gerouteten Befund atomar zurück; Vertragstest `test_routing.py`. Rest-Fenster: ein Abbruch genau zwischen Anlegen und Zurückschreiben |
+| F7 | behoben: ein Codec für Frontmatter und Konfiguration (`lib/keel/store/codec.py`), Schema mit Defaults; Vertragstest `test_config_codec.py` |
+| F8, F9 | behoben: Ereignisse liest nur noch `lib/keel/store/events.py`, tolerant und in UTC mit Zeitzone; Berichte lesen Frontmatter tolerant; Vertragstest `test_robust_reading.py` |
+| N4 | behoben: Laufzeit-Ordner `<name>-<hash>`, berechnet nur in `lib/keel/store/paths.py`; Vertragstest `test_runtime_key.py`. Ohne Migration, weil das Plugin in keinem Projekt läuft |
+| N6 | behoben: `atomic_write` und `file_lock` (`lib/keel/store/io.py`) an allen genannten Schreibstellen; Vertragstest `test_concurrency.py` |
 
 ## 1. Sicherheitsnetz: Gates, die bei Fehlern durchlassen
 

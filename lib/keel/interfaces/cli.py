@@ -7,14 +7,14 @@
 Exit codes (System-ADR 0019): 0 ok, 1 findings, 2 usage or internal error.
 """
 import argparse
-import json
 import shlex
 import sys
 
 import keel
 from keel.domain.errors import KeelError, UsageError
-from keel.services import doctor
 from keel.store.paths import Paths
+
+PATH_NAMES = ("brake", "events", "hooklog", "logs", "root", "runtime", "state")
 
 
 class _Parser(argparse.ArgumentParser):
@@ -35,11 +35,15 @@ def build_parser():
     pa.add_argument("--project", default=".")
     pa.add_argument("--ensure", action="store_true", help="create the runtime folders")
     pa.add_argument("--shell", action="store_true", help="all paths as shell assignments for eval")
-    pa.add_argument("name", nargs="?", choices=sorted(Paths(".").by_name()))
+    pa.add_argument("name", nargs="?", choices=PATH_NAMES)
     return p
 
 
 def cmd_doctor(args):
+    import json
+
+    from keel.services import doctor  # loaded only here: `keel path` runs in every hook and must start fast
+
     findings = doctor.run(args.project)
     ok = doctor.healthy(findings)
     if args.json:
