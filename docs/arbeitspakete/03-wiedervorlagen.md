@@ -109,6 +109,7 @@ Heute schreibt der Coach jeden Vorschlag als Vorlage ins Projekt, und das Briefi
 ## Abhängigkeiten und Reihenfolge
 
 - Paket 3 berührt `briefing_needed.py`, `due.py`, `metrics.py`, `lage.py` und die Hooks, also genau die Dateien, die Paket 2 auf die neue Ablage umstellt. Empfohlen: **erst Paket 2, dann Paket 3**, damit nicht dieselben Stellen zweimal angefasst werden.
+- Paket 2 ist umgesetzt (PR #13, System-ADR 0020). Paket 3 baut darauf auf: Frontmatter, Konfiguration, Ereignisse und Schreibzugriffe laufen über `lib/keel/store` (`frontmatter.fields`/`update`, `config.get`, `events.read`/`append`, `io.atomic_write`/`file_lock`), neue Schlüssel kommen ins Schema in `store/config.py` und ins Template, und `tests/unit/test_legacy_patterns.py` muss grün bleiben. Neue Fristen und Datumsvergleiche nutzen `events.parse_ts` (UTC); ein Kalendertag beginnt um lokale Mitternacht wie in `due.py`.
 - Ausnahme, falls das Beispielprojekt dringend weiterlaufen soll: Teil A (Zeitbudget) ist klein und unabhängig und kann vorgezogen werden.
 - Die nachfolgenden Pakete aus `02-kern-fundament.md` verschieben sich um eins: Hook-Dispatcher wird Paket 4, Messung Paket 5, Rollenkern Paket 6, Graph Paket 7.
 
@@ -121,4 +122,4 @@ Heute schreibt der Coach jeden Vorschlag als Vorlage ins Projekt, und das Briefi
 - **Zweiter Termin sperrt:** Ist „zweimal vertagt wird wieder sperrend“ die richtige Grenze, oder soll der Mensch einen Punkt ausdrücklich dauerhaft ohne Sperre parken können?
 - **Prüfung im Briefing-Protokoll:** Lässt sich „kein offener Punkt ohne Wiedervorlage“ deterministisch prüfen (etwa über einen festen Abschnitt `## Zurückgestellt` mit Verweisen), oder bleibt es eine Regel im Skill?
 - **ADR-Nummern:** Entwürfe ohne Nummer mit Vergabe bei der Integration (Vorschlag) oder eine zentrale Vergabe auf dem Basis-Branch schon beim Anlegen?
-- **System-ADR und Version:** Nummer und Minor-Version hängen davon ab, ob Paket 2 vorher integriert ist.
+- **System-ADR und Version:** Paket 2 ist System-ADR 0020 mit 0.15.0, Paket 3 wird damit System-ADR 0021 mit 0.16.0 (vor dem Anlegen `origin/main` holen und die Nummer prüfen).

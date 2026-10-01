@@ -23,11 +23,16 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
-scripts/          frontmatter.py, config.py, gate.sh, init.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py
+bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel --version
+lib/keel/         Kern als Python-Paket (System-ADR 0020): domain, store (einzige Stelle für Pfade, Frontmatter,
+                  Konfiguration, Ereignisse, atomares Schreiben), services (doctor), interfaces (Kommandozeile)
+scripts/          Übergang bis zum Umbau-Schritt M7: dünne Skripte auf lib/keel, z. B. frontmatter.py, config.py,
+                  gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
 tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest discover -s tests/contract
+tests/unit/       Unit-Tests für lib/keel, Schichtrichtung, alte Muster: python3 -m unittest discover -s tests/unit -t .
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
 ```
 
@@ -75,6 +80,8 @@ Der Mensch schreibt drei Sätze ins Backlog: Titel, Problem, Warum. Dann in eine
 Die Haupt-Session ist der Lead. Der PO macht aus dem Backlog-Element eine Problemstellung mit Pflicht-, verhandelbaren und Akzeptanzkriterien, der Architekt bewertet sie in drei Stufen mit Kosten, der PO entscheidet den Kompromiss innerhalb seiner Befugnisse oder legt vor. Dann ruft der Lead der Reihe nach Tester (Abnahmetests), Planer und je Aufgabe Tester, Entwickler und Reviewer als Subagents auf. Hooks prüfen jede Übergabe an der Grenze über das Frontmatter der Dateien unter `.keel/work/`, zählen das Budget pro Rolle, schützen die Tests des Testers vor dem Entwickler und lassen das Prüftor beim Beenden des Entwicklers laufen. Die Arbeit läuft auf `feature/<name>`, abgezweigt vom Basis-Branch aus `.keel/config.yaml` (`git.base_branch`, etwa `develop` oder `staging`). Am Ende steht ein Abnahmenachweis unter `.keel/work/acceptance/`. Nimmt der PO ab (`status: abgenommen`), integriert der nächste Aufruf in die Basis: Merge, Abnahmetests in die Regressionssuite, Branch weg. Der Weg von der Basis nach `main` bleibt ein manueller Schritt. Ob eine Aufgabe das Review besteht, rechnet ein Hook gegen eine Schwelle; jede Nacharbeit wird als eigenes Delta erneut reviewt, weitere Runden gibt es nur, solange die Befunde sinken, sonst entscheidet der Supervisor. Anmerkungen unter der Schwelle sammelt die Pflegeliste, die der Architekt wöchentlich zu Prüfregeln oder gebündelten Pflegeaufgaben macht (System-ADR 0018). Bei Testeinspruch oder erschöpftem Budget schneidet der Planer die Aufgabe neu: an Ort und Stelle, ersetzt durch kleinere, oder verworfen. Erst beim zweiten Neuschnitt derselben Aufgabe schreibt der Lead eine Vorlage und das Vorhaben bleibt `blockiert`, bis ein Mensch entscheidet.
 
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>-<hash>/` (`bin/keel path runtime` nennt den Ordner).
+
+`bin/keel doctor` prüft, ob Projekt und Rechner für keel taugen: Python, `git`, `jq`, Konfiguration, lesbare Frontmatter aller Artefakte, Notbremse, verwaiste Startmarken, Protokolle, Sperrordner. `/keel:hilfe` und der Monitor zeigen dieselben Befunde.
 
 ## Installation in einem Projekt
 

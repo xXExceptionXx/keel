@@ -1,6 +1,8 @@
 # Der Kern von keel: vom Skriptbündel zum Programm
 
-2026-10-01 · Konzeptentwurf, noch keine Entscheidung und kein ADR. Grundlage: Bestandsaufnahme des Kerns auf dem Branch `review-threshold` (Plugin 0.13.0), die Befunde in `kern-befunde.md` und die Konzeptentwürfe `kontext-scope.md` (PR #4) und `ablauf-beschleunigen.md` (PR #5).
+2026-10-01 · Konzeptentwurf. Grundlage: Bestandsaufnahme des Kerns auf dem Branch `review-threshold` (Plugin 0.13.0), die Befunde in `kern-befunde.md` und die Konzeptentwürfe `kontext-scope.md` (PR #4) und `ablauf-beschleunigen.md` (PR #5).
+
+**Stand 2026-10-02:** M0 ist umgesetzt (Arbeitspaket 1, System-ADR 0019, 0.14.0), M1 ebenso (Arbeitspaket 2, System-ADR 0020, 0.15.0). Abweichungen vom Entwurf stehen jeweils am Ort, die beantworteten Fragen unter „Offene Fragen“. Ab M2 gilt der Text weiter als Entwurf.
 
 ## Kurzfassung
 
@@ -109,7 +111,8 @@ flowchart TD
 ### Paketstruktur
 
 ```
-bin/keel                     Startskript: prüft die Python-Version, ruft keel.interfaces.cli
+bin/keel                     Startskript, ruft keel.interfaces.cli über lib/keel_main.py (umgesetzt in M1:
+                             die Python-Version prüft das Paket selbst beim Import)
 lib/keel/
   domain/
     artifacts.py             Typen: Plan, Aufgabe, Epic, Review, Vorlage, ADR, Backlog-Eintrag, Pflege-Eintrag
@@ -153,6 +156,8 @@ tests/
   domain/  store/  integrations/  services/  hooks/  cli/  fixtures/
 ```
 
+Umgesetzt in M1: `domain/errors.py`; `store/` mit `paths.py`, `codec.py`, `frontmatter.py`, `config.py`, `events.py`, `io.py`; `services/doctor.py`; `interfaces/cli.py`; Tests unter `tests/unit/` statt der Unterordner oben. `store/runtime.py` (Laufzeitzustand der Agenten mit Sperren) und `store/artifacts.py` fehlen noch; sie gehören zu M2 (Sperren für Zähler und `pending`) und M3.
+
 `agents/`, `skills/` und `hooks/hooks.json` bleiben am Ort, weil Claude Code sie dort erwartet. `scripts/` wird zum Übergangsordner mit Weiterleitungen und verschwindet am Ende.
 
 ### Querschnittsthemen
@@ -160,7 +165,7 @@ tests/
 **Eine Quelle für Regeln.**
 - `domain/statuses.py` hält je Artefakttyp die Status und erlaubten Übergänge.
 - `domain/flow.py` hält Eintritts- und Austrittsbedingungen je Rolle und Anlass.
-- Konfigurations-Defaults stehen nur im Schema in `store/config.py`. Das Template `templates/keel/config.yaml` wird daraus erzeugt, nicht von Hand gepflegt.
+- Konfigurations-Defaults stehen nur im Schema in `store/config.py`. Das Template `templates/keel/config.yaml` wird weiter von Hand gepflegt, weil seine Kommentare die Bedienung erklären; ein Test hält Template und Schema gleich (entschieden in M1).
 - Ein Test prüft, dass Status, die in Agenten und Skills genannt werden, im Code existieren. Prosa kann dann nicht mehr unbemerkt abdriften.
 
 **Fehlervertrag.**
@@ -193,7 +198,7 @@ Der Schlüssel für die Laufzeit wird an einer Stelle aus Ordnername plus kurzem
 - Ereignisse werden inkrementell gelesen: Ein kleiner Index merkt sich die letzte Leseposition und verdichtete Zähler. `due` und Monitor lesen dann nicht bei jedem Aufruf die ganze Historie.
 - `jq` ist danach keine Pflicht mehr.
 
-**Selbstdiagnose.** `keel doctor` prüft Python-Version, Git, optionale Werkzeuge, Gültigkeit der Konfiguration, verwaiste `pending`-Einträge und kaputte Zeilen im Protokoll. `/keel:hilfe` nutzt dasselbe.
+**Selbstdiagnose.** `keel doctor` prüft Python-Version, Git, optionale Werkzeuge, Gültigkeit der Konfiguration, verwaiste `pending`-Einträge und kaputte Zeilen im Protokoll. `/keel:hilfe` nutzt dasselbe. Umgesetzt in M1, dazu lesbare Frontmatter aller Artefakte unter `.keel/` und ein beschreibbarer Sperrordner; `keel doctor` meldet nur und räumt nichts auf.
 
 ### Hooks
 
@@ -251,7 +256,7 @@ with activity("prueftor", ref="T03"):
     ...
 ```
 
-Er legt einen Marker mit Prozess-ID, Startzeit und Bezug unter dem Laufzeit-Ordner an und entfernt ihn am Ende, auch bei Ausnahmen. Lebt die Prozess-ID eines Markers nicht mehr, ist er verwaist. Der Monitor zeigt das als Fehler, nicht als „läuft“, und `keel doctor` räumt ihn auf. Kein Befehl muss sich selbst darum kümmern.
+Er legt einen Marker mit Prozess-ID, Startzeit und Bezug unter dem Laufzeit-Ordner an und entfernt ihn am Ende, auch bei Ausnahmen. Lebt die Prozess-ID eines Markers nicht mehr, ist er verwaist. Der Monitor zeigt das als Fehler, nicht als „läuft“, und `keel doctor` meldet ihn; aufräumen bleibt bei `lage.py --clean` nach dem Ja des Menschen. Kein Befehl muss sich selbst darum kümmern.
 
 **3. Unbeaufsichtigter Lauf: Läuft er, wartet er, ist er fertig?**
 
@@ -334,9 +339,9 @@ M0 ist unabhängig vom Rest und sollte zuerst kommen. M1 und M2 sind der Kern de
 
 ## Offene Fragen
 
-- Eigener YAML-Teilparser oder ein kleiner, vendorter Parser im Plugin?
+- ~~Eigener YAML-Teilparser oder ein kleiner, vendorter Parser im Plugin?~~ Entschieden in M1: eigener, strikter Teilparser (`store/codec.py`, System-ADR 0020).
 - Bleibt `guard.sh` dauerhaft in Bash, oder zieht er in den Dispatcher, damit `jq` ganz entfällt?
-- Wird das Konfigurations-Template aus dem Schema erzeugt, oder prüft ein Test nur, dass beide übereinstimmen?
+- ~~Wird das Konfigurations-Template aus dem Schema erzeugt, oder prüft ein Test nur, dass beide übereinstimmen?~~ Entschieden in M1: ein Test prüft die Übereinstimmung.
 - Wie streng wird die Formatversion gehandhabt: blockieren bei unbekannter Version oder nur warnen?
 - Ist der Elternprozess eines Hooks der Claude-Prozess, oder liegt eine Shell dazwischen? Davon hängt ab, wie „abgebrochen“ erkannt wird.
 - Wird das Lebenszeichen der Session (Ebene 1) im Bestand vorgezogen oder erst mit dem Dispatcher gebaut?
