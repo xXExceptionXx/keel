@@ -30,6 +30,29 @@ Arbeitspaket 2 (`docs/arbeitspakete/02-kern-fundament.md`, System-ADR 0020, Vers
 | N4 | behoben: Laufzeit-Ordner `<name>-<hash>`, berechnet nur in `lib/keel/store/paths.py`; Vertragstest `test_runtime_key.py`. Ohne Migration, weil das Plugin in keinem Projekt läuft |
 | N6 | behoben: `atomic_write` und `file_lock` (`lib/keel/store/io.py`) an allen genannten Schreibstellen; Vertragstest `test_concurrency.py` |
 
+### Aus dem Review von PR #13 (2026-10-01)
+
+Zwei Reviews (Fable, Opus 5.5) des Pakets. Alle Befunde sind auf demselben Branch behoben, jeweils mit einem Test, der vor der Korrektur fehlschlug.
+
+| Befund | Stand |
+| --- | --- |
+| `gate.sh` meldete „grün“, wenn der Codec die Konfiguration ablehnte (leerer Testbefehl) | behoben, Exit 2; `test_config_gates.py` |
+| `\b` in `pii_patterns` wurde durch JSON-Escapes zu einem Steuerzeichen, der Scan meldete „frei“ | behoben, nur noch bekannte Escapes, sonst Fehler mit Zeile; Template mit einfachen Anführungszeichen |
+| `frontmatter set` mit Zeilenumbruch oder ungültigem Schlüssel schrieb eine unlesbare Datei | behoben, Schlüssel geprüft, Selbstprobe vor dem Schreiben; `test_frontmatter_write.py` |
+| `metrics.py` stürzte bei unlesbarer Konfiguration ab; `--since` mit Datum als UTC-Mitternacht | behoben, Exit 2; Datum als lokale Mitternacht wie `due.py` |
+| `atomic_write` ersetzte Symlinks durch Dateien | behoben, folgt dem Link |
+| Projektschlüssel hing unter macOS von der Groß-/Kleinschreibung ab | behoben, gespeicherte Schreibweise |
+| Eine unlesbare ADR sperrt alle Rollen ohne sichtbare Ursache | Sperre bleibt (Entscheidung des Menschen); Meldung mit Datei und Zeile, `keel doctor` prüft alle Artefakte |
+| `agent-stop.sh` las Frontmatter per `grep` | behoben, `frontmatter.py find`; Muster-Test |
+| `skill-gate.sh` prüfte `keel_paths` in einer `\|\|`-Liste nicht | behoben |
+| Monitor startete je Poll `git`, `jq` und las Protokolle ganz | behoben, schnelle Prüfung mit 60 s Zwischenspeicher, Ende der Protokolle |
+| `events.read` verwarf bei Schnitt auf Zeilengrenze eine volle Zeile | behoben |
+| Backlog: CRLF, IDs unter fremden Überschriften, Fließtext unter Einträgen | behoben, im Vertragstest belegt |
+| `flow.py` ließ unlesbare Dateien still weg | behoben, Feld `unlesbar`, im Monitor sichtbar |
+| `bin/keel` ließ sich von einem Ordner `keel/` im Projekt verdecken | behoben, Start über `lib/keel_main.py` |
+| Werte mit führendem `*`, `!`, `&` wurden abgelehnt | als Text gelesen (Entscheidung des Menschen) |
+| Sperren je Metrics-Wurzel | bewusst so, in System-ADR 0020 beschrieben; `keel doctor` prüft Schreibrechte |
+
 ## 1. Sicherheitsnetz: Gates, die bei Fehlern durchlassen
 
 Claude Code blockiert nur bei Exit-Code 2 oder einer ausdrücklichen Ablehnung (`permissionDecision: deny`, `decision: block`). Jeder andere Fehler ist ein „nicht blockierender Fehler“, und der Aufruf geht durch.
