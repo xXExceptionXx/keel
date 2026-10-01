@@ -1,127 +1,27 @@
 #!/usr/bin/env python3
-"""Read, write and validate YAML frontmatter of keel handoff files.
+"""Read, write and validate YAML frontmatter of keel handoff files (codec: keel.store.codec).
 
-No PyYAML dependency: supports scalars, inline lists `[a, b]` and block lists
-(`- item`). Values are kept as strings; lists as lists of strings. An empty value,
-or one that is only a comment, is empty text unless block list items follow.
+Values are text; lists are lists of text; nested keys are mappings. An empty value, or one that is only a
+comment, is empty text unless block list items follow. A line the codec does not understand is an error
+with its line number.
 
 Usage:
   frontmatter.py get <file> <key>
   frontmatter.py set <file> key=value [key=value ...]     (value "[a, b]" becomes a list)
   frontmatter.py validate <file> --type <typ> [--status a,b] [--require k1,k2] [--nonempty k1,k2]
   frontmatter.py dump <file>                               (JSON)
+  frontmatter.py find <folder> key=value [key=value ...]   files under folder (recursive, *.md) whose fields all match
 
-Exit codes: 0 ok, 1 validation failed or key missing, 2 usage error, unreadable file or internal error
-(System-ADR 0019: a crash must not read as "key missing").
+Exit codes: 0 ok, 1 validation failed, key missing or nothing found, 2 usage error, unreadable file, unknown syntax or
+internal error (System-ADR 0019: a crash must not read as "key missing").
 """
 import json
-import re
 import sys
 from pathlib import Path
 
-DELIM = "---"
-
-
-def parse(text):
-    if not text.startswith(DELIM + "\n"):
-        return None, text
-    end = text.find("\n" + DELIM + "\n", len(DELIM) + 1)
-    if end < 0:
-        if text.rstrip("\n").endswith("\n" + DELIM) or text.rstrip("\n") == DELIM:
-            end = len(text.rstrip("\n")) - len(DELIM) - 1
-        else:
-            return None, text
-    header = text[len(DELIM) + 1 : end]
-    body = text[end + len(DELIM) + 2 :]
-    data = {}
-    order = []
-    current_list = None
-    for raw in header.split("\n"):
-        line = raw.rstrip()
-        if not line.strip() or line.strip().startswith("#"):
-            continue
-        if current_list is not None and re.match(r"^\s*-(\s|$)", line):
-            # an empty key followed by "- item" lines (indented or not) is a block list
-            if not isinstance(data[current_list], list):
-                data[current_list] = []
-            data[current_list].append(_scalar(re.sub(r"^\s*-\s*", "", line)))
-            continue
-        current_list = None
-        m = re.match(r"^([A-Za-z0-9_.-]+):\s*(.*)$", line)
-        if not m:
-            continue
-        key, value = m.group(1), m.group(2)
-        order.append(key)
-        if value == "" or value.startswith("#"):
-            # empty, or only a comment: empty text unless block list items follow
-            data[key] = ""
-            current_list = key
-        elif value.startswith("[") and value.endswith("]"):
-            inner = value[1:-1].strip()
-            data[key] = [_scalar(v) for v in _split_inline(inner)] if inner else []
-        else:
-            data[key] = _scalar(value)
-    data["__order__"] = order
-    return data, body
-
-
-def _split_inline(inner):
-    return [p.strip() for p in re.split(r",(?=(?:[^\"']*[\"'][^\"']*[\"'])*[^\"']*$)", inner) if p.strip()]
-
-
-def _scalar(value):
-    value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] == '"':
-        # written by _quote with json.dumps: unescape, so reading and writing do not add backslashes
-        try:
-            return json.loads(value)
-        except ValueError:
-            return value[1:-1]
-    if len(value) >= 2 and value[0] == value[-1] == "'":
-        return value[1:-1].replace("''", "'")
-    return re.sub(r"\s+#.*$", "", value)
-
-
-def render(data, body):
-    order = data.get("__order__", [k for k in data if k != "__order__"])
-    keys = [k for k in order if k in data] + [k for k in data if k not in order and k != "__order__"]
-    lines = [DELIM]
-    for key in keys:
-        value = data[key]
-        if isinstance(value, list):
-            if not value:
-                lines.append(f"{key}: []")
-            elif all(_simple(v) for v in value):
-                lines.append(f"{key}: [{', '.join(value)}]")
-            else:
-                lines.append(f"{key}:")
-                lines.extend(f"  - {_quote(v)}" for v in value)
-        else:
-            lines.append(f"{key}: {_quote(value)}")
-    lines.append(DELIM)
-    return "\n".join(lines) + "\n" + body
-
-
-def _simple(v):
-    return re.fullmatch(r"[A-Za-z0-9_./#@:-]+", v) is not None
-
-
-def _quote(v):
-    v = str(v)
-    if v == "" or re.search(r"[:#\[\]{}\"\\]|^['\s]|\s$", v) or v.lower() in {"true", "false", "null", "yes", "no"}:
-        return json.dumps(v, ensure_ascii=False)
-    return v
-
-
-def load(path):
-    try:
-        text = Path(path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        fail(f"cannot read {path}: {exc}", 2)
-    data, body = parse(text)
-    if data is None:
-        fail(f"{path}: no frontmatter found", 1)
-    return data, body
+import _keel  # noqa: F401
+from keel.domain.errors import KeelError, ParseError, ReadError
+from keel.store import codec, frontmatter
 
 
 def fail(msg, code=1):
@@ -129,29 +29,43 @@ def fail(msg, code=1):
     sys.exit(code)
 
 
+def load(path):
+    try:
+        data, body = frontmatter.load(path)
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
+    if data is None:
+        fail(f"{path}: no frontmatter found", 1)
+    return data, body
+
+
 def cmd_get(args):
     data, _ = load(args[0])
     value = data.get(args[1])
     if value is None:
         sys.exit(1)
-    print(", ".join(value) if isinstance(value, list) else value)
+    if isinstance(value, dict):
+        print(json.dumps(value, ensure_ascii=False))
+    else:
+        print(", ".join(value) if isinstance(value, list) else value)
 
 
 def cmd_set(args):
     path = args[0]
-    data, body = load(path)
+    values = {}
     for pair in args[1:]:
         if "=" not in pair:
             fail(f"expected key=value, got {pair}", 2)
         key, value = pair.split("=", 1)
         if value.startswith("[") and value.endswith("]"):
-            inner = value[1:-1].strip()
-            data[key] = [_scalar(v) for v in _split_inline(inner)] if inner else []
+            values[key] = codec.scalar_or_list(value, source="argument")
         else:
-            data[key] = value
-        if key not in data["__order__"]:
-            data["__order__"].append(key)
-    Path(path).write_text(render(data, body), encoding="utf-8")
+            values[key] = value
+    load(path)  # missing frontmatter is exit 1, as for get
+    try:
+        frontmatter.update(path, values)
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
 
 
 def cmd_validate(args):
@@ -182,6 +96,29 @@ def cmd_dump(args):
     print(json.dumps(data, ensure_ascii=False))
 
 
+def cmd_find(args):
+    """Every file whose frontmatter has all the given values; a file that cannot be read is exit 2, because an
+    answer "not found" could be wrong (System-ADR 0019)."""
+    folder = Path(args[0])
+    wanted = {}
+    for pair in args[1:]:
+        if "=" not in pair:
+            fail(f"expected key=value, got {pair}", 2)
+        key, value = pair.split("=", 1)
+        wanted[key] = value
+    hits = []
+    for p in sorted(folder.rglob("*.md")) if folder.is_dir() else []:
+        try:
+            data = frontmatter.fields(p)
+        except (ReadError, ParseError) as exc:
+            fail(str(exc), 2)
+        if all(str(data.get(k)) == v for k, v in wanted.items()):
+            hits.append(str(p))
+    if not hits:
+        sys.exit(1)
+    print("\n".join(hits))
+
+
 def _opts(args):
     opts = {}
     i = 0
@@ -194,12 +131,14 @@ def _opts(args):
     return opts
 
 
-COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cmd_dump}
+COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cmd_dump, "find": cmd_find}
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in COMMANDS:
         fail(__doc__, 2)
     try:
         COMMANDS[sys.argv[1]](sys.argv[2:])
+    except KeelError as exc:
+        fail(f"frontmatter: {exc}", exc.exit_code)
     except Exception as exc:  # a crash is exit 2, never the 1 of "key missing" or "invalid"
         fail(f"frontmatter: interner Fehler: {exc!r}", 2)

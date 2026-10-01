@@ -77,7 +77,8 @@ faelligkeiten:
   architektur_min_commits: 10
 
 compliance:
-  pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. "mitgliedsnummer|kundennummer"
+  pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. 'mitgliedsnummer|\bkundennummer\b'
+                         # Reguläre Ausdrücke in einfache Anführungszeichen: dort gilt \ wörtlich.
 
 backlog:
   provider: markdown   # markdown | github | linear

@@ -8,6 +8,7 @@ KEEL_DONE=0
 KEEL_ERR=""
 KEEL_TMP=""
 ERRF=/dev/null
+KEEL_PATH_RUNTIME=""
 
 # Error contract (System-ADR 0019). Claude Code blocks only on exit 2 or an explicit deny/block; any other
 # failure lets the call through. A gate therefore ends through keel_ok, deny, block_stop or gate_fail; every
@@ -96,15 +97,15 @@ keel_observer_init() {
   printf '%s' "$payload" | jq -e 'type == "object"' >/dev/null 2>&1 || { hook_error "Eingabe ist kein JSON-Objekt"; keel_ok; }
 }
 
-# hook_error <detail>: append a hook_error event without jq or python3, best effort.
+# hook_error <detail>: append a hook_error event without jq, best effort. Needs python3 for the path of the
+# runtime folder (keel.store.paths); without python3 the error is lost, the hook still lets go.
 hook_error() {
-  local p="${CLAUDE_PROJECT_DIR:-}"
-  [ -n "$p" ] || p="$(field '.cwd' 2>/dev/null || true)"
+  local p; p="$(field '.cwd' 2>/dev/null || true)"
   [ -n "$p" ] || p="$PWD"
-  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
   local detail; detail="$(printf '%s' "$1" | tr '\n\t' '  ' | tr -d '\000-\037"\\' | cut -c1-300)"
-  { mkdir -p "$d" && printf '{"event":"hook_error","ts":"%s","hook":"%s","detail":"%s"}\n' \
-      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$KEEL_HOOK" "$detail" >> "$d/events.jsonl"; } 2>/dev/null || true
+  printf '{"event":"hook_error","ts":"%s","hook":"%s","detail":"%s"}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$KEEL_HOOK" "$detail" \
+    | python3 "$PLUGIN_ROOT/scripts/jsonl.py" append --project "$p" 2>/dev/null || true
 }
 
 is_number() { case "${1:-}" in ''|*[!0-9]*) return 1 ;; esac; }
@@ -121,6 +122,18 @@ fm_get() {
   esac
 }
 
+# fm_find <folder> key=value...: the first file whose frontmatter matches, empty when none; an unreadable file
+# ends the gate (fail closed), because "none found" could be wrong.
+fm_find() {
+  local rc=0 v
+  v="$($FM find "$@" 2>"$ERRF")" || rc=$?
+  case $rc in
+    0) printf '%s' "$v" | head -1 ;;
+    1) ;;
+    *) gate_fail "$1 nicht lesbar: $(cat "$ERRF" 2>/dev/null)" ;;
+  esac
+}
+
 field() { printf '%s' "$payload" | jq -r "$1 // empty"; }
 
 project_dir() {
@@ -128,18 +141,14 @@ project_dir() {
   [ -n "$cwd" ] && printf '%s' "$cwd" || pwd
 }
 
-state_dir() {
-  local p; p="$(project_dir)"
-  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")/state"
-  mkdir -p "$d"
-  printf '%s' "$d"
-}
-
-log_dir() {
-  local p; p="$(project_dir)"
-  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")/logs"
-  mkdir -p "$d"
-  printf '%s' "$d"
+# keel_paths: KEEL_PATH_ROOT, _RUNTIME, _STATE, _LOGS, _EVENTS, _HOOKLOG, _BRAKE for the project of this hook,
+# from bin/keel (System-ADR 0020), once per hook process. Call it at the top level, not in $(...), so the
+# values stay. Fails (return 1) when the path cannot be computed; errexit then ends the hook by its contract,
+# but not inside an if, && or || list: there the caller checks it (keel_paths || gate_fail ...).
+keel_paths() {
+  [ -n "$KEEL_PATH_RUNTIME" ] && return 0
+  local out; out="$("$PLUGIN_ROOT/bin/keel" path --project "$(project_dir)" --ensure --shell)" || return 1
+  eval "$out"
 }
 
 # Role name without the plugin namespace: "keel:planer" -> "planer"; empty for non-keel agents.
@@ -185,9 +194,7 @@ block_stop() {
   keel_ok
 }
 
-record() {  # record <event> <json-fields>: append a metrics line, atomically (scripts/jsonl.py)
-  local p; p="$(project_dir)"
-  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
+record() {  # record <event> <json-fields>: append an event, atomically (scripts/jsonl.py)
   local line; line="$(jq -nc --arg ev "$1" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson f "$2" '{event:$ev,ts:$ts} + $f')" || return 0
-  printf '%s' "$line" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" append "$d/events.jsonl"
+  printf '%s' "$line" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" append --project "$(project_dir)"
 }

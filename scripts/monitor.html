@@ -335,7 +335,7 @@ function render(s) {
   ].join(" · ");
   renderNow(s);
   renderFlow(s);
-  renderDue(l.faellig);
+  renderDue(l.faellig, l.gesundheit, s.unlesbar);
   renderPlans(l);
   renderDecisions(l.vorlagen);
   renderEvents(s.ereignisse);
@@ -436,11 +436,14 @@ function renderFlow(s) {
   $("flow").innerHTML = FLOW.map(l => `<div class="lane"><span class="lane-label">${esc(l.label)}</span>${l.nodes.map(node).join("")}</div>`).join("");
 }
 
-function renderDue(d) {
-  const items = (d && d.faellig) || [];
+function renderDue(d, health, unreadable) {
+  const items = [...((d && d.faellig) || []).map(i => ({ ...i, badge: i.hart ? "hart" : "soft", label: i.hart ? "hart" : "Hinweis" })),
+    ...(health || []).map(h => ({ art: "keel doctor: " + h.pruefung, grund: h.meldung, befehl: "/keel:hilfe",
+      badge: h.stufe === "fehler" ? "bad" : "warn", label: h.stufe })),
+    ...(unreadable || []).map(p => ({ art: "unlesbar", grund: p, befehl: "keel doctor nennt die Zeile", badge: "bad", label: "fehler" }))];
   $("due-count").textContent = items.length || "";
   $("due").innerHTML = items.length ? `<ul class="plain">${items.map(i => `<li>
-      <span class="badge ${i.hart ? "hart" : "soft"}">${i.hart ? "hart" : "Hinweis"}</span> <b>${esc(i.art)}</b>
+      <span class="badge ${i.badge}">${esc(i.label)}</span> <b>${esc(i.art)}</b>
       <div class="muted">${esc(i.grund)}</div>${i.befehl ? `<div class="mono">${esc(i.befehl)}</div>` : ""}</li>`).join("")}</ul>`
     : `<div class="empty">Nichts fällig.</div>`;
 }

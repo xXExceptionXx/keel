@@ -10,13 +10,9 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from frontmatter import parse as parse_fm  # noqa: E402
-
-
-def fm(p):
-    d, _ = parse_fm(p.read_text(encoding="utf-8"))
-    return d or {}
+import _keel  # noqa: F401
+from keel.domain.errors import KeelError
+from keel.store.frontmatter import fields as fm
 
 
 def main():
@@ -62,6 +58,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeelError as e:  # an unreadable artifact: cannot tell, and say which file and line
+        print(f"briefing_needed: nicht prüfbar: {e}", file=sys.stderr)
+        sys.exit(2)
     except Exception as e:  # a crash must not read as "briefing needed" (exit 1)
         print(f"briefing_needed: interner Fehler: {e!r}", file=sys.stderr)
         sys.exit(2)

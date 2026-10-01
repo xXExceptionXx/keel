@@ -30,7 +30,10 @@ esac
 case "$skill" in
   keel:hilfe|hilfe)
     sid="$(field '.session_id')"
-    [ -z "$sid" ] || touch "$(state_dir)/hilfe-$sid"
+    if [ -n "$sid" ]; then
+      keel_paths || gate_fail "Laufzeit-Ordner nicht bestimmbar (bin/keel path)"
+      touch "$KEEL_PATH_STATE/hilfe-$sid"
+    fi
     keel_ok ;;
   keel:briefing|briefing) needed=1 ;;
   keel:start|start)

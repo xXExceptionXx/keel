@@ -7,23 +7,19 @@ Thresholds in .keel/config.yaml under `faelligkeiten`.
 Exit codes (System-ADR 0019): 0 nothing hard is due, 1 something hard is due, 2 cannot tell (usage, internal error).
 """
 import json
-import os
 import subprocess
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.domain.errors import KeelError
+from keel.store import config, events, frontmatter
+from keel.store.paths import Paths
 from models import switches as model_switches  # noqa: E402
 
-DEFAULTS = {"coach_tage": 30, "coach_min_rollenlaeufe": 40, "coach_nach_modellwechsel_rollenlaeufe": 10, "architektur_tage": 7, "architektur_min_commits": 10}
-
-
-def fm(p):
-    d, _ = parse_fm(p.read_text(encoding="utf-8"))
-    return d or {}
+THRESHOLDS = ("coach_tage", "coach_min_rollenlaeufe", "coach_nach_modellwechsel_rollenlaeufe", "architektur_tage",
+              "architektur_min_commits")
 
 
 def sh(args, cwd):
@@ -36,12 +32,12 @@ def newest(dirpath, pattern="*.md"):
     files = [p for p in dirpath.glob(pattern) if not p.name.endswith(".bewertung.md")]
     dated = []
     for p in files:
-        d = fm(p).get("datum")
+        d = frontmatter.fields(p).get("datum")
         if d:
             try:
-                dated.append((date.fromisoformat(d), p))
-            except ValueError:
-                pass
+                dated.append((date.fromisoformat(str(d)), p))
+            except (TypeError, ValueError):
+                pass  # not a date (e.g. a list): the report does not count for this due item
     return max(dated)[0] if dated else None
 
 
@@ -49,27 +45,14 @@ class DueError(Exception):
     pass
 
 
-def event_time(e):
-    """Naive UTC datetime of an event, or None when the event has no usable ts."""
-    ts = e.get("ts") if isinstance(e, dict) else None
-    if not isinstance(ts, str):
-        return None
-    try:
-        t = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return t.astimezone(timezone.utc).replace(tzinfo=None) if t.tzinfo else t
-
-
 def main():
     if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
-    cfg = read_config(project / ".keel" / "config.yaml") if (project / ".keel" / "config.yaml").exists() else {}
-    th = dict(DEFAULTS)
-    if isinstance(cfg.get("faelligkeiten"), dict):
-        th.update({k: int(v) for k, v in cfg["faelligkeiten"].items() if str(v).isdigit()})
+    paths = Paths(project)
+    cfg = config.load_file(paths.config)
+    th = {k: config.get_int(cfg, f"faelligkeiten.{k}") for k in THRESHOLDS}
     today = date.today()
     items = []
 
@@ -102,18 +85,9 @@ def main():
 
     # coach: enough days and enough role runs since the last report
     last_coach = newest(project / ".keel" / "work" / "coach")
-    metrics = Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name / "events.jsonl"
-    runs = 0
-    if metrics.exists():
-        since = datetime.combine(last_coach, datetime.min.time()) if last_coach else datetime.min
-        for line in metrics.read_text(encoding="utf-8").splitlines():
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            t = event_time(e)
-            if t is not None and e.get("event") == "agent_stop" and t >= since:
-                runs += 1
+    # report dates are local calendar days; events carry UTC: the day starts at local midnight
+    since = datetime.combine(last_coach, datetime.min.time()).astimezone() if last_coach else None
+    runs = sum(1 for e in events.read(paths.events, since=since).events if e.get("event") == "agent_stop")
     days = (today - last_coach).days if last_coach else None
     if (days is None or days >= th["coach_tage"]) and runs >= th["coach_min_rollenlaeufe"]:
         items.append({"art": "coach", "hart": True, "rolle": "coach", "grund": f"{days if days is not None else 'noch kein'} Tage seit dem letzten Coach-Lauf, {runs} Rollenläufe seitdem", "befehl": "/keel:start führt ihn aus"})
@@ -164,7 +138,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except DueError as e:
+    except (DueError, KeelError) as e:  # an unreadable artifact names its file and line
         print(f"due: nicht prüfbar: {e}", file=sys.stderr)
         sys.exit(2)
     except Exception as e:  # a crash must not read as "something is due" (exit 1)

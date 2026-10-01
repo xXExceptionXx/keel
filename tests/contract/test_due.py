@@ -14,7 +14,7 @@ class DueContractTest(ContractTest):
 
     def test_event_without_timestamp_is_skipped(self):
         p = project()
-        write(self.metrics / p.name / "events.jsonl", '{"event":"agent_stop","role":"tester"}\n')
+        write(self.runtime(p) / "events.jsonl", '{"event":"agent_stop","role":"tester"}\n')
         r = self.script("due.py", p, "--json", proj=p)
         self.assertIn(r.rc, (0, 1), r)
         self.assertNotIn("Traceback", r.err)

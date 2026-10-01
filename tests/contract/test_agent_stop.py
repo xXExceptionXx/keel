@@ -6,7 +6,7 @@ from harness import CRASH_PY, REPO, ContractTest, agent_call, plugin_copy, proje
 
 class AgentStopTest(ContractTest):
     def stop(self, p, role, ref, root=REPO, env=None):
-        write(self.metrics / p.name / "state" / "agent-a1.ref", ref + "\n")
+        write(self.runtime(p) / "state" / "agent-a1.ref", ref + "\n")
         payload = {"hook_event_name": "SubagentStop", "agent_type": f"keel:{role}", "agent_id": "a1", "cwd": str(p),
                    "last_assistant_message": "fertig"}
         return self.hook("agent-stop", payload, proj=p, root=root, env=env)

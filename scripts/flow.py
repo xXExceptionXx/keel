@@ -19,8 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.store.frontmatter import load_tolerant
 
 # rolle.anlass -> object kind, required status, fields that must not be empty, further conditions
 GATES = {
@@ -127,23 +127,19 @@ def shell():
     return "\n".join(out)
 
 
-def _fm(path):
-    try:
-        d, body = parse_fm(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError):
-        return None, ""
-    return (d or {}), body
-
-
-def _objects(keel, kind):
+def _objects(keel, kind, unreadable=None):
+    """Objects of a kind with their frontmatter; files the codec refuses go to unreadable instead of vanishing."""
     folder = {"plan": "work/plans", "aufgabe": "work/tasks", "epic": "work/epics", "vorlage": "decisions/pending"}[kind]
     d = keel / folder
     for p in sorted(d.glob("*.md")) if d.exists() else []:
         if p.name.endswith(".bewertung.md"):
             continue
-        data, body = _fm(p)
-        if data is None:
+        loaded = load_tolerant(p)
+        if loaded is None:
+            if unreadable is not None:
+                unreadable.add(p)
             continue
+        data, body = loaded
         typ = {"aufgabe": "aufgabe", "plan": "plan", "epic": "epic", "vorlage": "vorlage"}[kind]
         if data.get("typ") != typ:
             continue
@@ -174,16 +170,19 @@ def satisfied(keel, g, name, path, data, body):
 
 def bereit(project):
     """Per role: the objects it could start on now, by the gate's entry conditions. Roles that start by
-    due item (auditor, coach) or by date (architect rounds) are left to the due list."""
+    due item (auditor, coach) or by date (architect rounds) are left to the due list. Under "unlesbar": files
+    whose frontmatter cannot be read, so they cannot be ready for anyone (keel doctor names the line)."""
     keel = Path(project) / ".keel"
     out = {r: [] for r in ROLES}
+    unreadable = set()
     for key, g in GATES.items():
         if g.get("nur_gate") or g.get("oder_fehlt"):
             continue
         role, anlass = key.split(".", 1)
-        for name, path, data, body in _objects(keel, g["objekt"]):
+        for name, path, data, body in _objects(keel, g["objekt"], unreadable):
             if satisfied(keel, g, name, path, data, body):
                 out[role].append({"anlass": anlass, "ref": name, "pfad": str(path.relative_to(project))})
+    out["unlesbar"] = sorted(str(p.relative_to(project)) for p in unreadable)
     return out
 
 

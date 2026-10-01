@@ -5,6 +5,5 @@
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 keel_observer_init
-dir="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$(project_dir)")"
-printf '%s' "$payload" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" hooklog "$dir/hooks.jsonl"
+printf '%s' "$payload" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" hooklog --project "$(project_dir)"
 keel_ok

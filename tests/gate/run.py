@@ -27,15 +27,26 @@ def arg(name, default=None):
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
 
 
+def runtime_dir(root, proj, mdir):
+    """Runtime folder of proj as this plugin copy lays it out: bin/keel since 0.15.0, the folder name before."""
+    keel = Path(root) / "bin" / "keel"
+    if not keel.exists():
+        return mdir / proj.name
+    out = subprocess.run(["bash", str(keel), "path", "runtime", "--project", str(proj)], capture_output=True, text=True,
+                         check=True, env={**os.environ, "KEEL_METRICS_DIR": str(mdir)})
+    return Path(out.stdout.strip())
+
+
 def run(root, proj, mdir, t, p, bg):
     shutil.rmtree(mdir, ignore_errors=True)
     payload = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "cwd": str(proj), "session_id": "s1",
                "tool_input": {"subagent_type": t, "prompt": p, "run_in_background": bg}}
     r = subprocess.run(["bash", f"{root}/hooks/agent-gate.sh"], input=json.dumps(payload), capture_output=True,
                        text=True, env={**os.environ, "KEEL_METRICS_DIR": str(mdir)}, cwd=proj)
-    sd = mdir / proj.name / "state"
+    rt = runtime_dir(root, proj, mdir)
+    sd = rt / "state"
     pend = {f.name: f.read_text() for f in sorted(sd.glob("pending-*"))} if sd.exists() else {}
-    ev = mdir / proj.name / "events.jsonl"
+    ev = rt / "events.jsonl"
     evs = [re.sub(r'"ts":"[^"]*",?', "", line) for line in ev.read_text().splitlines()] if ev.exists() else []
     return {"rc": r.returncode, "out": r.stdout, "err": r.stderr.strip(), "pending": pend, "events": evs}
 

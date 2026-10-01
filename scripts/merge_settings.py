@@ -8,6 +8,9 @@ import json
 import sys
 from pathlib import Path
 
+import _keel  # noqa: F401
+from keel.store.io import atomic_write
+
 
 def main() -> int:
     settings_path = Path(sys.argv[1])
@@ -23,7 +26,7 @@ def main() -> int:
         current.extend(added)
         print(f"{kind} rules: {len(added)} added, {len(current) - len(added)} already present")
 
-    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    atomic_write(settings_path, json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
     return 0
 
 

@@ -60,7 +60,7 @@ class BrokenStateTest(ContractTest):
         if config:
             with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as c:
                 c.write(config)
-        sd = self.metrics / p.name / "state"
+        sd = self.runtime(p) / "state"
         sd.mkdir(parents=True, exist_ok=True)
         (sd / "agent-a1.ref").write_text("T-x\n")
         return sd

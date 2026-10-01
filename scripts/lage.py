@@ -3,7 +3,7 @@
 
 Usage: lage.py <project-dir> [--hours N] [--plugin-root DIR] [--json] [--clean]
 
-Sections: project and plugin versions, due items, open Vorhaben and epics, open Vorlagen,
+Sections: project and plugin versions, due items, health (keel doctor), open Vorhaben and epics, open Vorlagen,
 events of the last N hours grouped by kind and reason, leftover state files.
 --clean removes leftover state files (stale pending markers, per-agent files of finished runs,
 context step markers older than a day). Reads only; never touches .keel/ content.
@@ -15,24 +15,19 @@ import subprocess
 import sys
 import time
 from collections import Counter, defaultdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.domain.errors import KeelError
+from keel.services import doctor
+from keel.store import config, events
+from keel.store.frontmatter import fields_tolerant as fields
+from keel.store.paths import Paths
 
 ACTIVE_PLAN = {"integriert", "verworfen", "abgeschlossen"}
 STALE_AGENT_SECONDS = 24 * 3600
-STALE_PENDING_SECONDS = 600
-
-
-def fm(p):
-    try:
-        d, _ = parse_fm(p.read_text(encoding="utf-8"))
-    except OSError:
-        return {}
-    return d or {}
+STALE_PENDING_SECONDS = doctor.STALE_PENDING_SECONDS
 
 
 def sh(args, cwd):
@@ -100,7 +95,7 @@ def vorhaben(project):
     if not plans.exists():
         return out
     for p in sorted(plans.glob("*.md")):
-        d = fm(p)
+        d = fields(p)
         if d.get("typ") != "plan" or d.get("status") in ACTIVE_PLAN:
             continue
         name = p.stem
@@ -108,7 +103,7 @@ def vorhaben(project):
         vid = d.get("vorhaben")
         if tasks.exists() and vid:
             for t in tasks.glob("*.md"):
-                td = fm(t)
+                td = fields(t)
                 if td.get("vorhaben") == vid:
                     counts[td.get("status", "?")] += 1
         out.append({"name": name, "id": vid, "status": d.get("status"), "branch": d.get("branch"), "epic": d.get("epic"), "aufgaben": dict(counts)})
@@ -123,7 +118,7 @@ def epics(project):
     for p in sorted(ep.glob("*.md")):
         if p.name.endswith(".bewertung.md"):
             continue
-        d = fm(p)
+        d = fields(p)
         out.append({"name": p.stem, "status": d.get("status")})
     return out
 
@@ -135,7 +130,7 @@ def vorlagen(project):
         return out
     today = date.today()
     for p in sorted(pend.glob("*.md")):
-        d = fm(p)
+        d = fields(p)
         try:
             age = (today - date.fromisoformat(str(d.get("datum")))).days
         except (TypeError, ValueError):
@@ -149,10 +144,9 @@ def reason_key(e):
     return re.sub(r"\d+", "N", str(e.get("reason", "")))[:90]
 
 
-def events(metrics_dir, hours):
-    """Events of the last N hours from events.jsonl, grouped."""
-    f = metrics_dir / "events.jsonl"
-    since = time.time() - hours * 3600
+def grouped_events(paths, hours):
+    """Events of the last N hours, grouped; starts and stops of all time for the per-agent state."""
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
     runs = Counter()
     blocked = defaultdict(Counter)
     budget = Counter()
@@ -160,30 +154,24 @@ def events(metrics_dir, hours):
     alarms = 0
     stops = {}
     starts = {}
-    if f.exists():
-        for line in f.read_text(encoding="utf-8").splitlines():
-            try:
-                e = json.loads(line)
-                ts = datetime.fromisoformat(e["ts"].replace("Z", "+00:00")).timestamp()
-            except (ValueError, KeyError):
-                continue
-            ev = e.get("event")
-            if ev == "agent_start":
-                starts[e.get("agent_id")] = e
-            if ev == "agent_stop":
-                stops[e.get("agent_id")] = e
-            if ts < since:
-                continue
-            if ev == "agent_stop":
-                runs[f"{e.get('role')}:{e.get('result')}"] += 1
-            elif ev == "stop_blocked":
-                blocked[e.get("role")][reason_key(e)] += 1
-            elif ev == "budget_exhausted":
-                budget[e.get("role")] += 1
-            elif ev == "denied":
-                denied[e.get("hook")][reason_key(e)] += 1
-            elif ev == "context_alarm":
-                alarms += 1
+    for e in events.read(paths.events).events:
+        ev = e.get("event")
+        if ev == "agent_start":
+            starts[e.get("agent_id")] = e
+        if ev == "agent_stop":
+            stops[e.get("agent_id")] = e
+        if e["_ts"] < since:
+            continue
+        if ev == "agent_stop":
+            runs[f"{e.get('role')}:{e.get('result')}"] += 1
+        elif ev == "stop_blocked":
+            blocked[e.get("role")][reason_key(e)] += 1
+        elif ev == "budget_exhausted":
+            budget[e.get("role")] += 1
+        elif ev == "denied":
+            denied[e.get("hook")][reason_key(e)] += 1
+        elif ev == "context_alarm":
+            alarms += 1
     return {
         "rollenlaeufe": dict(runs),
         "blockierte_uebergaben": {r: dict(c) for r, c in blocked.items()},
@@ -282,33 +270,47 @@ def newest_dated(dirpath):
         return None
     best = None
     for p in dirpath.glob("*.md"):
-        d = fm(p)
+        d = fields(p)
         if d.get("datum") and (best is None or str(d["datum"]) > str(best[0])):
             best = (d["datum"], p.name, d.get("status"))
     return best
 
 
-def metrics_dir_of(project):
-    return Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name
+_health = {}
+HEALTH_TTL = 60.0
 
 
-def build_report(project, hours=24, plugin_root=None):
+def health(project, fast):
+    """Findings of keel doctor that are not ok. fast (the monitor, polled every few seconds): without starting
+    git and jq, and reused for HEALTH_TTL seconds."""
+    if not fast:
+        return [f.as_dict() for f in doctor.run(project) if f.stufe != doctor.OK]
+    hit = _health.get(str(project))
+    if not hit or time.time() - hit[0] > HEALTH_TTL:
+        hit = (time.time(), [f.as_dict() for f in doctor.run(project, tools=False) if f.stufe != doctor.OK])
+        _health[str(project)] = hit
+    return hit[1]
+
+
+def build_report(project, hours=24, plugin_root=None, fast=False):
     """The situation report as a dict, plus the state files --clean would remove. Shared with monitor.py."""
-    cfg_path = project / ".keel" / "config.yaml"
-    cfg = read_config(cfg_path) if cfg_path.exists() else {}
-    metrics_dir = metrics_dir_of(project)
-    state_dir = metrics_dir / "state"
+    paths = Paths(project)
+    try:
+        cfg = config.load_file(paths.config)
+    except KeelError:
+        cfg = {}  # reported by the health section
 
-    ev = events(metrics_dir, hours)
-    findings, cleanup = state_files(state_dir, ev.pop("_starts"), ev.pop("_stops"))
+    ev = grouped_events(paths, hours)
+    findings, cleanup = state_files(paths.state, ev.pop("_starts"), ev.pop("_stops"))
 
     report = {
         "projekt": project.name,
         "branch": sh(["git", "branch", "--show-current"], project),
-        "basis": (cfg.get("git") or {}).get("base_branch") if isinstance(cfg.get("git"), dict) else None,
+        "basis": config.get(cfg, "git.base_branch"),
         "arbeitsbaum_geaendert": len([l for l in sh(["git", "status", "--porcelain"], project).splitlines() if l]),
         "plugin": plugin_versions(project, plugin_root),
         "faellig": due(project),
+        "gesundheit": health(project, fast),
         "vorhaben": vorhaben(project),
         "epics": epics(project),
         "vorlagen": vorlagen(project),
@@ -358,6 +360,12 @@ def main():
         print("  nichts")
     for i in report["faellig"]["faellig"]:
         print(f"  {'HART' if i['hart'] else 'soft'}  {i['art']}: {i['grund']} → {i['befehl']}")
+
+    print("\nGesundheit (keel doctor):")
+    if not report["gesundheit"]:
+        print("  alles in Ordnung")
+    for f in report["gesundheit"]:
+        print(f"  {f['stufe'].upper()}  {f['pruefung']}: {f['meldung']}")
 
     print("\nVorhaben und Epics:")
     for e in report["epics"]:

@@ -20,7 +20,7 @@ the address and exits. With --if-autostart it does nothing unless monitor.autost
 --stop ends a monitor that --ensure started for this project.
 
 Observer only (System-ADR 0017): reads state, events and files, never writes to the project and starts no
-role. --ensure keeps its log and PID under ~/.keel-metrics/<project>/logs/.
+role. --ensure keeps its log and PID in the runtime folder of the project (keel path logs).
 Binds to 127.0.0.1 and answers only requests addressed to localhost.
 """
 import json
@@ -36,11 +36,14 @@ from urllib.error import URLError
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
+import _keel  # noqa: F401
 from flow import BY_DUE, DUE_ROLES, NEXT_PLAN, PHASES, ROLES, bereit, next_task  # noqa: E402
-from frontmatter import parse as parse_fm  # noqa: E402
-from lage import agent_runs, build_report, metrics_dir_of  # noqa: E402
+from keel.domain.errors import KeelError
+from keel.store import config, events as event_log
+from keel.store.frontmatter import load_tolerant
+from keel.store.io import atomic_write
+from keel.store.paths import Paths
+from lage import agent_runs, build_report  # noqa: E402
 
 PAGE = Path(__file__).parent / "monitor.html"
 EVENT_TAIL = 200            # events.jsonl lines shown in the stream
@@ -55,33 +58,15 @@ def arg(name, default=None):
     return default
 
 
-def tail_lines(path, max_bytes):
-    """Last complete lines of a file, reading at most max_bytes from the end."""
-    try:
-        size = path.stat().st_size
-        with path.open("rb") as f:
-            f.seek(max(0, size - max_bytes))
-            data = f.read()
-    except OSError:
-        return []
-    lines = data.decode("utf-8", errors="replace").splitlines()
-    return lines[1:] if size > max_bytes else lines
+def _plain(e):
+    """An event for the page: without the parsed time and the transcript path."""
+    return {k: v for k, v in e.items() if k not in ("_ts", "transcript")}
 
 
-def parse_json_lines(lines):
-    out = []
-    for line in lines:
-        try:
-            out.append(json.loads(line))
-        except ValueError:
-            continue
-    return out
-
-
-def commands(metrics_dir):
+def commands(paths):
     """Typed /keel:<skill> prompts and Skill tool calls from the raw hook log, oldest first."""
     out = []
-    for e in parse_json_lines(tail_lines(metrics_dir / "hooks.jsonl", HOOKS_TAIL_BYTES)):
+    for e in event_log.read(paths.hooklog, tail_bytes=HOOKS_TAIL_BYTES).events:
         hook = e.get("hook_event_name")
         skill = None
         if hook == "UserPromptSubmit":
@@ -100,9 +85,9 @@ def commands(metrics_dir):
 _events_cache = {}
 
 
-def load_events(md):
-    """All of events.jsonl, re-read only when the file changed. Callers get copies of the dicts."""
-    f = md / "events.jsonl"
+def load_events(paths):
+    """Events of the project (last 16 MB), re-read only when the file changed. Callers get copies of the dicts."""
+    f = paths.events
     try:
         st = f.stat()
         key = (st.st_mtime_ns, st.st_size)
@@ -110,21 +95,21 @@ def load_events(md):
         return []
     hit = _events_cache.get(f)
     if not hit or hit[0] != key:
-        hit = (key, parse_json_lines(tail_lines(f, 16_000_000)))
+        hit = (key, [_plain(e) for e in event_log.read(f, tail_bytes=16_000_000).events])
         _events_cache[f] = hit
     return [dict(e) for e in hit[1]]
 
 
 def state(project, plugin_root, hours):
-    report, _ = build_report(project, hours, plugin_root)
-    md = metrics_dir_of(project)
-    events = load_events(md)
+    report, _ = build_report(project, hours, plugin_root, fast=True)
+    paths = Paths(project)
+    events = load_events(paths)
     stops = {e.get("agent_id") for e in events if e.get("event") == "agent_stop"}
     starts = {e.get("agent_id"): e for e in events if e.get("event") == "agent_start"}
-    cmds = commands(md)
+    cmds = commands(paths)
 
     active = []
-    for a in agent_runs(md / "state", stops):
+    for a in agent_runs(paths.state, stops):
         if a["zustand"] != "laeuft":
             continue
         a.pop("_files")
@@ -137,7 +122,7 @@ def state(project, plugin_root, hours):
         active.append(a)
 
     starting = []
-    sd = md / "state"
+    sd = paths.state
     if sd.exists():
         for p in sd.glob("pending-*"):
             age = time.time() - p.stat().st_mtime
@@ -145,14 +130,13 @@ def state(project, plugin_root, hours):
                 starting.append({"rolle": p.name[len("pending-"):], "ref": p.read_text(encoding="utf-8").strip(), "seit_sekunden": int(age)})
 
     stream = sorted(events[-EVENT_TAIL:] + cmds[-50:], key=lambda e: e.get("ts") or "")
-    roles = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])
-    for e in stream:
-        e.pop("transcript", None)
+    roles, unreadable = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])
     return {
         "lage": report,
         "aktiv": active,
         "startet": starting,
         "rollen": roles,
+        "unlesbar": unreadable,
         "ereignisse": stream[-EVENT_TAIL:],
         "zeit": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
@@ -261,7 +245,7 @@ def vorhaben_detail(project, name):
         "aufgaben": ordered,
         "abnahme": acceptance,
         "vorlagen": vorlagen,
-        "laeufe": runs_for(load_events(metrics_dir_of(project)), refs),
+        "laeufe": runs_for(load_events(Paths(project)), refs),
     }
 
 
@@ -273,6 +257,7 @@ def role_states(project, due, running):
     hard = [i for i in items if i.get("hart")]
     allowed = {r for i in hard for r in DUE_ROLES.get(i.get("art"), [])}
     ready = bereit(project)
+    unreadable = ready.pop("unlesbar", [])
     for role, art in list(BY_DUE.items()) + [("architekt", "architektur")]:
         for i in items:
             if i.get("art") == art:
@@ -291,7 +276,7 @@ def role_states(project, due, running):
         else:
             r["zustand"] = "ruht"
         out[role] = r
-    return out
+    return out, unreadable
 
 
 def keel_root(project):
@@ -299,12 +284,7 @@ def keel_root(project):
 
 
 def fm_of(path):
-    try:
-        d, body = parse_fm(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError):
-        return {}, ""
-    d = {k: v for k, v in (d or {}).items() if not k.startswith("__")}
-    return d, body
+    return load_tolerant(path) or ({}, "")
 
 
 def files(project):
@@ -430,11 +410,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def config_of(project):
-    cfg = project / ".keel" / "config.yaml"
     try:
-        return (read_config(cfg).get("monitor") or {}) if cfg.exists() else {}
-    except (OSError, AttributeError):
-        return {}
+        return config.section(config.load(project), "monitor")
+    except KeelError:
+        return config.section({}, "monitor")
 
 
 def ping(port):
@@ -459,24 +438,23 @@ def ensure(project, port, plugin_root, quiet):
         print(f"keel-Monitor: Port {port} ist belegt ({running or 'anderer Dienst'}). "
               f"Setze monitor.port in .keel/config.yaml auf einen freien Port.", file=sys.stderr)
         return 1
-    log_dir = metrics_dir_of(project) / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    with open(log_dir / "monitor.log", "ab") as log:
+    paths = Paths(project).ensure()
+    with open(paths.monitor_log, "ab") as log:
         proc = subprocess.Popen(
             [sys.executable, str(Path(__file__).resolve()), str(project), "--port", str(port), "--plugin-root", plugin_root],
             stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True, close_fds=True)
-    (log_dir / "monitor.pid").write_text(f"{proc.pid} {port}\n")
+    atomic_write(paths.monitor_pid, f"{proc.pid} {port}\n")
     for _ in range(20):
         time.sleep(0.1)
         if ping(port) == str(project):
             say(f"keel-Monitor gestartet: {url}")
             return 0
-    print(f"keel-Monitor startete nicht; siehe {log_dir / 'monitor.log'}", file=sys.stderr)
+    print(f"keel-Monitor startete nicht; siehe {paths.monitor_log}", file=sys.stderr)
     return 1
 
 
 def stop(project):
-    pid_file = metrics_dir_of(project) / "logs" / "monitor.pid"
+    pid_file = Paths(project).monitor_pid
     try:
         pid, port = (int(x) for x in pid_file.read_text().split())
     except (OSError, ValueError):

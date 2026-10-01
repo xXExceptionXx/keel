@@ -1,7 +1,8 @@
 """Black-box harness for contract tests: payload or command line in, answer, exit code and events out.
 
 The tests only talk to hooks and scripts through their public interface (stdin payload, argv, exit code,
-stdout, files under the metrics folder), so they survive restructuring of the core.
+stdout, files under the runtime folder), so they survive restructuring of the core. Where the runtime folder
+of a project lies is asked from the plugin (`keel path`), never rebuilt here.
 
 Environment:
   KEEL_TEST_BASH  bash to run the hooks with (CI sets /bin/bash on macOS to cover bash 3.2)
@@ -70,6 +71,20 @@ def plugin_copy(overrides):
     return dst
 
 
+_runtime = {}
+
+
+def runtime_dir(metrics, proj):
+    """Runtime folder of a project below the metrics root, as the plugin computes it (System-ADR 0020)."""
+    key = (str(metrics), str(proj))
+    if key not in _runtime:
+        out = subprocess.run([BASH, str(REPO / "bin" / "keel"), "path", "runtime", "--project", str(proj)],
+                             capture_output=True, text=True, check=True,
+                             env={**os.environ, "KEEL_METRICS_DIR": str(metrics)})
+        _runtime[key] = Path(out.stdout.strip())
+    return _runtime[key]
+
+
 CRASH_PY = "import sys\nraise RuntimeError('simulated crash')\n"
 
 
@@ -82,7 +97,7 @@ class Result:
             self.json = json.loads(proc.stdout) if proc.stdout.strip() else None
         except ValueError:
             self.json = None
-        base = metrics / proj.name if proj else metrics
+        base = runtime_dir(metrics, proj) if proj else metrics
         self.events = _jsonl(base / "events.jsonl")
         self.hooklog = _jsonl(base / "hooks.jsonl")
         self.raw_hooklog = (base / "hooks.jsonl").read_text(encoding="utf-8") if (base / "hooks.jsonl").exists() else ""
@@ -123,6 +138,10 @@ class ContractTest(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def runtime(self, proj):
+        """The runtime folder of proj under this test's metrics root."""
+        return runtime_dir(self.metrics, proj)
 
     def env(self, extra=None, path=None):
         e = {**os.environ, "KEEL_METRICS_DIR": str(self.metrics), "TMPDIR": str(self.tmpdir)}

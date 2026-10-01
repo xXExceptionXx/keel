@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# keel: command line of the keel core (lib/keel, System-ADR 0020). Needs python3, version 3.9 or newer;
+# the package itself refuses older versions with exit 2.
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "keel: python3 fehlt im PATH (gebraucht: 3.9 oder neuer)" >&2
+  exit 2
+fi
+exec python3 "$root/lib/keel_main.py" "$@"

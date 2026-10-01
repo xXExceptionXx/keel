@@ -9,10 +9,11 @@ role="$(keel_role "$agent_type")"
 id="$(field '.agent_id')"
 tool="$(field '.tool_name')"
 proj="$(project_dir)"
-sd="$(state_dir)"
+keel_paths
+sd="$KEEL_PATH_STATE"
 
 # Metrics folder is off limits for working roles
-metrics="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}"
+metrics="$KEEL_PATH_ROOT"
 if [ "$role" != "coach" ]; then
   input="$(field '.tool_input | tostring')"
   case "$input" in *"$metrics"*) deny "Der Kennzahlen-Ordner ist für arbeitende Rollen gesperrt" ;; esac

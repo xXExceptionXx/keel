@@ -6,11 +6,13 @@ Prints one line per broken reference (file:line: kind: token) and a summary. Exi
 
 Existence, not truth: a commit id that resolves may still be described wrongly; that stays the Auditor's job.
 """
-import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+import _keel  # noqa: F401
+from keel.store.paths import Paths
 
 LOG = re.compile(r"\b([a-zA-Z0-9-]+-\d{8}T\d{6}Z\.log)\b")
 COMMIT = re.compile(r"(?:`|\bCommit\s+|\bcommit\s+|\()([0-9a-f]{7,40})(?:`|\b)")
@@ -27,7 +29,7 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
-    metrics_logs = Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name / "logs"
+    metrics_logs = Paths(project).logs
     broken = 0
     checked = 0
     for f in sys.argv[2:]:
