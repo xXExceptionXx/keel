@@ -154,7 +154,7 @@ stateDiagram-v2
 
 ## 6. Was die Hooks um eine Rolle herum tun
 
-Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel. Welcher Status für welche Rolle und welchen Anlass nötig ist und welche Rollen eine harte Fälligkeit freigibt, liest agent-gate aus `scripts/flow.py`, derselben Tabelle, aus der der Monitor „bereit“ und „gesperrt“ ableitet. Ist sie nicht lesbar, startet keine Rolle. `python3 tests/gate/run.py --against main` vergleicht das Gate mit einem früheren Stand.
+Am Beispiel des Entwicklers. Jede Prüfung ist deterministisch und unabhängig vom Modell; blockiert wird mit dem konkreten Mangel. Welcher Status für welche Rolle und welchen Anlass nötig ist und welche Rollen eine harte Fälligkeit freigibt, liest agent-gate aus `scripts/flow.py`, derselben Tabelle, aus der der Monitor „bereit“ und „gesperrt“ ableitet. Ist sie nicht lesbar, startet keine Rolle. Allgemein gilt der Fehlervertrag aus System-ADR 0019: Kann ein Gate nicht prüfen, weil ein Werkzeug fehlt, ein Feld leer ist oder ein Hilfsskript abstürzt, blockiert es mit Meldung, statt durchzulassen; Beobachter wie Protokoll und Kontext-Alarm protokollieren den Fehler als `hook_error` und lassen weiterlaufen. `python3 -m unittest discover -s tests/contract` prüft die Hooks von außen gegen feste Sollwerte, `python3 tests/gate/run.py --against main` vergleicht das Gate mit einem früheren Stand.
 
 ```mermaid
 sequenceDiagram

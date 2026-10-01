@@ -8,6 +8,14 @@ PROJECT="${1:-$(pwd)}"
 PROJECT="$(cd "$PROJECT" && pwd)"
 TEMPLATES="$PLUGIN_ROOT/templates/keel"
 
+# The hooks block instead of letting calls through when jq or python3 is missing (System-ADR 0019).
+for tool in git python3 jq; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "keel init: '$tool' fehlt im PATH. Ohne es blockieren die keel-Hooks; installiere es zuerst (Linux: Paketverwaltung)." >&2
+    exit 2
+  fi
+done
+
 created=()
 skipped=()
 

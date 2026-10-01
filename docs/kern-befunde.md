@@ -6,6 +6,19 @@ Diese Liste ist zum Abarbeiten gedacht. Das Sicherheitsnetz (Abschnitt 1) sollte
 
 Legende: **belegt** = im Experiment nachgestellt, **gelesen** = aus dem Code abgeleitet.
 
+## Stand der Behebung
+
+Arbeitspaket 1 (`docs/arbeitspakete/01-sicherheitsnetz.md`, System-ADR 0019, Version 0.14.0), 2026-10-01:
+
+| Befund | Stand |
+| --- | --- |
+| S1 bis S8 | behoben, je mit Vertragstest unter `tests/contract/` |
+| F1, F2, F3 | behoben, mit Vertragstests |
+| F4 | geklärt und behoben: Der lexikografische Vergleich war in ADR 0018 bewusst festgelegt. Ergänzt um die Bedingung, dass die Summe aus blockierend und wichtig nicht steigt; das ADR-Beispiel 4/0 → 0/2 bleibt Fortschritt, 1/0 → 0/9 nicht mehr |
+| N3, N5 | behoben; dazu neu N7: getippte `/keel:`-Befehle erreichten das Hook-Protokoll nie, obwohl der Monitor sie dort sucht |
+| Beim Umsetzen zusätzlich gefunden | `guard.sh` ließ wegen SIGPIPE unter `pipefail` lange Befehle durch; ungebundene Variablen und Abbrüche innerhalb von Funktionen endeten ohne Exit 2; `deny` protokollierte vor der Ausgabe der Entscheidung; `guard.sh` protokollierte seine Ablehnungen nicht. Alles behoben |
+| U1 bis U4, N1, N2, N4, N6, F5 bis F9 | offen, gehören zum Umbau (M1, M2 in `docs/kern-architektur.md`) |
+
 ## 1. Sicherheitsnetz: Gates, die bei Fehlern durchlassen
 
 Claude Code blockiert nur bei Exit-Code 2 oder einer ausdrücklichen Ablehnung (`permissionDecision: deny`, `decision: block`). Jeder andere Fehler ist ein „nicht blockierender Fehler“, und der Aufruf geht durch.
