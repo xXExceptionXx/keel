@@ -1,18 +1,18 @@
-"""A strict YAML subset for frontmatter and .keel/config.yaml (F7, System-ADR 0020).
+r"""A strict YAML subset for frontmatter and .keel/config.yaml (F7, System-ADR 0020).
 
 Understood:
   key: value             keys of letters, digits, _ . -
   key:                   followed by deeper lines: a nested mapping or a block list; else empty text
     - item               block list, indented or at the same indent as its key
   key: [a, "b, c"]       inline list
-  "text", 'text', text   double quotes with JSON escapes, single quotes with '' for ', plain text
+  "text", 'text', text   double quotes with a few escapes, single quotes with '' for ' (no escapes), plain
   # comment              whole line, or after whitespace outside quotes
 
 Values stay text; there is no conversion to numbers or booleans. Anything else (tabs, block scalars | and >,
-flow mappings {}, anchors, tags, nested structures in lists, unexpected indentation) is a ParseError naming
-the line. A key written twice takes the later value; a section written twice is merged.
+flow mappings {}, nested structures in lists, unexpected indentation, an escape other than \" \\ \/ \n \t \r
+\uXXXX inside double quotes) is a ParseError naming the line. There are no anchors or tags: a value starting
+with &, * or ! is plain text. A key written twice takes the later value; a section written twice is merged.
 """
-import json
 import re
 
 from keel.domain.errors import ParseError
@@ -201,10 +201,7 @@ def scalar(value, line_no=None, source=None):
             raise ParseError("Anführungszeichen nicht geschlossen", line_no, source)
         if end != len(value) - 1:
             raise ParseError("Text nach dem schließenden Anführungszeichen", line_no, source)
-        try:
-            return json.loads(value)
-        except ValueError:
-            return value[1:-1]  # an escape JSON does not know, e.g. C:\pfad: keep the text as written
+        return _unescape(value[1:-1], line_no, source)
     if head == "'":
         if len(value) < 2 or value[-1] != "'" or re.search(r"(?<!')'(?!')", value[1:-1].replace("''", "")):
             raise ParseError("einfache Anführungszeichen nicht sauber geschlossen", line_no, source)
@@ -213,9 +210,38 @@ def scalar(value, line_no=None, source=None):
         raise ParseError("Abbildungen in geschweiften Klammern werden nicht unterstützt", line_no, source)
     if head in "|>" and value.rstrip("+-0123456789") in ("|", ">"):
         raise ParseError("mehrzeilige Blöcke (| und >) werden nicht unterstützt", line_no, source)
-    if head in "&*!":
-        raise ParseError("Anker, Verweise und Tags werden nicht unterstützt", line_no, source)
     return value
+
+
+ESCAPES = {'"': '"', "\\": "\\", "/": "/", "n": "\n", "t": "\t", "r": "\r"}
+
+
+def _unescape(inner, line_no, source):
+    """Text between double quotes. Known escapes only: \\" \\\\ \\/ \\n \\t \\r \\uXXXX. Any other (\\b, \\d, \\p ...) is
+    refused: JSON would turn \\b into a backspace and silently change a regular expression."""
+    out, i = [], 0
+    while i < len(inner):
+        c = inner[i]
+        if c != "\\":
+            out.append(c)
+            i += 1
+            continue
+        nxt = inner[i + 1] if i + 1 < len(inner) else ""
+        if nxt in ESCAPES:
+            out.append(ESCAPES[nxt])
+            i += 2
+        elif nxt == "u" and re.fullmatch(r"[0-9a-fA-F]{4}", inner[i + 2:i + 6]):
+            code = int(inner[i + 2:i + 6], 16)
+            low = inner[i + 6:i + 12]
+            if 0xD800 <= code < 0xDC00 and re.fullmatch(r"\\u[dD][c-fC-F][0-9a-fA-F]{2}", low):
+                code = 0x10000 + ((code - 0xD800) << 10) + (int(low[2:], 16) - 0xDC00)  # surrogate pair
+                i += 6
+            out.append(chr(code))
+            i += 6
+        else:
+            raise ParseError(f"unbekanntes Escape '\\{nxt}' in doppelten Anführungszeichen; reguläre Ausdrücke und "
+                             f"Windows-Pfade gehören in einfache Anführungszeichen", line_no, source)
+    return "".join(out)
 
 
 def _closing_double(value):
@@ -231,11 +257,32 @@ def _closing_double(value):
 
 
 def dump_scalar(value):
-    """A text value as it is written: plain when that reads back the same, else as a JSON string."""
+    """A text value as it is written: plain when that reads back the same, else in double quotes with only the
+    escapes the reader knows. Line breaks and other control characters always go in quotes."""
     v = str(value)
-    if v == "" or re.search(r"[:#\[\]{}\"\\]|^['\s|>&*!]|\s$", v) or v.lower() in RESERVED:
-        return json.dumps(v, ensure_ascii=False)
+    if (v == "" or re.search(r"[:#\[\]{}\"\\\x00-\x1f\x7f]|^['\s|>&*!]|\s$", v)
+            or v.lower() in RESERVED):
+        return quote(v)
     return v
+
+
+def quote(v):
+    out = ['"']
+    for c in v:
+        if c in '"\\':
+            out.append("\\" + c)
+        elif c == "\n":
+            out.append("\\n")
+        elif c == "\t":
+            out.append("\\t")
+        elif c == "\r":
+            out.append("\\r")
+        elif ord(c) < 0x20 or ord(c) == 0x7F:
+            out.append("\\u%04x" % ord(c))
+        else:
+            out.append(c)
+    out.append('"')
+    return "".join(out)
 
 
 def dump_inline_list(values):

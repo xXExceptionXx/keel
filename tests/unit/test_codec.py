@@ -5,7 +5,8 @@ from tests.unit.base import TempTest
 from keel.domain.errors import ParseError
 from keel.store import codec, frontmatter
 
-TRICKY = ['Er sagt "Hallo": ok', "a: b", "x # y", "back\\slash", "'führend", "C:\\Pfad\\datei", "ende ", " anfang",
+TRICKY = ["zeile1\nzeile2", "cr\rlf", "tab\tda", "glocke\x07", "\x08b", "\\bwort\\b", "😀 emoji",
+          'Er sagt "Hallo": ok', "a: b", "x # y", "back\\slash", "'führend", "C:\\Pfad\\datei", "ende ", " anfang",
           "true", "null", "[klammer]", "{x}", "|", ">", "&anker", "*stern", "!tag", "a, b", "#", "-", "- x", "ü ß €"]
 
 
@@ -26,6 +27,14 @@ class CodecTest(unittest.TestCase):
     def test_comments_and_blank_lines_anywhere(self):
         self.assertEqual(codec.loads("# k\na:\n  # k\n\n  b: 1   # k\n# github:\n#   repo: x\n"), {"a": {"b": "1"}})
 
+    def test_no_anchors_or_tags(self):
+        self.assertEqual(codec.loads("a: &anker x\nb: *Entwurf*\nc: !wichtig\n"),
+                         {"a": "&anker x", "b": "*Entwurf*", "c": "!wichtig"})
+
+    def test_escapes(self):
+        d = codec.loads('a: "zeile\\nzwei \\"q\\" \\\\ \\/ \\u00e4 \\ud83d\\ude00"\nb: \'\\bwort\\b\'\n')
+        self.assertEqual(d, {"a": 'zeile\nzwei "q" \\ / ä 😀', "b": "\\bwort\\b"})
+
     def test_section_written_twice_is_merged(self):
         self.assertEqual(codec.loads("t:\n  a: 1\n  b: 2\nt:\n  b: 3\n"), {"t": {"a": "1", "b": "3"}})
 
@@ -36,7 +45,9 @@ class CodecTest(unittest.TestCase):
             "a: |\n  text\n": 1,
             "a: 1\n  b: 2\n": 2,
             "a:\n  - x\n    - y\n": 3,
-            "a: &anker x\n": 1,
+            'a: "\\bwort\\b"\n': 1,
+            'a: "C:\\Pfad"\n': 1,
+            'a: "\\u12"\n': 1,
             "kein feld\n": 1,
             "- x\n": 1,
             "a: [x, \n": 1,

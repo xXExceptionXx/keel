@@ -103,7 +103,15 @@ def main():
         comp = config.section(config.load(project), "compliance")
     except Exception as exc:  # a config the codec refuses: cannot scan with the project's patterns
         raise ScanError(f"Konfiguration nicht lesbar: {exc}") from exc
-    extra_pii = [(p.strip(), "project pattern") for p in comp.get("pii_patterns", "").split("|") if p.strip()]
+    patterns = comp.get("pii_patterns") or ""
+    if not isinstance(patterns, str):
+        raise ScanError("compliance.pii_patterns muss ein Text sein (Muster mit | getrennt), keine Liste")
+    extra_pii = [(p.strip(), "project pattern") for p in patterns.split("|") if p.strip()]
+    for pat, _ in extra_pii:
+        try:
+            re.compile(pat)
+        except re.error as exc:
+            raise ScanError(f"compliance.pii_patterns: '{pat}' ist kein gültiger regulärer Ausdruck ({exc})") from exc
 
     excludes = [":(exclude).keel", ":(exclude)*.lock", ":(exclude)package-lock.json", ":(exclude)pnpm-lock.yaml", ":(exclude)yarn.lock"]
     diff = git(["diff", base, "--", ".", *excludes], project)
