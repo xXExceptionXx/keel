@@ -10,7 +10,8 @@ Result classes:
   pruefen  personal-data patterns, new external calls, logging of such fields — the Compliance agent judges
   frei     nothing found
 
-Exit codes: 0 frei, 3 pruefen, 4 vorlage, 5 block. Patterns are extendable in .keel/config.yaml under compliance.*.
+Exit codes: 0 frei, 3 pruefen, 4 vorlage, 5 block, 2 cannot scan (usage, git error, internal error; System-ADR 0019).
+Patterns are extendable in .keel/config.yaml under compliance.*.
 """
 import json
 import re
@@ -63,8 +64,27 @@ DEP_FILES = {
 SCHEMA_HINT = re.compile(r"(?i)(migration|schema|prisma|\.sql$|model|entity|types?\.ts$|dto|serializer|form)")
 
 
-def sh(args, cwd):
-    return subprocess.run(args, cwd=cwd, capture_output=True, text=True).stdout
+class ScanError(Exception):
+    pass
+
+
+def _git(args, cwd):
+    return subprocess.run(["git", "-c", "core.quotePath=false", *args], cwd=cwd, capture_output=True,
+                          encoding="utf-8", errors="surrogateescape")
+
+
+def git(args, cwd):
+    """stdout of a git command; a failing git means the scan saw nothing, so it is an error, not 'frei'."""
+    r = _git(args, cwd)
+    if r.returncode != 0:
+        raise ScanError(f"git {' '.join(args)}: {r.stderr.strip() or 'exit ' + str(r.returncode)}")
+    return r.stdout
+
+
+def git_optional(args, cwd):
+    """stdout of a git command that may legitimately fail, e.g. a manifest missing at the base."""
+    r = _git(args, cwd)
+    return r.stdout if r.returncode == 0 else ""
 
 
 def main():
@@ -72,15 +92,20 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
-    base = sys.argv[sys.argv.index("--base") + 1] if "--base" in sys.argv else "HEAD"
+    base = "HEAD"
+    if "--base" in sys.argv:
+        i = sys.argv.index("--base") + 1
+        if i >= len(sys.argv) or sys.argv[i].startswith("--"):
+            raise ScanError("--base braucht einen Git-Ref")
+        base = sys.argv[i]
     as_json = "--json" in sys.argv
     cfg = read_config(project / ".keel" / "config.yaml") if (project / ".keel" / "config.yaml").exists() else {}
     comp = cfg.get("compliance", {}) if isinstance(cfg.get("compliance"), dict) else {}
     extra_pii = [(p.strip(), "project pattern") for p in comp.get("pii_patterns", "").split("|") if p.strip()]
 
     excludes = [":(exclude).keel", ":(exclude)*.lock", ":(exclude)package-lock.json", ":(exclude)pnpm-lock.yaml", ":(exclude)yarn.lock"]
-    diff = sh(["git", "diff", base, "--", ".", *excludes], project)
-    untracked = sh(["git", "ls-files", "--others", "--exclude-standard"], project).split()
+    diff = git(["diff", base, "--", ".", *excludes], project)
+    untracked = [f for f in git(["ls-files", "-z", "--others", "--exclude-standard"], project).split("\0") if f]
     for f in untracked:
         if f.startswith(".keel/") or f.endswith((".lock", "package-lock.json", "pnpm-lock.yaml", "yarn.lock")):
             continue
@@ -96,7 +121,7 @@ def main():
         if (project / manifest).exists():
             try:
                 after = json.loads((project / manifest).read_text(encoding="utf-8"))
-                before_txt = sh(["git", "show", f"{base}:{manifest}"], project)
+                before_txt = git_optional(["show", f"{base}:{manifest}"], project)
                 before = json.loads(before_txt) if before_txt.strip() else {}
             except (ValueError, OSError):
                 continue
@@ -149,4 +174,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ScanError as e:
+        print(f"compliance: Scan nicht möglich: {e}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:  # any crash is "not scanned", never "frei"
+        print(f"compliance: interner Fehler: {e!r}", file=sys.stderr)
+        sys.exit(2)

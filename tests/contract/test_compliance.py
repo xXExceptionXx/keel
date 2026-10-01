@@ -27,19 +27,16 @@ class ComplianceScanTest(ContractTest):
         write(d / "config.py", f'KEY = "{AWS_KEY}"\n')
         self.assertEqual(self.scan(d).rc, 5)
 
-    @unittest.expectedFailure
     def test_secret_in_untracked_file_with_umlaut_blocks(self):
         d = self.repo()
         write(d / "Prüfung.py", f'KEY = "{AWS_KEY}"\n')
         self.assertEqual(self.scan(d).rc, 5)
 
-    @unittest.expectedFailure
     def test_secret_in_untracked_file_with_space_blocks(self):
         d = self.repo()
         write(d / "my secret.py", f'KEY = "{AWS_KEY}"\n')
         self.assertEqual(self.scan(d).rc, 5)
 
-    @unittest.expectedFailure
     def test_not_a_repository_is_an_error(self):
         d = self.tmp / "plain"
         d.mkdir()
@@ -47,13 +44,11 @@ class ComplianceScanTest(ContractTest):
         r = self.scan(d)
         self.assertEqual(r.rc, 2, r)
 
-    @unittest.expectedFailure
     def test_unknown_base_is_an_error(self):
         d = self.repo()
         write(d / "a.py", f'KEY = "{AWS_KEY}"\n')
         self.assertEqual(self.scan(d, "--base", "gibt-es-nicht").rc, 2)
 
-    @unittest.expectedFailure
     def test_base_without_value_is_an_error(self):
         r = self.scan(self.repo(), "--base")
         self.assertEqual(r.rc, 2, r)
