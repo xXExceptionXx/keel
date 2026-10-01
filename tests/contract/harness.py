@@ -31,17 +31,19 @@ def path_without(*tools):
     key = tuple(sorted(tools))
     if key in _paths:
         return _paths[key]
-    d = _session / ("path-" + "-".join(key))
-    d.mkdir()
+    d = Path(tempfile.mkdtemp(prefix="path-", dir=_session))
     for entry in os.environ.get("PATH", "").split(os.pathsep):
         p = Path(entry)
         if not p.is_dir():
             continue
         for f in p.iterdir():
-            if f.name in tools or (d / f.name).exists():
+            if f.name in tools or os.path.lexists(d / f.name):
                 continue
-            if f.is_file() and os.access(f, os.X_OK):
-                (d / f.name).symlink_to(f)
+            try:
+                if f.is_file() and os.access(f, os.X_OK):
+                    (d / f.name).symlink_to(f)
+            except OSError:
+                continue
     _paths[key] = str(d)
     return _paths[key]
 
