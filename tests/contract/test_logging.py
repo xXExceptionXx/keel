@@ -48,7 +48,7 @@ class HookLogTest(ContractTest):
             payload.update({"hook_event_name": "PostToolUse", "tool_response": {"stdout": "y" * 100_000}})
             payloads.append(payload)
         self.run_parallel("log", payloads, p)
-        lines = (self.metrics / p.name / "hooks.jsonl").read_text(encoding="utf-8").splitlines()
+        lines = (self.runtime(p) / "hooks.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(len(lines), 50)
         records = [json.loads(line) for line in lines]
         self.assertEqual(sorted(r["tool_input"]["command"] for r in records), sorted(f"echo {i}" for i in range(50)))
@@ -58,7 +58,7 @@ class HookLogTest(ContractTest):
         p = project()
         self.run_parallel("agent-gate", [agent_call(p, "keel:xyz", f"Aufgabe: T{i}") for i in range(50)], p)
         events = [json.loads(line) for line in
-                  (self.metrics / p.name / "events.jsonl").read_text(encoding="utf-8").splitlines()]
+                  (self.runtime(p) / "events.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual(len([e for e in events if e["event"] == "denied"]), 50)
 
     def test_typed_keel_commands_reach_the_log(self):
@@ -71,7 +71,7 @@ class HookLogTest(ContractTest):
         self.hook("log", {"hook_event_name": "UserPromptSubmit", "prompt": "/keel:start " + "z" * 2000,
                           "cwd": str(p), "session_id": "s1"}, proj=p)
         self.hook("log", tool_call(p, "Skill", {"skill": "keel:vorhaben", "args": "x"}), proj=p)
-        prompt, skill = (self.metrics / p.name / "hooks.jsonl").read_text(encoding="utf-8").splitlines()
+        prompt, skill = (self.runtime(p) / "hooks.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertTrue(json.loads(prompt)["prompt"].startswith("/keel:start"))
         self.assertLessEqual(len(json.loads(prompt)["prompt"]), 500)
         self.assertEqual(json.loads(skill)["tool_input"]["skill"], "keel:vorhaben")
