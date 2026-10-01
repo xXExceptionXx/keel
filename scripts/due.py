@@ -3,13 +3,14 @@
 
 Usage: due.py <project-dir> [--json]
 Hard items block all roles except the one that satisfies them; /keel:start runs them in order.
-Thresholds in .keel/config.yaml under `faelligkeiten`. Exit 1 when anything hard is due.
+Thresholds in .keel/config.yaml under `faelligkeiten`.
+Exit codes (System-ADR 0019): 0 nothing hard is due, 1 something hard is due, 2 cannot tell (usage, internal error).
 """
 import json
 import os
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -44,7 +45,26 @@ def newest(dirpath, pattern="*.md"):
     return max(dated)[0] if dated else None
 
 
+class DueError(Exception):
+    pass
+
+
+def event_time(e):
+    """Naive UTC datetime of an event, or None when the event has no usable ts."""
+    ts = e.get("ts") if isinstance(e, dict) else None
+    if not isinstance(ts, str):
+        return None
+    try:
+        t = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t.astimezone(timezone.utc).replace(tzinfo=None) if t.tzinfo else t
+
+
 def main():
+    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
     project = Path(sys.argv[1]).resolve()
     cfg = read_config(project / ".keel" / "config.yaml") if (project / ".keel" / "config.yaml").exists() else {}
     th = dict(DEFAULTS)
@@ -56,9 +76,11 @@ def main():
     # briefing
     r = subprocess.run([sys.executable, str(Path(__file__).parent / "briefing_needed.py"), str(project), "--json"], capture_output=True, text=True)
     try:
-        br = json.loads(r.stdout)
+        br = json.loads(r.stdout) if r.returncode in (0, 1) else None
     except ValueError:
-        br = {"briefing_noetig": False, "gruende": []}
+        br = None
+    if not isinstance(br, dict):
+        raise DueError(f"briefing_needed.py endete mit {r.returncode}: {r.stderr.strip()[-300:]}")
     if br.get("briefing_noetig"):
         items.append({"art": "briefing", "hart": True, "rolle": "supervisor", "grund": f"{len(br['gruende'])} Punkt(e) für das Briefing", "befehl": "/keel:start (wird zum Briefing)"})
 
@@ -89,7 +111,8 @@ def main():
                 e = json.loads(line)
             except ValueError:
                 continue
-            if e.get("event") == "agent_stop" and datetime.fromisoformat(e["ts"].replace("Z", "")) >= since:
+            t = event_time(e)
+            if t is not None and e.get("event") == "agent_stop" and t >= since:
                 runs += 1
     days = (today - last_coach).days if last_coach else None
     if (days is None or days >= th["coach_tage"]) and runs >= th["coach_min_rollenlaeufe"]:
@@ -139,4 +162,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except DueError as e:
+        print(f"due: nicht prüfbar: {e}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:  # a crash must not read as "something is due" (exit 1)
+        print(f"due: interner Fehler: {e!r}", file=sys.stderr)
+        sys.exit(2)

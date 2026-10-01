@@ -17,7 +17,8 @@ bestand (new in code the rework did not touch; only blockierend or anmerkung).
 
 Verdict (review_ergebnis):
   bestanden   no severity above its threshold (review.schwelle_blockierend, review.schwelle_wichtig; default 0)
-  nacharbeit  round 1, or (blockierend, wichtig) strictly lower than in the previous round
+  nacharbeit  round 1, or (blockierend, wichtig) lexicographically lower than in the previous round
+              while blockierend + wichtig does not rise
   vorlage     not lower than the previous round, or review.max_runden reached (plus review_zusatzrunden of the task)
 """
 import os
@@ -128,8 +129,15 @@ def findings(body):
 def counts(data):
     try:
         return {s: int(data.get(s, "")) for s in SEVERITIES}
-    except ValueError:
+    except (ValueError, TypeError):
         return None
+
+
+def sinking(before, now):
+    """(blockierend, wichtig) is lexicographically lower and their sum does not rise: blocking findings weigh
+    more, so (4, 0) to (0, 2) is progress, but trading one blocker for nine important findings, (1, 0) to
+    (0, 9), is not."""
+    return now < before and sum(now) <= sum(before)
 
 
 def cmd_pruefen(project, task):
@@ -179,7 +187,7 @@ def cmd_pruefen(project, task):
         trend = f"Runde {runde - 1}: {before[0]}/{before[1]}, Runde {runde}: {now[0]}/{now[1]} (blockierend/wichtig), davon aus der Nacharbeit {fix}" if before else f"Runde {runde}: {now[0]}/{now[1]}, Vorrunde fehlt"
         if runde >= limit:
             result, reason = "vorlage", f"Höchstzahl von {limit} Runden erreicht; {trend}"
-        elif before is None or now >= before:
+        elif before is None or not sinking(before, now):
             result, reason = "vorlage", f"Befunde sinken nicht; {trend}"
         else:
             result, reason = "nacharbeit", f"Befunde sinken; {trend}"

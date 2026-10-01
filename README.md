@@ -27,6 +27,7 @@ scripts/          frontmatter.py, config.py, gate.sh, init.sh, due.py, flow.py, 
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
+tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest discover -s tests/contract
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
 ```
 
@@ -76,6 +77,8 @@ Die Haupt-Session ist der Lead. Der PO macht aus dem Backlog-Element eine Proble
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>/`.
 
 ## Installation in einem Projekt
+
+Voraussetzungen: `git`, `python3` (ab 3.9, nur Standardbibliothek) und `jq`. Auf macOS kommen `git` und `python3` mit den Command Line Tools (`xcode-select --install`), `jq` liegt ab macOS 15 unter `/usr/bin/jq`, auf älteren Versionen über Homebrew. Auf Linux kommen alle drei aus der Paketverwaltung. Fehlt `jq` oder `python3`, blockieren die keel-Hooks, statt ungeprüft durchzulassen (System-ADR 0019).
 
 ```bash
 claude plugin marketplace add xXExceptionXx/keel

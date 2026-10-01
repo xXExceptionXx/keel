@@ -3,6 +3,123 @@
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FM="python3 $PLUGIN_ROOT/scripts/frontmatter.py"
 CFG="python3 $PLUGIN_ROOT/scripts/config.py"
+KEEL_HOOK="$(basename "$0" .sh)"
+KEEL_DONE=0
+KEEL_ERR=""
+KEEL_TMP=""
+ERRF=/dev/null
+
+# Error contract (System-ADR 0019). Claude Code blocks only on exit 2 or an explicit deny/block; any other
+# failure lets the call through. A gate therefore ends through keel_ok, deny, block_stop or gate_fail; every
+# other ending (errexit, unbound variable, missing tool) is caught by the EXIT trap and turned into exit 2.
+# An observer never blocks: it records a hook_error event and ends with 0.
+
+keel_ok() { KEEL_DONE=1; exit 0; }
+
+gate_fail() {
+  KEEL_DONE=1
+  printf 'keel: %s konnte nicht prüfen (%s). Aus Sicherheitsgründen abgelehnt. /keel:hilfe erklärt den Stand.\n' "$KEEL_HOOK" "$1" >&2
+  _keel_brake "$1"
+  exit 2
+}
+
+_keel_gate_exit() {
+  local rc=$?
+  [ -n "$KEEL_TMP" ] && rm -rf "$KEEL_TMP"
+  if [ "$KEEL_DONE" != 1 ]; then
+    # Exit 2 here comes from gate_fail in a command substitution, which has already said why.
+    if [ "$rc" -ne 2 ]; then
+      printf 'keel: %s brach unerwartet ab (%s%s). Aus Sicherheitsgründen abgelehnt. /keel:hilfe erklärt den Stand.\n' \
+        "$KEEL_HOOK" "$([ "$rc" -eq 0 ] && echo "Ursache unbekannt" || echo "Code $rc")" "${KEEL_ERR:+, $KEEL_ERR}" >&2
+    fi
+    _keel_brake "${KEEL_ERR:-Code $rc}"
+    exit 2
+  fi
+}
+
+# Emergency brake (System-ADR 0019). A SubagentStop that fails internally blocks the stop, but the role
+# cannot repair the core and would retry forever. After the third internal failure of the same agent the
+# stop goes through, keel is locked (state file kern-gesperrt) and agent-gate refuses every role until a
+# human has fixed the cause and removed the lock. Applies only at the top level of agent-stop.sh.
+_keel_brake() {
+  [ "$KEEL_HOOK" = "agent-stop" ] && [ "${BASH_SUBSHELL:-0}" -eq 0 ] && [ -n "${sd:-}" ] && [ -n "${id:-}" ] || return 0
+  local f="$sd/agent-$id.stopfail" n
+  n="$(cat "$f" 2>/dev/null || echo 0)"
+  is_number "$n" || n=0
+  n=$((n + 1))
+  printf '%s\n' "$n" > "$f" 2>/dev/null || return 0
+  [ "$n" -ge 3 ] || return 0
+  printf 'Notbremse seit %s: agent-stop konnte dreimal nicht prüfen (%s; Rolle %s, Bezug %s). Behebe die Ursache, dann lösche %s.\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "${role:-?}" "${ref:-?}" "$sd/kern-gesperrt" > "$sd/kern-gesperrt" 2>/dev/null || return 0
+  hook_error "Notbremse: $1"
+  rm -f "$f"
+  KEEL_DONE=1
+  printf 'keel: Notbremse gezogen, der Rollenlauf endet ungeprüft und alle Rollen sind gesperrt. Siehe %s.\n' "$sd/kern-gesperrt" >&2
+  exit 0
+}
+
+# keel_gate_init [keel-only]: strict mode, fail-closed traps, tool and payload check, private temp dir.
+# keel-only: without jq or python3, calls that do not concern keel pass instead of blocking every tool call.
+keel_gate_init() {
+  set -euo pipefail
+  trap 'KEEL_ERR="Zeile $LINENO: $BASH_COMMAND"' ERR
+  trap _keel_gate_exit EXIT
+  if ! command -v jq >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
+    if [ "${1:-}" = keel-only ]; then
+      case "$payload" in *keel:*) ;; *) keel_ok ;; esac
+    fi
+    gate_fail "jq und python3 werden gebraucht, mindestens eines fehlt im PATH"
+  fi
+  printf '%s' "$payload" | jq -e 'type == "object"' >/dev/null 2>&1 || gate_fail "Eingabe ist kein JSON-Objekt"
+  KEEL_TMP="$(mktemp -d "${TMPDIR:-/tmp}/keel.XXXXXX")" || gate_fail "kein temporärer Ordner"
+  ERRF="$KEEL_TMP/err"
+}
+
+_keel_observer_exit() {
+  local rc=$?
+  [ -n "$KEEL_TMP" ] && rm -rf "$KEEL_TMP"
+  if [ "$KEEL_DONE" != 1 ]; then
+    hook_error "Code $rc${KEEL_ERR:+, $KEEL_ERR}"
+    exit 0
+  fi
+}
+
+# keel_observer_init: strict mode, but every failure is recorded as hook_error and the call goes on.
+keel_observer_init() {
+  set -euo pipefail
+  trap 'KEEL_ERR="Zeile $LINENO: $BASH_COMMAND"' ERR
+  trap _keel_observer_exit EXIT
+  if ! command -v jq >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
+    hook_error "jq oder python3 fehlt im PATH"
+    keel_ok
+  fi
+  printf '%s' "$payload" | jq -e 'type == "object"' >/dev/null 2>&1 || { hook_error "Eingabe ist kein JSON-Objekt"; keel_ok; }
+}
+
+# hook_error <detail>: append a hook_error event without jq or python3, best effort.
+hook_error() {
+  local p="${CLAUDE_PROJECT_DIR:-}"
+  [ -n "$p" ] || p="$(field '.cwd' 2>/dev/null || true)"
+  [ -n "$p" ] || p="$PWD"
+  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
+  local detail; detail="$(printf '%s' "$1" | tr '\n\t' '  ' | tr -d '\000-\037"\\' | cut -c1-300)"
+  { mkdir -p "$d" && printf '{"event":"hook_error","ts":"%s","hook":"%s","detail":"%s"}\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$KEEL_HOOK" "$detail" >> "$d/events.jsonl"; } 2>/dev/null || true
+}
+
+is_number() { case "${1:-}" in ''|*[!0-9]*) return 1 ;; esac; }
+
+# fm_get <file> <key>: the value, empty when the key or the frontmatter is missing; an unreadable file or a
+# crash of frontmatter.py ends the gate (fail closed).
+fm_get() {
+  local rc=0 v
+  v="$($FM get "$1" "$2" 2>"$ERRF")" || rc=$?
+  case $rc in
+    0) printf '%s' "$v" ;;
+    1) ;;
+    *) gate_fail "$1 nicht lesbar: $(cat "$ERRF" 2>/dev/null)" ;;
+  esac
+}
 
 field() { printf '%s' "$payload" | jq -r "$1 // empty"; }
 
@@ -53,22 +170,24 @@ transcript_model() {  # transcript_model <path>
 # Extract "Aufgabe: V1-T01" or "Vorhaben: rechnung" from a prompt.
 prompt_field() { { printf '%s' "$1" | grep -oE "^$2:[[:space:]]*[A-Za-z0-9_.-]+" || true; } | head -1 | sed -E "s/^$2:[[:space:]]*//"; }
 
+# deny and block_stop print the decision first and record it afterwards, so a failing record cannot turn a
+# refusal into a pass. Should printing the decision itself fail, gate_fail blocks with exit 2.
 deny() {
-  record "denied" "$(jq -n --arg hook "$(basename "$0" .sh)" --arg role "${role:-}" --arg reason "$1" '{hook:$hook,role:$role,reason:$reason}')"
-  jq -n --arg reason "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
-  exit 0
+  jq -n --arg reason "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}' \
+    || gate_fail "$1"
+  record "denied" "$(jq -n --arg hook "$KEEL_HOOK" --arg role "${role:-}" --arg reason "$1" '{hook:$hook,role:$role,reason:$reason}')" || true
+  keel_ok
 }
 
 block_stop() {
-  record "stop_blocked" "$(jq -n --arg role "${role:-}" --arg id "${id:-}" --arg ref "${ref:-}" --arg reason "$1" '{role:$role,agent_id:$id,ref:$ref,reason:$reason}')"
-  jq -n --arg reason "$1" '{decision:"block",reason:$reason}'
-  exit 0
+  jq -n --arg reason "$1" '{decision:"block",reason:$reason}' || gate_fail "$1"
+  record "stop_blocked" "$(jq -n --arg role "${role:-}" --arg id "${id:-}" --arg ref "${ref:-}" --arg reason "$1" '{role:$role,agent_id:$id,ref:$ref,reason:$reason}')" || true
+  keel_ok
 }
 
-record() {  # record <event> <json-fields>: append a metrics line
+record() {  # record <event> <json-fields>: append a metrics line, atomically (scripts/jsonl.py)
   local p; p="$(project_dir)"
   local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
-  mkdir -p "$d"
   local line; line="$(jq -nc --arg ev "$1" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson f "$2" '{event:$ev,ts:$ts} + $f')" || return 0
-  printf '%s\n' "$line" >> "$d/events.jsonl"
+  printf '%s' "$line" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" append "$d/events.jsonl"
 }

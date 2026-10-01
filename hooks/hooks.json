@@ -70,7 +70,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-stop.sh\""
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-stop.sh\"",
+            "timeout": 600
           }
         ]
       }
@@ -102,6 +103,10 @@
     "UserPromptSubmit": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
+          },
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/skill-gate.sh\""

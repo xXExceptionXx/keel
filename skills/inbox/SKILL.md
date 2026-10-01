@@ -7,7 +7,7 @@ Zeige dem Menschen, was auf seine Entscheidung wartet. Lies nur Frontmatter übe
 
 Sammle:
 
-0. **Briefing:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/briefing_needed.py" "$PWD"` wörtlich. Ist ein Briefing nötig, steht das zuerst; Supervisor-Entscheidungen mit `vorgelegt: offen` werden dort vorgelegt, nicht hier entschieden.
+0. **Briefing:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/briefing_needed.py" "$PWD"` wörtlich. Exit 2 heißt: nicht prüfbar; nenne das zuerst und verweise auf `/keel:hilfe`. Ist ein Briefing nötig, steht das zuerst; Supervisor-Entscheidungen mit `vorgelegt: offen` werden dort vorgelegt, nicht hier entschieden.
 1. **Vorlagen:** alle Dateien unter `.keel/decisions/pending/`, mit Kennzeichnung `eskaliert: Supervisor` (richtungsweisend) oder offen (der Supervisor entscheidet sie beim nächsten Rollenlauf). Je Vorlage: Titel, von, Datum. Für jede gib zusätzlich die Zeilen **Empfehlung** und **Warum ich nicht selbst entscheide** aus dem Body wörtlich wieder; das ist die einzige Ausnahme von der Frontmatter-Regel, weil der Mensch damit in einer Minute entscheiden soll.
 2. **Zur Abnahme:** Pläne unter `.keel/work/plans/` mit Status `abnahme-bereit` oder `abnahme-rot`, mit Pfad des Abnahmenachweises unter `.keel/work/acceptance/`.
 2b. **Abnahmen durch den PO (delegiert, letzte 7 Tage):** Pläne mit `abgenommen_von: PO`; du kannst jede kippen, indem du `status: nacharbeit` mit einem Abschnitt `## Nacharbeit` setzt.

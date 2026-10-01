@@ -2,7 +2,8 @@
 """Read, write and validate YAML frontmatter of keel handoff files.
 
 No PyYAML dependency: supports scalars, inline lists `[a, b]` and block lists
-(`- item`). Values are kept as strings; lists as lists of strings.
+(`- item`). Values are kept as strings; lists as lists of strings. An empty value,
+or one that is only a comment, is empty text unless block list items follow.
 
 Usage:
   frontmatter.py get <file> <key>
@@ -10,7 +11,8 @@ Usage:
   frontmatter.py validate <file> --type <typ> [--status a,b] [--require k1,k2] [--nonempty k1,k2]
   frontmatter.py dump <file>                               (JSON)
 
-Exit codes: 0 ok, 1 validation failed, 2 usage or file error.
+Exit codes: 0 ok, 1 validation failed or key missing, 2 usage error, unreadable file or internal error
+(System-ADR 0019: a crash must not read as "key missing").
 """
 import json
 import re
@@ -38,8 +40,11 @@ def parse(text):
         line = raw.rstrip()
         if not line.strip() or line.strip().startswith("#"):
             continue
-        if current_list is not None and re.match(r"^\s+-\s*", line):
-            data[current_list].append(_scalar(re.sub(r"^\s+-\s*", "", line)))
+        if current_list is not None and re.match(r"^\s*-(\s|$)", line):
+            # an empty key followed by "- item" lines (indented or not) is a block list
+            if not isinstance(data[current_list], list):
+                data[current_list] = []
+            data[current_list].append(_scalar(re.sub(r"^\s*-\s*", "", line)))
             continue
         current_list = None
         m = re.match(r"^([A-Za-z0-9_.-]+):\s*(.*)$", line)
@@ -47,8 +52,9 @@ def parse(text):
             continue
         key, value = m.group(1), m.group(2)
         order.append(key)
-        if value == "":
-            data[key] = []
+        if value == "" or value.startswith("#"):
+            # empty, or only a comment: empty text unless block list items follow
+            data[key] = ""
             current_list = key
         elif value.startswith("[") and value.endswith("]"):
             inner = value[1:-1].strip()
@@ -65,8 +71,14 @@ def _split_inline(inner):
 
 def _scalar(value):
     value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        # written by _quote with json.dumps: unescape, so reading and writing do not add backslashes
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value[1:-1]
+    if len(value) >= 2 and value[0] == value[-1] == "'":
+        return value[1:-1].replace("''", "'")
     return re.sub(r"\s+#.*$", "", value)
 
 
@@ -96,7 +108,7 @@ def _simple(v):
 
 def _quote(v):
     v = str(v)
-    if v == "" or re.search(r"[:#\[\]{}]|^\s|\s$", v) or v.lower() in {"true", "false", "null", "yes", "no"}:
+    if v == "" or re.search(r"[:#\[\]{}\"\\]|^['\s]|\s$", v) or v.lower() in {"true", "false", "null", "yes", "no"}:
         return json.dumps(v, ensure_ascii=False)
     return v
 
@@ -104,7 +116,7 @@ def _quote(v):
 def load(path):
     try:
         text = Path(path).read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         fail(f"cannot read {path}: {exc}", 2)
     data, body = parse(text)
     if data is None:
@@ -187,4 +199,7 @@ COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cm
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in COMMANDS:
         fail(__doc__, 2)
-    COMMANDS[sys.argv[1]](sys.argv[2:])
+    try:
+        COMMANDS[sys.argv[1]](sys.argv[2:])
+    except Exception as exc:  # a crash is exit 2, never the 1 of "key missing" or "invalid"
+        fail(f"frontmatter: interner Fehler: {exc!r}", 2)

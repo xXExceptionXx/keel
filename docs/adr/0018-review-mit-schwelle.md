@@ -36,7 +36,7 @@ Die zweite Beobachtung: Anmerkungen unter der Schwelle blieben für immer liegen
 **Konvergenz statt fester Rundenzahl.** Der Hook schreibt `review_ergebnis` in die Aufgabe, der Lead liest nur das:
 
 - **bestanden:** unter der Schwelle
-- **nacharbeit:** Runde 1, oder die Befunde sinken, das heißt (blockierend, wichtig) ist lexikografisch kleiner als in der Vorrunde. Beispiel: 4 blockierend → 2 wichtig → 2 Anmerkungen → bestanden.
+- **nacharbeit:** Runde 1, oder die Befunde sinken, das heißt (blockierend, wichtig) ist lexikografisch kleiner als in der Vorrunde und die Summe aus blockierend und wichtig steigt nicht. Beispiel: 4 blockierend → 2 wichtig → 2 Anmerkungen → bestanden. Ergänzt am 2026-10-01 (System-ADR 0019): Ohne die Summenbedingung galt auch 1 blockierend → 9 wichtig als Fortschritt; wer einen Blocker gegen neun neue Probleme tauscht, geht jetzt als Vorlage an den Supervisor.
 - **vorlage:** Die Befunde sinken nicht, oder `review.max_runden` (Standard 4) ist erreicht.
 
 Die Vorlage geht an den Supervisor. Er kann die Aufgabe in den Neuschnitt geben, eine weitere Runde erlauben (`review_zusatzrunden`), sie verwerfen oder an den Menschen eskalieren. Ein Neuschnitt ohne Vorlage nach Runde 2 entfällt.

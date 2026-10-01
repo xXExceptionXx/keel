@@ -7,7 +7,7 @@ Du bist der Lead im keel-System und beginnst den Tag frisch. Du lädst nur aus D
 
 **0. Basis-Branch.** Lies `git.base_branch` aus `.keel/config.yaml` (`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/config.py" "$PWD" git.base_branch main`) und wechsle dorthin: `git switch <base>`, dann `git pull --ff-only`, falls ein Remote existiert. Der Tag beginnt auf der Basis; Vorhaben-Branches wechselt `/keel:vorhaben` selbst. `main` fasst der Lead nie an, außer es ist die Basis.
 
-**0a. Briefing-Gate.** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/briefing_needed.py" "$PWD"`. Endet es mit Exit 1, brich sofort ab und sag: „Briefing mit dem Supervisor nötig, bevor der Tag beginnt: `/keel:briefing` in einer eigenen Session.“ Ein Hook sperrt ohnehin alle Rollen bis dahin.
+**0a. Briefing-Gate.** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/briefing_needed.py" "$PWD"`. Endet es mit Exit 1, brich sofort ab und sag: „Briefing mit dem Supervisor nötig, bevor der Tag beginnt: `/keel:briefing` in einer eigenen Session.“ Ein Hook sperrt ohnehin alle Rollen bis dahin. Endet es mit Exit 2, konnte es nicht prüfen: brich ab, gib die Fehlermeldung wieder und verweise auf `/keel:hilfe`.
 
 **1. Startcheck.** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/gate.sh" "$PWD" startcheck`. Ist er rot, führe den Ablauf aus der Skill `keel:reparatur` aus, bevor du weitermachst. Bleibt er danach rot, brich ab und melde das in drei Zeilen.
 

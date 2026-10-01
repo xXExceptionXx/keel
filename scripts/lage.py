@@ -84,9 +84,13 @@ def plugin_versions(project, plugin_root):
 def due(project):
     r = subprocess.run([sys.executable, str(Path(__file__).parent / "due.py"), str(project), "--json"], capture_output=True, text=True)
     try:
-        return json.loads(r.stdout)
+        if r.returncode in (0, 1):
+            return json.loads(r.stdout)
     except ValueError:
-        return {"hart": False, "faellig": []}
+        pass
+    # due.py could not tell (exit 2 or unreadable output): say so instead of reporting "nothing due" (System-ADR 0019)
+    grund = (r.stderr.strip().splitlines() or [f"due.py endete mit {r.returncode}"])[-1]
+    return {"hart": True, "fehler": grund, "faellig": [{"art": "fehler", "hart": True, "rolle": "", "grund": f"Fälligkeiten nicht prüfbar: {grund}", "befehl": "/keel:hilfe"}]}
 
 
 def vorhaben(project):
@@ -240,6 +244,11 @@ def state_files(state_dir, starts, stops):
     cleanup = []
     if not state_dir.exists():
         return findings, cleanup
+    brake = state_dir / "kern-gesperrt"
+    if brake.exists():
+        # never cleaned up automatically: the human fixes the cause and removes the lock (System-ADR 0019)
+        text = brake.read_text(encoding="utf-8", errors="replace").strip()
+        findings.append(f"NOTBREMSE, alle Rollen gesperrt: {text}")
     for p in state_dir.glob("pending-*"):
         age = now - p.stat().st_mtime
         role = p.name[len("pending-"):]
