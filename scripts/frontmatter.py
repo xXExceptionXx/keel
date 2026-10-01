@@ -70,8 +70,14 @@ def _split_inline(inner):
 
 def _scalar(value):
     value = value.strip()
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        # written by _quote with json.dumps: unescape, so reading and writing do not add backslashes
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value[1:-1]
+    if len(value) >= 2 and value[0] == value[-1] == "'":
+        return value[1:-1].replace("''", "'")
     return re.sub(r"\s+#.*$", "", value)
 
 
@@ -101,7 +107,7 @@ def _simple(v):
 
 def _quote(v):
     v = str(v)
-    if v == "" or re.search(r"[:#\[\]{}]|^\s|\s$", v) or v.lower() in {"true", "false", "null", "yes", "no"}:
+    if v == "" or re.search(r"[:#\[\]{}\"\\]|^['\s]|\s$", v) or v.lower() in {"true", "false", "null", "yes", "no"}:
         return json.dumps(v, ensure_ascii=False)
     return v
 

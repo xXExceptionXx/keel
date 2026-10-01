@@ -39,7 +39,6 @@ class FrontmatterTest(ContractTest):
 class RoundTripTest(ContractTest):
     VALUES = ['Er sagt "hi": a #b \\ x', '"zitiert" am Anfang', "it's: fine", "a: b", "C:\\pfad\\datei", "#kein Kommentar"]
 
-    @unittest.expectedFailure
     def test_values_survive_repeated_writes_of_other_fields(self):
         f = write(self.tmp / "a.md", "---\ntyp: x\n---\n# Text\n")
         for i, v in enumerate(self.VALUES):
