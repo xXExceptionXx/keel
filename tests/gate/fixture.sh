@@ -26,6 +26,7 @@ task T-nach nacharbeit "tests: [a.py]\ndateien: [b.py]\n"
 task T-review review "review_runde: 1\n"
 task T-review-norunde review
 task T-rep reparatur
+printf -- "---\ntyp: aufgabe\nid: T-rep-nach\nvorhaben: R\ntitel: Reparatur\nstatus: nacharbeit\ntests: []\ndateien: []\n---\n" > $w/tasks/T-rep-nach.md
 task T-comp fertig-gemeldet "compliance: pruefen\n"
 task T-comp-noscan fertig-gemeldet "compliance: pruefen\n"
 task T-fertig fertig

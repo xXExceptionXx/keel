@@ -60,5 +60,7 @@ Nebenbefunde, gleich mit behoben:
 - Eine problematische Aufgabe kostet mehr Reviewer-Läufe als bisher, höchstens vier statt zwei. Die Bedingung „Befunde müssen sinken“ begrenzt das. Eine falsch geschnittene Aufgabe konvergiert nicht und landet wie im Konzept beim Neuschnitt, jetzt über den Supervisor statt automatisch.
 - Die Einstufung trägt jetzt Gewicht, weil die Schwelle rechnet. Der Druck auf den Reviewer, herabzustufen, wird durch die Kriterienbindung und die Herkunftsprüfung aufgefangen. Der Auditor kann Stichproben ziehen.
 - Der Entwickler behebt in der Nacharbeit nur Befunde, keine Anmerkungen. Die Anmerkungen gehen in die Pflegeliste und nicht in einen Fix, der seinerseits Fehler einbaut.
+- Der Monitor (System-ADR 0017) zeigt je Review-Runde die Zahlen blockierend/wichtig/Anmerkung und die Befunde aus der Nacharbeit; „als Nächstes“ folgt nach dem Reviewer `review_ergebnis` (`flow.next_task`). Die Freigabe der Reparatur-Nacharbeit steht in der Ablauftabelle `flow.py`, aus der Gate und Monitor lesen.
+- System-ADR 0016 (vorgeschlagen) eskalierte die Stufe nach „zwei Review-Runden“. Diese Grenze gibt es nicht mehr; Auslöser ist jetzt die Review-Vorlage.
 - Neue Kennzahlen: `fix_befunde_prozent` (Korridor 0–20) und `pflege_verfallen_prozent` (Korridor 0–50).
 - Die Git-Trees der Runden-Stände hängen an keinem Commit. `git gc` räumt sie nach der üblichen Frist ab; nach dem Commit der Aufgabe braucht sie niemand mehr.

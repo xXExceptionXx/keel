@@ -92,6 +92,21 @@ NEXT_TASK = {
     "neuschnitt": "Planer (Neuschnitt) oder PO (Klärung)",
 }
 
+# After the Reviewer the task stays in "review"; the hook's verdict says what comes next (System-ADR 0018).
+NEXT_AFTER_REVIEW = {
+    "bestanden": "Lead committet",
+    "nacharbeit": "Entwickler (Nacharbeit, danach erneut Review)",
+    "vorlage": "Lead schreibt Review-Vorlage an den Supervisor",
+}
+
+
+def next_task(task):
+    """Next step for a task from its frontmatter."""
+    if task.get("status") == "review" and task.get("review_ergebnis") in NEXT_AFTER_REVIEW:
+        return NEXT_AFTER_REVIEW[task["review_ergebnis"]]
+    return NEXT_TASK.get(task.get("status"))
+
+
 ROLES = ["supervisor", "po", "architekt", "planer", "tester", "entwickler", "compliance", "reviewer", "auditor", "coach"]
 
 

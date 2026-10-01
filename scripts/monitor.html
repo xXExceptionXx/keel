@@ -620,7 +620,7 @@ function renderVorhaben(v) {
       <td>${esc(t.titel || "")}${t.neuschnitt_runden && t.neuschnitt_runden !== "0" ? ` <span class="badge warn">Neuschnitt</span>` : ""}</td>
       <td>${statusBadge(t.status)}</td>
       <td>${t.naechste ? esc(t.naechste) : `<span class="muted">–</span>`}</td>
-      <td>${t.reviews.map(r => `<span class="link" data-open="${esc(r.pfad)}" title="${esc(r.status || "")}">${esc(r.name.slice(t.id.length + 1))}${r.status === "bestanden" ? " ✓" : r.status === "befunde" ? " ✗" : ""}</span>`).join(" ")}
+      <td>${t.reviews.map(r => `<span class="link" data-open="${esc(r.pfad)}" title="${esc(r.status || "")}${r.zahlen ? ` · blockierend/wichtig/Anmerkung ${esc(r.zahlen.join("/"))}` : ""}${r.fix && r.fix !== "0" ? ` · ${esc(r.fix)} aus der Nacharbeit` : ""}">${esc(r.name.slice(t.id.length + 1))}${r.status === "bestanden" ? " ✓" : r.status === "befunde" ? " ✗" : ""}${r.zahlen ? ` <small>${esc(r.zahlen.join("/"))}</small>` : ""}</span>`).join(" ")}
           ${t.compliance_dateien.map(c => `<span class="link" data-open="${esc(c)}">${c.endsWith(".scan.md") ? "Scan" : "Compliance"}</span>`).join(" ")}</td>
     </tr>`).join("");
   const runs = v.laeufe.map(r => {

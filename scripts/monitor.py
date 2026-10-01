@@ -38,7 +38,7 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).parent))
 from config import read as read_config  # noqa: E402
-from flow import BY_DUE, DUE_ROLES, NEXT_PLAN, NEXT_TASK, PHASES, ROLES, bereit  # noqa: E402
+from flow import BY_DUE, DUE_ROLES, NEXT_PLAN, PHASES, ROLES, bereit, next_task  # noqa: E402
 from frontmatter import parse as parse_fm  # noqa: E402
 from lage import agent_runs, build_report, metrics_dir_of  # noqa: E402
 
@@ -217,13 +217,16 @@ def vorhaben_detail(project, name):
             reviews = []
             for r in sorted((work / "reviews").glob(f"{tid}-r*.md")) if (work / "reviews").exists() else []:
                 rd, _ = fm_of(r)
-                reviews.append({"pfad": rel(r), "name": r.stem, "status": rd.get("status")})
+                reviews.append({"pfad": rel(r), "name": r.stem, "status": rd.get("status"),
+                                "zahlen": [rd.get(k) for k in ("blockierend", "wichtig", "anmerkung")] if rd.get("blockierend") is not None else None,
+                                "fix": td.get(f"review_fix_r{rd.get('runde')}")})
             comp = [rel(c) for c in sorted((work / "compliance").glob(f"{tid}*.md"))] if (work / "compliance").exists() else []
             tasks[tid] = {"id": tid, "pfad": rel(t), "titel": td.get("titel"), "status": td.get("status"),
                           "im_plan": tid in order, "review_runde": td.get("review_runde"),
                           "neuschnitt_runden": td.get("neuschnitt_runden"), "compliance": td.get("compliance"),
                           "reviews": reviews, "compliance_dateien": comp,
-                          "naechste": NEXT_TASK.get(td.get("status"))}
+                          "review_ergebnis": td.get("review_ergebnis"),
+                          "naechste": next_task(td)}
     ordered = [tasks[i] for i in order if i in tasks] + [t for i, t in sorted(tasks.items()) if i not in order]
 
     acc = work / "acceptance" / f"{name}.md"
