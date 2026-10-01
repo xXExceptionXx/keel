@@ -220,6 +220,68 @@ Für das Agent-Ende, das die Testsuite startet, gibt es ein ausdrückliches, lä
 
 Der Monitor ist schon gut abgesichert: nur `127.0.0.1`, Host-Prüfung, `safe_under`, nur lesend. Er zieht in `interfaces/server/` und bekommt seine Daten nur aus `services/reports.py`, demselben Lesemodell, das `/keel:hilfe` nutzt. Damit legt er nichts mehr selbst aus: Phase, nächster Schritt und Rollenzustände kommen aus `domain/flow.py`. Das HTML bleibt eine statische Datei. Später können Graph und Kennzahlen aus dem Architektur-Strang dort erscheinen.
 
+### Lebenszeichen: Läuft keel gerade?
+
+Der Kern ist kein Dienst, der dauerhaft läuft. Er läuft nur in kurzen Momenten, wenn ein Hook oder ein Befehl ausgelöst wird. Der Monitor sieht heute nur die Subagenten (`agent_start` ohne `agent_stop`). Er sieht nicht, ob eine keel-Session offen ist, was der Lead zwischen den Rollen tut, ob gerade das Prüftor minutenlang im Stop-Hook läuft oder ob ein unbeaufsichtigter Lauf auf das Ende eines Nutzungslimits wartet. Für den Menschen sieht ein Kern, der wegen eines Fehlers alles blockiert, genauso aus wie ein Kern, der nichts zu tun hat.
+
+Vorgeschlagen wird ein Lebenszeichen auf drei Ebenen, jeweils deterministisch aus Ereignissen und Prozessprüfungen abgeleitet.
+
+**1. Session: Ist keel offen, und was macht der Lead?**
+
+Dazu kommen zwei Hook-Ereignisse, die keel heute nicht nutzt: `SessionEnd` und `Notification` (Claude wartet auf eine Freigabe oder ist untätig). Zusammen mit `SessionStart`, `Stop` und den Werkzeugaufrufen ergibt sich je Session ein Zustand:
+
+| Zustand | Erkannt an |
+| --- | --- |
+| arbeitet | Werkzeugaufruf vor wenigen Sekunden, oder `PreToolUse` ohne passendes `PostToolUse` |
+| wartet auf dich | letztes Ereignis ist `Notification` |
+| Zug beendet | letztes Ereignis ist `Stop`, keine neue Eingabe |
+| beendet | `SessionEnd` |
+| abgebrochen | kein `SessionEnd`, aber der Prozess lebt nicht mehr |
+
+Für „abgebrochen“ merkt sich der Dispatcher bei `SessionStart` die Prozess-ID des Claude-Prozesses, und der Monitor prüft, ob sie noch lebt. Ob der Elternprozess des Hooks wirklich Claude Code ist oder eine Shell dazwischen liegt, ist noch zu prüfen.
+
+Aus dem offenen Werkzeugaufruf zeigt der Monitor, was der Lead gerade tut, etwa „Lead: Bash `keel gate` seit 1:20“.
+
+**2. Kern: Welche Operation läuft gerade?**
+
+Lange Operationen (Prüftor, Compliance-Scan, Fälligkeiten, später Graph und Lint) melden sich über einen Kontextmanager in `store/runtime.py` an und ab:
+
+```python
+with activity("prueftor", ref="T03"):
+    ...
+```
+
+Er legt einen Marker mit Prozess-ID, Startzeit und Bezug unter dem Laufzeit-Ordner an und entfernt ihn am Ende, auch bei Ausnahmen. Lebt die Prozess-ID eines Markers nicht mehr, ist er verwaist. Der Monitor zeigt das als Fehler, nicht als „läuft“, und `keel doctor` räumt ihn auf. Kein Befehl muss sich selbst darum kümmern.
+
+**3. Unbeaufsichtigter Lauf: Läuft er, wartet er, ist er fertig?**
+
+Der Runner (heute `keel-run.sh`, künftig `keel run`) schreibt seinen Zustand mit Prozess-ID in eine Datei:
+- läuft
+- wartet auf das Limit bis HH:MM
+- Briefing nötig
+- beendet mit Code
+
+**Gesundheit.**
+
+Mit dem Fehlervertrag unterscheidet der Dispatcher zwischen „Regel verletzt“ und „Programm kaputt“. Jeder interne Fehler wird als Ereignis `hook_error` mit Hook, Ereignis und Meldung protokolliert. Der Monitor zeigt den letzten als rote Markierung, etwa „Gate wegen Fehler geschlossen, 14:02, agent-stop“, bis er quittiert oder durch einen erfolgreichen Lauf desselben Hooks überholt ist.
+
+**In der Oberfläche** wird das eine Statuszeile ganz oben:
+
+```
+keel ● arbeitet · Session 3f2a (Lead auf Fable) · Prüftor seit 1:20 für T03 · Runner: wartet auf Limit bis 14:30 · Kern gesund
+```
+
+| Punkt | Bedeutung |
+| --- | --- |
+| grün | arbeitet |
+| gelb | wartet auf dich |
+| grau | nichts offen |
+| rot | abgebrochen, verwaister Marker oder interner Fehler |
+
+Dieselben Zustände liefert `services/reports.py` auch an `/keel:hilfe`, damit Hilfe und Monitor dasselbe sagen.
+
+**Einordnung in den Umbau.** Ebene 1 und der Runner sind klein und ließen sich auch im Bestand vorziehen: zwei Hook-Einträge, ein paar Zeilen im Runner, eine Auswertung im Monitor. Ebene 2 und die Gesundheitsanzeige bauen auf `store/runtime.py` und dem Fehlervertrag auf und gehören zu M1 und M2. Die Anzeige im Monitor gehört zu M6.
+
 ### Anschluss an die Konzepte
 
 | Konzept | Wo es im Kern landet |
@@ -256,7 +318,7 @@ Der Umbau ersetzt den Bestand Stück für Stück. Jeder Schritt hält das Prüft
 | M3 | Fachlogik nach `domain`: Status und Übergänge, Ein- und Austrittsregeln aus `agent-stop.sh`, Review-Urteil, Fälligkeiten, Budgets | Keine Regel mehr in Bash, Test für Status in Prosa grün |
 | M4 | Kommandozeile `keel` mit Unterbefehlen. Skills und Agenten rufen nur noch `keel …` auf. Alte Pfade als Weiterleitung. | Kein Verweis mehr auf `scripts/` in Skills und Agenten |
 | M5 | Services aus den Konzepten: `next` und `done`, Kontext zusammensetzen | je nach Konzept, eigene ADRs |
-| M6 | Monitor auf das gemeinsame Lesemodell, inkrementelle Ereignisse | Monitor und Hilfe zeigen dasselbe |
+| M6 | Monitor auf das gemeinsame Lesemodell, inkrementelle Ereignisse, Statuszeile mit Lebenszeichen | Monitor und Hilfe zeigen dasselbe |
 | M7 | `scripts/` entfernen | keine Weiterleitung mehr in Benutzung |
 
 M0 ist unabhängig vom Rest und sollte zuerst kommen. M1 und M2 sind der Kern des Umbaus. Ab M3 lassen sich die Konzepte aus PR #4 und #5 sauber andocken. Jeder Schritt wird ein System-ADR.
@@ -276,5 +338,7 @@ M0 ist unabhängig vom Rest und sollte zuerst kommen. M1 und M2 sind der Kern de
 - Bleibt `guard.sh` dauerhaft in Bash, oder zieht er in den Dispatcher, damit `jq` ganz entfällt?
 - Wird das Konfigurations-Template aus dem Schema erzeugt, oder prüft ein Test nur, dass beide übereinstimmen?
 - Wie streng wird die Formatversion gehandhabt: blockieren bei unbekannter Version oder nur warnen?
+- Ist der Elternprozess eines Hooks der Claude-Prozess, oder liegt eine Shell dazwischen? Davon hängt ab, wie „abgebrochen“ erkannt wird.
+- Wird das Lebenszeichen der Session (Ebene 1) im Bestand vorgezogen oder erst mit dem Dispatcher gebaut?
 - Soll der Monitor später schreiben dürfen, etwa um eine Vorlage zu entscheiden, oder bleibt er strikt lesend wie die Hilfe?
 - Ab wann gilt Python 3.9 nicht mehr als Untergrenze, etwa wenn macOS eine neuere Version mitliefert?
