@@ -30,7 +30,7 @@ esac
 case "$skill" in
   keel:hilfe|hilfe)
     sid="$(field '.session_id')"
-    [ -z "$sid" ] || touch "$(state_dir)/hilfe-$sid"
+    [ -z "$sid" ] || { keel_paths && touch "$KEEL_PATH_STATE/hilfe-$sid"; }
     keel_ok ;;
   keel:briefing|briefing) needed=1 ;;
   keel:start|start)

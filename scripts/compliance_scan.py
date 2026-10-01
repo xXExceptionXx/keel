@@ -19,8 +19,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
+import _keel  # noqa: F401
+from keel.store import config
 
 SECRETS = [
     (r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----", "private key"),
@@ -99,8 +99,10 @@ def main():
             raise ScanError("--base braucht einen Git-Ref")
         base = sys.argv[i]
     as_json = "--json" in sys.argv
-    cfg = read_config(project / ".keel" / "config.yaml") if (project / ".keel" / "config.yaml").exists() else {}
-    comp = cfg.get("compliance", {}) if isinstance(cfg.get("compliance"), dict) else {}
+    try:
+        comp = config.section(config.load(project), "compliance")
+    except Exception as exc:  # a config the codec refuses: cannot scan with the project's patterns
+        raise ScanError(f"Konfiguration nicht lesbar: {exc}") from exc
     extra_pii = [(p.strip(), "project pattern") for p in comp.get("pii_patterns", "").split("|") if p.strip()]
 
     excludes = [":(exclude).keel", ":(exclude)*.lock", ":(exclude)package-lock.json", ":(exclude)pnpm-lock.yaml", ":(exclude)yarn.lock"]

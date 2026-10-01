@@ -26,7 +26,6 @@ class ConcurrencyTest(ContractTest):
             _, err = proc.communicate(timeout=120)
             self.assertEqual(proc.returncode, 0, err)
 
-    @unittest.expectedFailure
     def test_parallel_pflege_sammeln_gives_unique_ids(self):
         p = project()
         n = 50
@@ -40,7 +39,6 @@ class ConcurrencyTest(ContractTest):
         self.assertEqual(len(ids), n)
         self.assertEqual(len(set(ids)), n)
 
-    @unittest.expectedFailure
     def test_parallel_backlog_propose_gives_unique_ids(self):
         p = project()
         n = 40

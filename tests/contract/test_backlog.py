@@ -53,7 +53,6 @@ class BacklogTest(ContractTest):
     def backlog(self, p, *args):
         return self.script("backlog.py", "--project", p, *args, proj=p)
 
-    @unittest.expectedFailure
     def test_status_change_leaves_every_other_line_unchanged(self):
         p = self.setup_backlog()
         r = self.backlog(p, "status", "BL-2", "bereit")
@@ -62,7 +61,6 @@ class BacklogTest(ContractTest):
         self.assertEqual(without(after, BLOCK), without(BACKLOG.split("\n"), BLOCK))
         self.assertEqual(r.json["status"], "bereit")
 
-    @unittest.expectedFailure
     def test_unknown_fields_survive_a_change(self):
         p = self.setup_backlog()
         self.assertEqual(self.backlog(p, "link", "BL-1", ".keel/work/plans/x.md").rc, 0)
@@ -72,7 +70,6 @@ class BacklogTest(ContractTest):
             self.assertIn(kept, text)
         self.assertIn("  Plan: .keel/work/plans/x.md", text)
 
-    @unittest.expectedFailure
     def test_propose_keeps_the_order_of_sections(self):
         p = self.setup_backlog()
         f = p / "neu.md"
@@ -86,7 +83,6 @@ class BacklogTest(ContractTest):
         self.assertEqual(without(lines, ["", "- [BL-3] Neu", "  Problem: p3", "  Warum: w3", "  Herkunft: Audit"]),
                          BACKLOG.split("\n"))
 
-    @unittest.expectedFailure
     def test_show_without_id_is_a_usage_error(self):
         p = self.setup_backlog()
         r = self.backlog(p, "show")

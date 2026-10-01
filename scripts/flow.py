@@ -19,8 +19,8 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.store.frontmatter import load_tolerant
 
 # rolle.anlass -> object kind, required status, fields that must not be empty, further conditions
 GATES = {
@@ -127,23 +127,16 @@ def shell():
     return "\n".join(out)
 
 
-def _fm(path):
-    try:
-        d, body = parse_fm(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError):
-        return None, ""
-    return (d or {}), body
-
-
 def _objects(keel, kind):
     folder = {"plan": "work/plans", "aufgabe": "work/tasks", "epic": "work/epics", "vorlage": "decisions/pending"}[kind]
     d = keel / folder
     for p in sorted(d.glob("*.md")) if d.exists() else []:
         if p.name.endswith(".bewertung.md"):
             continue
-        data, body = _fm(p)
-        if data is None:
+        loaded = load_tolerant(p)
+        if loaded is None:
             continue
+        data, body = loaded
         typ = {"aufgabe": "aufgabe", "plan": "plan", "epic": "epic", "vorlage": "vorlage"}[kind]
         if data.get("typ") != typ:
             continue

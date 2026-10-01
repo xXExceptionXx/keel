@@ -27,34 +27,28 @@ class RobustReadingTest(ContractTest):
         self.assertIn(r.rc, codes, r)
         self.assertNotIn("Traceback", r.err)
 
-    @unittest.expectedFailure
     def test_metrics_survives_broken_events(self):
         p = self.broken_events()
         self.assertClean(self.script("metrics.py", p, "--json"), (0, 3))
 
-    @unittest.expectedFailure
     def test_models_survives_broken_events(self):
         p = self.broken_events()
         r = self.script("models.py", p, "--json")
         self.assertClean(r)
         self.assertEqual(r.json["aktuell_je_rolle"], {"tester": "m1"})
 
-    @unittest.expectedFailure
     def test_lage_survives_broken_events(self):
         p = self.broken_events()
         self.assertClean(self.script("lage.py", p, "--json"))
 
-    @unittest.expectedFailure
     def test_due_survives_broken_events(self):
         p = self.broken_events()
         self.assertClean(self.script("due.py", p, "--json"), (0, 1))
 
-    @unittest.expectedFailure
     def test_since_with_offset(self):
         p = self.broken_events()
         self.assertClean(self.script("metrics.py", p, "--since", "2026-09-30T00:00:00+02:00", "--json"), (0, 3))
 
-    @unittest.expectedFailure
     def test_metrics_survives_broken_values(self):
         p = project()
         write(p / ".keel" / "work" / "tasks" / "T-zwei.md", "---\ntyp: aufgabe\nid: T-zwei\nneuschnitt_runden: zwei\n---\n")
@@ -64,7 +58,6 @@ class RobustReadingTest(ContractTest):
               "---\ntyp: vorlage\ndatum: gestern\nentschieden: heute\nstatus: entschieden\n---\n")
         self.assertClean(self.script("metrics.py", p, "--json"), (0, 3))
 
-    @unittest.expectedFailure
     def test_lage_survives_a_file_that_is_not_utf8(self):
         p = project()
         (p / ".keel" / "work" / "plans" / "kaputt.md").write_bytes(b"---\ntyp: plan\ntitel: K\xe4se\n---\n")

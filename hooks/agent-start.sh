@@ -7,7 +7,8 @@ agent_type="$(field '.agent_type')"
 role="$(keel_role "$agent_type")"
 [ -n "$role" ] || keel_ok
 id="$(field '.agent_id')"
-sd="$(state_dir)"
+keel_paths
+sd="$KEEL_PATH_STATE"
 ref=""
 [ -f "$sd/pending-$role" ] && ref="$(cat "$sd/pending-$role")" && rm -f "$sd/pending-$role"
 printf '%s\n' "$ref" > "$sd/agent-$id.ref"

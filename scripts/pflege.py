@@ -12,15 +12,17 @@ Usage:
 File: .keel/work/pflege.md, one table row per entry:
   | ID | Datum | Aufgabe | Fundstelle | Anmerkung | Status |
 Open entries older than pflege.verfall_tage (default 42) become "verfallen".
+Every change runs under a lock on the file and is written atomically, so parallel runs never hand out an ID twice.
 """
 import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.domain.errors import ParseError, ReadError
+from keel.store import config, frontmatter
+from keel.store.io import atomic_write, file_lock
 
 HEAD = """---
 typ: pflegeliste
@@ -53,9 +55,7 @@ def load(project):
 
 
 def save(project, lines):
-    p = path_of(project)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    atomic_write(path_of(project), "\n".join(lines) + "\n")
 
 
 def rows(lines):
@@ -70,11 +70,10 @@ def fmt(r):
 
 
 def expire(project, lines):
-    cfg = project / ".keel" / "config.yaml"
     try:
-        days = int((read_config(cfg) if cfg.exists() else {}).get("pflege", {}).get("verfall_tage", 42))
-    except (TypeError, ValueError):
-        days = 42
+        days = config.get_int(config.load(project), "pflege.verfall_tage", 42)
+    except (ReadError, ParseError) as exc:
+        fail(f"pflege: {exc}", 2)
     cutoff = (date.today() - timedelta(days=days)).isoformat()
     changed = 0
     for i, r in list(rows(lines)):
@@ -86,7 +85,10 @@ def expire(project, lines):
 
 
 def cmd_sammeln(project, review):
-    data, body = parse_fm(review.read_text(encoding="utf-8"))
+    try:
+        data, body = frontmatter.load(review)
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
     if not data or data.get("typ") != "review":
         fail(f"{review}: keine Review-Datei")
     if data.get("status") != "bestanden":
@@ -147,14 +149,15 @@ def main():
     if len(sys.argv) < 3 or sys.argv[1] not in ("sammeln", "offen", "setze"):
         fail(__doc__, 2)
     cmd, project = sys.argv[1], Path(sys.argv[2]).resolve()
-    if cmd == "sammeln" and len(sys.argv) >= 4:
-        cmd_sammeln(project, Path(sys.argv[3]).resolve())
-    elif cmd == "offen":
-        cmd_offen(project)
-    elif cmd == "setze" and len(sys.argv) >= 5:
-        cmd_setze(project, sys.argv[3], sys.argv[4], " ".join(sys.argv[5:]))
-    else:
+    if not ((cmd == "sammeln" and len(sys.argv) >= 4) or cmd == "offen" or (cmd == "setze" and len(sys.argv) >= 5)):
         fail(__doc__, 2)
+    with file_lock(path_of(project)):
+        if cmd == "sammeln":
+            cmd_sammeln(project, Path(sys.argv[3]).resolve())
+        elif cmd == "offen":
+            cmd_offen(project)
+        else:
+            cmd_setze(project, sys.argv[3], sys.argv[4], " ".join(sys.argv[5:]))
 
 
 if __name__ == "__main__":

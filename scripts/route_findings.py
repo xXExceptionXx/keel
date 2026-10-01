@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Route the findings of an audit report: every finding line without an ID becomes a backlog item
-(Herkunft: Audit, or Pflege for "wird Pflege") or a decision file, and the ID is written back into the report. Idempotent.
+(Herkunft: Audit, or Pflege for "wird Pflege") or a decision file, and the ID is written back into the report. Idempotent:
+the report is written back atomically after every routed finding (F6), so an abort leaves nothing to route twice.
 
 Usage: route_findings.py <project-dir> [<report.md>]     (default: newest report under .keel/work/audit/)
 Prints one line per routed finding and a summary; exit 0.
@@ -16,8 +17,9 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.store.frontmatter import parse as parse_fm
+from keel.store.io import atomic_write, create_exclusive, file_lock
 
 LINE = re.compile(r"^(- (?P<befund>.+?) – (?P<fundstelle>.+?) – wird (?P<ziel>Aufgabe|Vorlage|Pflege))\s*$")
 
@@ -50,13 +52,8 @@ def propose_backlog(project, befund, fundstelle, report_name, herkunft="Audit"):
 def write_decision(project, befund, fundstelle, report_name, n):
     today = date.today().isoformat()
     pending = project / ".keel" / "decisions" / "pending"
-    pending.mkdir(parents=True, exist_ok=True)
-    name = f"{today}-audit-{n}.md"
-    while (pending / name).exists():
-        n += 1
-        name = f"{today}-audit-{n}.md"
     titel = befund if len(befund) <= 80 else befund[:77].rstrip() + "…"
-    (pending / name).write_text(f"""---
+    text = f"""---
 typ: vorlage
 titel: {json.dumps(titel, ensure_ascii=False)}
 von: Auditor
@@ -79,8 +76,10 @@ quelle: {report_name}
 **Empfehlung:** vom Auditor als Vorlage eingestuft, weil er außerhalb der Befugnisse des PO liegt; die Abwägung ist deine.
 
 **Warum ich nicht selbst entscheide:** Vermerk des Auditors „wird Vorlage“ (außerhalb der Befugnisse des PO).
-""", encoding="utf-8")
-    return name
+"""
+    while not create_exclusive(pending / f"{today}-audit-{n}.md", text):
+        n += 1
+    return f"{today}-audit-{n}.md"
 
 
 def main():
@@ -97,8 +96,13 @@ def main():
 
 
 def route(project, report):
+    with file_lock(report):
+        _route(project, report)
+
+
+def _route(project, report):
     text = report.read_text(encoding="utf-8")
-    data, _ = parse_fm(text)
+    data, _ = parse_fm(text, source=str(report))
     if not data or data.get("typ") not in ("pruefbericht", "architekturbericht"):
         print(f"{report.name}: kein Prüf- oder Architekturbericht (typ fehlt)")
         return
@@ -118,13 +122,16 @@ def route(project, report):
             decisions += 1
             ref = write_decision(project, befund, fundstelle, report.name, decisions)
         lines[i] = f"{m.group(1)} → {ref}"
+        atomic_write(report, "\n".join(lines))
         routed.append((ziel, ref, befund[:70]))
-    if routed:
-        report.write_text("\n".join(lines), encoding="utf-8")
     for ziel, ref, befund in routed:
         print(f"{ziel}: {ref}  {befund}")
     print(f"geroutet: {len(routed)} Befunde aus {report.name} ({sum(1 for z, _, _ in routed if z != 'Vorlage')} Backlog, {sum(1 for z, _, _ in routed if z == 'Vorlage')} Vorlagen)")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # what was routed is already written back; a rerun continues there
+        print(f"route_findings: abgebrochen: {exc!r}", file=sys.stderr)
+        sys.exit(2)

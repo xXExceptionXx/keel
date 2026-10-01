@@ -28,9 +28,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
-from frontmatter import parse as parse_fm, render  # noqa: E402
+import _keel  # noqa: F401
+from keel.domain.errors import ParseError, ReadError
+from keel.store import config, frontmatter
 
 SEVERITIES = ("blockierend", "wichtig", "anmerkung")
 ORIGINS_FIRST = ("neu",)
@@ -56,30 +56,29 @@ def task_path(project, task):
 
 def load(path):
     try:
-        data, body = parse_fm(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        fail(f"cannot read {path}: {exc}", 2)
+        data, body = frontmatter.load(path)
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
     if data is None:
         fail(f"{path}: no frontmatter found")
     return data, body
 
 
 def update(path, **fields):
-    data, body = load(path)
-    for key, value in fields.items():
-        data[key] = str(value)
-        if key not in data["__order__"]:
-            data["__order__"].append(key)
-    path.write_text(render(data, body), encoding="utf-8")
+    """Write fields into the task, under a lock and atomically (N6)."""
+    load(path)
+    try:
+        frontmatter.update(path, {k: str(v) for k, v in fields.items()})
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
 
 
 def cfg_int(project, key, default):
-    path = project / ".keel" / "config.yaml"
-    tree = read_config(path) if path.exists() else {}
     try:
-        return int(tree.get("review", {}).get(key, default))
-    except (TypeError, ValueError):
-        return default
+        tree = config.load(project)
+    except (ReadError, ParseError) as exc:
+        fail(f"review: {exc}", 2)
+    return config.get_int(tree, f"review.{key}", default)
 
 
 def snapshot(project):

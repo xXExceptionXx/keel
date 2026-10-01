@@ -9,7 +9,8 @@ role="$(keel_role "$agent_type")"
 [ -n "$role" ] || keel_ok
 id="$(field '.agent_id')"
 proj="$(project_dir)"
-sd="$(state_dir)"
+keel_paths
+sd="$KEEL_PATH_STATE"
 ref="$(cat "$sd/agent-$id.ref" 2>/dev/null || true)"
 calls="$(cat "$sd/agent-$id.calls" 2>/dev/null || echo 0)"
 is_number "$calls" || calls=0

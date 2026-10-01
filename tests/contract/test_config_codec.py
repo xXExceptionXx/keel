@@ -27,13 +27,11 @@ class ConfigCodecTest(ContractTest):
     def config(self, p, key, default=""):
         return self.script("config.py", p, key, default, proj=p)
 
-    @unittest.expectedFailure
     def test_hash_inside_quotes_is_not_a_comment(self):
         p = project()
         write(p / ".keel" / "config.yaml", CONFIG)
         self.assertEqual(self.config(p, "motor.repo").out.strip(), "o/r#1")
 
-    @unittest.expectedFailure
     def test_three_levels_and_lists(self):
         p = project()
         write(p / ".keel" / "config.yaml", CONFIG)
@@ -43,7 +41,6 @@ class ConfigCodecTest(ContractTest):
         self.assertEqual(self.config(p, "test.command").out.strip(), "make test")
         self.assertEqual(self.config(p, "test.extra", "liste").out.strip(), "liste")  # not a scalar: the default
 
-    @unittest.expectedFailure
     def test_unknown_syntax_in_the_config_is_refused_with_its_line(self):
         p = project()
         write(p / ".keel" / "config.yaml", "budget:\n  tool_calls: 60\n  minutes: {a: 1}\n")
@@ -52,13 +49,11 @@ class ConfigCodecTest(ContractTest):
         self.assertRegex(r.err, r"config\.yaml:3\b")
         self.assertNotIn("Traceback", r.err)
 
-    @unittest.expectedFailure
     def test_missing_arguments_are_a_usage_error(self):
         r = self.script("config.py")
         self.assertEqual(r.rc, 2, r)
         self.assertNotIn("Traceback", r.err)
 
-    @unittest.expectedFailure
     def test_unknown_line_in_frontmatter_is_refused_with_its_line(self):
         p = project()
         f = p / "x.md"

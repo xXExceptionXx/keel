@@ -3,7 +3,7 @@
 
 Usage: models.py <project-dir> [--json]
 
-Source: agent_stop events in ~/.keel-metrics/<project>/events.jsonl. Each carries `model` since
+Source: agent_stop events in the runtime folder of the project (keel path events). Each carries `model` since
 System-ADR 0015; older events fall back to the model in their subagent transcript while it exists.
 A switch is per role: the model of the role's latest run differs from the model it mostly ran on before;
 a single run on another model in between (fallback on overload) is not a switch.
@@ -11,18 +11,13 @@ It stays open until a Coach report names the new model under `modell_geprueft`.
 Used by due.py (Fälligkeit) and metrics.py (Kennzahlen je Modell).
 """
 import json
-import os
 import sys
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from frontmatter import parse as parse_fm  # noqa: E402
-
-
-def metrics_file(project):
-    return Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / Path(project).name / "events.jsonl"
+import _keel  # noqa: F401
+from keel.store import events, frontmatter
+from keel.store.paths import Paths
 
 
 def transcript_model(path):
@@ -47,18 +42,8 @@ def transcript_model(path):
 
 
 def load_events(project):
-    events = []
-    f = metrics_file(project)
-    if not f.exists():
-        return events
-    for line in f.read_text(encoding="utf-8").splitlines():
-        try:
-            e = json.loads(line)
-            e["_ts"] = datetime.fromisoformat(e["ts"].replace("Z", ""))
-        except (ValueError, KeyError):
-            continue
-        events.append(e)
-    return events
+    """Events of the project with `_ts` in UTC; unusable lines are skipped (keel.store.events)."""
+    return events.read(Paths(project).events).events
 
 
 def runs(events):
@@ -67,7 +52,7 @@ def runs(events):
     for e in events:
         if e.get("event") != "agent_stop":
             continue
-        model = e.get("model") or (transcript_model(e["transcript"]) if e.get("transcript") else "")
+        model = e.get("model") or (transcript_model(e["transcript"]) if isinstance(e.get("transcript"), str) else "")
         if model:
             out.append({"role": e.get("role", "?"), "model": model, "ts": e["_ts"], "agent_id": e.get("agent_id"), "ref": e.get("ref") or "", "result": e.get("result"), "transcript": e.get("transcript")})
     return sorted(out, key=lambda r: r["ts"])
@@ -80,8 +65,7 @@ def checked_models(project):
     if not d.exists():
         return seen
     for p in d.glob("*.md"):
-        data, _ = parse_fm(p.read_text(encoding="utf-8"))
-        v = (data or {}).get("modell_geprueft")
+        v = frontmatter.fields_tolerant(p).get("modell_geprueft")
         if isinstance(v, list):
             seen.update(x for x in v if x)
         elif v:
@@ -127,6 +111,9 @@ def switches(project, role_runs=None):
 
 
 def main():
+    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
     project = Path(sys.argv[1]).resolve()
     rr = runs(load_events(project))
     latest = {}

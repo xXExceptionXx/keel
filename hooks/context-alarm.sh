@@ -18,7 +18,8 @@ is_number "$used" || used=0
 [ "$used" -gt 0 ] || keel_ok
 percent=$(( used * 100 / window ))
 [ "$percent" -ge "$threshold" ] || keel_ok
-sd="$(state_dir)"
+keel_paths
+sd="$KEEL_PATH_STATE"
 sid="$(field '.session_id')"
 step=$(( percent / 10 ))
 last="$(cat "$sd/context-$sid.step" 2>/dev/null || echo 0)"

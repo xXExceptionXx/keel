@@ -19,7 +19,8 @@ eval "$(python3 "$PLUGIN_ROOT/scripts/flow.py" shell 2>/dev/null)" || true
 if [ "$(field '.tool_input.run_in_background')" = "true" ]; then
   deny "keel-Rollen laufen im Vordergrund und nacheinander. Starte '$type' erneut mit run_in_background: false."
 fi
-sd_early="$(state_dir)"
+keel_paths
+sd_early="$KEEL_PATH_STATE"
 # Emergency brake (System-ADR 0019): agent-stop could not check a handoff three times in a row.
 if [ -f "$sd_early/kern-gesperrt" ]; then
   deny "keel ist gesperrt (Notbremse): $(head -1 "$sd_early/kern-gesperrt"). /keel:hilfe erklärt den Stand."
@@ -229,6 +230,6 @@ case "$role" in
   *) deny "Unbekannte keel-Rolle '$role'" ;;
 esac
 
-sd="$(state_dir)"
+sd="$KEEL_PATH_STATE"
 printf '%s\n' "${task:-$plan}" > "$sd/pending-$role"
 keel_ok

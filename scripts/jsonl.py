@@ -1,43 +1,28 @@
 #!/usr/bin/env python3
-"""Append one JSON line to a log file, atomically: one write on an O_APPEND file under an exclusive lock.
+"""Append one JSON line to a log in the runtime folder of a project, atomically (keel.store.events).
 
 Usage:
-  jsonl.py append <file>    read one JSON object from stdin, append it as one line
-  jsonl.py hooklog <file>   read a hook payload from stdin, keep what the learning loop and the monitor read,
-                            add ts, append it; an unreadable payload becomes a hook_error line
+  jsonl.py append --project <dir>    read one JSON object from stdin, append it to events.jsonl
+  jsonl.py hooklog --project <dir>   read a hook payload from stdin, keep what the learning loop and the monitor
+                                     read, add ts, append it to hooks.jsonl; an unreadable payload becomes a
+                                     hook_error line
 
-Several hooks write the same files at the same time (parallel subagents, two hooks per event). printf >> in
-bash writes long lines in several chunks, which interleaved lines in real logs (System-ADR 0019).
+Several hooks write the same files at the same time (parallel subagents, two hooks per event); every line is
+one write under an exclusive lock (System-ADR 0019). Where the files lie comes from keel.store.paths.
 Exit 0 on success, 2 on usage errors or a non-object input.
 """
-import fcntl
 import json
-import os
 import sys
-from datetime import datetime, timezone
+
+import _keel  # noqa: F401
+from keel.store import events
+from keel.store.paths import Paths
 
 HEAD = ("hook_event_name", "session_id", "agent_id", "agent_type", "tool_name", "tool_use_id", "cwd", "source",
         "transcript_path", "agent_transcript_path", "permission_mode", "stop_hook_active")
 TOOL_INPUT = {"skill": 200, "args": 200, "command": 2000, "subagent_type": 200, "description": 200, "file_path": 500,
               "prompt": 500, "run_in_background": None}
 PROMPT_CHARS = 500
-
-
-def now():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def append(path, record):
-    line = (json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-        view = memoryview(line)
-        while view:
-            view = view[os.write(fd, view):]
-    finally:
-        os.close(fd)
 
 
 def cut(value, limit):
@@ -60,10 +45,10 @@ def trim(payload):
 
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in ("append", "hooklog"):
+    if len(sys.argv) != 4 or sys.argv[1] not in ("append", "hooklog") or sys.argv[2] != "--project":
         print(__doc__, file=sys.stderr)
         sys.exit(2)
-    cmd, path = sys.argv[1], sys.argv[2]
+    cmd, paths = sys.argv[1], Paths(sys.argv[3])
     raw = sys.stdin.read()
     try:
         data = json.loads(raw)
@@ -73,15 +58,15 @@ def main():
         if not isinstance(data, dict):
             print("jsonl: input is not a JSON object", file=sys.stderr)
             sys.exit(2)
-        append(path, data)
+        events.append(paths.events, data)
         return
     if isinstance(data, dict):
         record = trim(data)
-        record["ts"] = now()
+        record["ts"] = events.now_ts()
     else:
-        record = {"hook_event_name": "hook_error", "ts": now(), "detail": "payload is not a JSON object",
+        record = {"hook_event_name": "hook_error", "ts": events.now_ts(), "detail": "payload is not a JSON object",
                   "bytes": len(raw)}
-    append(path, record)
+    events.append(paths.hooklog, record)
 
 
 if __name__ == "__main__":

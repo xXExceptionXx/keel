@@ -3,51 +3,49 @@
 
 Usage: metrics.py <project-dir> [--since YYYY-MM-DD] [--json]
 
-Sources: ~/.keel-metrics/<project>/events.jsonl (role starts/stops, blocked stops, budgets),
+Sources: events of the runtime folder (keel path events: role starts/stops, blocked stops, budgets),
 subagent transcripts (tokens), git log (task diffs), .keel/work (tasks, reviews, audits),
 .keel/decisions and .keel/adr. Corridors come from .keel/config.yaml under `korridore`.
 A second table splits run outcomes by the model that ran them (System-ADR 0015), for the Coach after a model switch.
 Working roles never call this; it is for the human and the Coach.
+Unreadable files and values that are not numbers or dates are skipped, never a crash (F8).
 """
 import json
-import os
 import re
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from config import read as read_config  # noqa: E402
-from frontmatter import parse as parse_fm  # noqa: E402
+import _keel  # noqa: F401
+from keel.store import config, events
+from keel.store.frontmatter import fields_tolerant as fields
+from keel.store.paths import Paths
 from models import runs as model_runs, switches as model_switches  # noqa: E402
 from review import findings as review_findings  # noqa: E402
 
-DEFAULT_CORRIDORS = {
-    "vorlagen_pro_woche": "2-5",
-    "entscheidungsdauer_tage": "0-2",
-    "gekippte_delegierte_adrs_prozent": "0-10",
-    "gekippte_supervisor_entscheidungen_prozent": "0-15",
-    "eskalationsquote_prozent": "10-40",
-    "einwaende_supervisor": "1-10",
-    "review_runden_pro_aufgabe": "1-2",
-    "ruecklaufquote_review_prozent": "0-30",
-    "fix_befunde_prozent": "0-20",
-    "pflege_verfallen_prozent": "0-50",
-    "neuschnitt_quote_prozent": "0-20",
-    "blockierte_uebergaben_prozent": "0-20",
-    "budget_verstoesse": "0-0",
-    "kontext_alarme": "0-0",
-    "audit_abweichungen_pro_bericht": "0-3",
-    "diff_zeilen_pro_aufgabe": "20-300",
-    "tokens_pro_aufgabe_k": "0-400",
-}
+
+def as_int(value, default=0):
+    """A whole number from a frontmatter value; default for anything else (`runde: zwei`)."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
 
 
-def fm(path):
-    data, _ = parse_fm(Path(path).read_text(encoding="utf-8"))
-    return data or {}
+def as_date(value):
+    try:
+        return date.fromisoformat(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def text_of(path):
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
 
 
 def in_corridor(value, corridor):
@@ -64,12 +62,12 @@ def token_usage(transcript):
     """Sum output tokens and take the largest context seen in a subagent transcript."""
     out, ctx = 0, 0
     try:
-        for line in Path(transcript).read_text(encoding="utf-8").splitlines():
+        for line in Path(transcript).read_text(encoding="utf-8", errors="replace").splitlines():
             try:
                 rec = json.loads(line)
             except ValueError:
                 continue
-            if rec.get("type") != "assistant":
+            if not isinstance(rec, dict) or rec.get("type") != "assistant":
                 continue
             u = (rec.get("message") or {}).get("usage") or {}
             out += u.get("output_tokens", 0)
@@ -84,39 +82,29 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
+    paths = Paths(project)
     since = None
     if "--since" in sys.argv:
-        since = datetime.fromisoformat(sys.argv[sys.argv.index("--since") + 1])
+        i = sys.argv.index("--since") + 1
+        since = events.parse_ts(sys.argv[i]) if i < len(sys.argv) else None
+        if since is None:
+            print("metrics: --since braucht ein Datum oder einen Zeitpunkt (ISO 8601)", file=sys.stderr)
+            sys.exit(2)
     as_json = "--json" in sys.argv
-    metrics_dir = Path(os.environ.get("KEEL_METRICS_DIR", Path.home() / ".keel-metrics")) / project.name
-    cfg = read_config(project / ".keel" / "config.yaml") if (project / ".keel" / "config.yaml").exists() else {}
-    corridors = dict(DEFAULT_CORRIDORS)
-    if isinstance(cfg.get("korridore"), dict):
-        corridors.update(cfg["korridore"])
+    corridors = config.section(config.load_file(paths.config), "korridore")
 
     # ---- events
-    events = []
-    ev_file = metrics_dir / "events.jsonl"
-    if ev_file.exists():
-        for line in ev_file.read_text(encoding="utf-8").splitlines():
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            ts = datetime.fromisoformat(e["ts"].replace("Z", ""))
-            if since and ts < since:
-                continue
-            e["_ts"] = ts
-            events.append(e)
-    stops = [e for e in events if e["event"] == "agent_stop"]
-    blocked = [e for e in events if e["event"] == "stop_blocked"]
-    budget = [e for e in events if e["event"] == "budget_exhausted"]
-    context_alarms = [e for e in events if e["event"] == "context_alarm"]
+    read = events.read(paths.events, since=since)
+    evs = read.events
+    stops = [e for e in evs if e.get("event") == "agent_stop"]
+    blocked = [e for e in evs if e.get("event") == "stop_blocked"]
+    budget = [e for e in evs if e.get("event") == "budget_exhausted"]
+    context_alarms = [e for e in evs if e.get("event") == "context_alarm"]
 
     # ---- tokens per task from subagent transcripts
     tokens_by_ref = defaultdict(int)
     for e in stops:
-        if e.get("transcript"):
+        if isinstance(e.get("transcript"), str):
             out, _ = token_usage(e["transcript"])
             tokens_by_ref[e.get("ref") or "?"] += out
     task_refs = [r for r in tokens_by_ref if re.match(r"^[A-Z]+\d*-T\d+$", r)]
@@ -124,27 +112,24 @@ def main():
 
     # ---- tasks and reviews
     tasks_dir = project / ".keel" / "work" / "tasks"
-    tasks = {p.stem: fm(p) for p in tasks_dir.glob("*.md")} if tasks_dir.exists() else {}
-    if since:
-        tasks = {k: v for k, v in tasks.items() if True}  # task files carry no date; keep all
-    done = [t for t in tasks.values() if t.get("status") in ("fertig", "verworfen", "ersetzt")]
-    neuschnitt = [t for t in tasks.values() if int(t.get("neuschnitt_runden") or 0) > 0]
+    tasks = {p.stem: fields(p) for p in tasks_dir.glob("*.md")} if tasks_dir.exists() else {}  # no date: all
+    neuschnitt = [t for t in tasks.values() if as_int(t.get("neuschnitt_runden")) > 0]
     reviews_dir = project / ".keel" / "work" / "reviews"
-    reviews = [fm(p) for p in reviews_dir.glob("*.md")] if reviews_dir.exists() else []
+    reviews = [fields(p) for p in reviews_dir.glob("*.md")] if reviews_dir.exists() else []
     rounds = defaultdict(int)
     for r in reviews:
-        rounds[r.get("aufgabe")] = max(rounds[r.get("aufgabe")], int(r.get("runde") or 0))
+        rounds[r.get("aufgabe")] = max(rounds[r.get("aufgabe")], as_int(r.get("runde")))
     review_rounds = round(sum(rounds.values()) / len(rounds), 2) if rounds else None
     befunde = [r for r in reviews if r.get("status") == "befunde"]
     # rework rounds whose rework introduced findings above Anmerkung (System-ADR 0018)
     rework = []
     for p in (reviews_dir.glob("*.md") if reviews_dir.exists() else []):
-        text = p.read_text(encoding="utf-8")
-        if int(fm(p).get("runde") or 0) >= 2:
+        text = text_of(p)
+        if as_int(fields(p).get("runde")) >= 2:
             rework.append(any(r["herkunft"] == "fix" and r["schweregrad"] != "anmerkung" for r in review_findings(text)))
     fix_prozent = round(100 * sum(rework) / len(rework)) if rework else None
     pflege_file = project / ".keel" / "work" / "pflege.md"
-    pflege_status = re.findall(r"^\| P-\d+ \|.*\| (\S+)[^|]*\|\s*$", pflege_file.read_text(encoding="utf-8"), flags=re.M) if pflege_file.exists() else []
+    pflege_status = re.findall(r"^\| P-\d+ \|.*\| (\S+)[^|]*\|\s*$", text_of(pflege_file), flags=re.M)
     pflege_closed = [st for st in pflege_status if st != "offen"]
     pflege_verfallen = round(100 * pflege_closed.count("verfallen") / len(pflege_closed)) if pflege_closed else None
 
@@ -166,25 +151,24 @@ def main():
     # ---- decisions
     dec = project / ".keel" / "decisions"
     pending = list((dec / "pending").glob("*.md")) if (dec / "pending").exists() else []
-    done_dec = [fm(p) for p in (dec / "done").glob("*.md")] if (dec / "done").exists() else []
-    all_dec = [fm(p) for p in pending] + done_dec
+    done_dec = [fields(p) for p in (dec / "done").glob("*.md")] if (dec / "done").exists() else []
+    all_dec = [fields(p) for p in pending] + done_dec
     weeks = 1.0
-    if all_dec:
-        dates = sorted(d for d in (x.get("datum") for x in all_dec) if d)
-        if len(dates) >= 2:
-            span = (date.fromisoformat(dates[-1]) - date.fromisoformat(dates[0])).days
-            weeks = max(1.0, span / 7)
+    dates = sorted(d for d in (as_date(x.get("datum")) for x in all_dec) if d)
+    if len(dates) >= 2:
+        weeks = max(1.0, (dates[-1] - dates[0]).days / 7)
     human_dec = [d for d in all_dec if d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden")]
     vorlagen_pro_woche = round(len(human_dec) / weeks, 1)
     durations = []
     for d in done_dec:
-        if d.get("datum") and d.get("entschieden"):
-            durations.append((date.fromisoformat(d["entschieden"]) - date.fromisoformat(d["datum"])).days)
+        start, end = as_date(d.get("datum")), as_date(d.get("entschieden"))
+        if start and end:
+            durations.append((end - start).days)
     entscheidungsdauer = round(sum(durations) / len(durations), 1) if durations else None
 
     # ---- ADRs
     adr_dir = project / ".keel" / "adr"
-    adrs = [fm(p) for p in adr_dir.glob("[0-9]*.md") if p.stem != "0000-vorlage"] if adr_dir.exists() else []
+    adrs = [fields(p) for p in adr_dir.glob("[0-9]*.md") if p.stem != "0000-vorlage"] if adr_dir.exists() else []
     delegated = [a for a in adrs if "delegiert" in str(a.get("status", "")) or (a.get("entscheider") == "PO")]
     kippt = [a for a in delegated if str(a.get("status", "")).startswith(("Rejected", "Superseded"))]
     gekippt_prozent = round(100 * len(kippt) / len(delegated)) if delegated else None
@@ -199,7 +183,7 @@ def main():
     einwaende = 0
     if adr_dir.exists():
         for p in adr_dir.glob("[0-9]*.md"):
-            if "## Einwand des Supervisors" in p.read_text(encoding="utf-8"):
+            if "## Einwand des Supervisors" in text_of(p):
                 einwaende += 1
 
     # ---- audits
@@ -207,15 +191,15 @@ def main():
     audits = []
     if audit_dir.exists():
         for p in audit_dir.glob("*.md"):
-            data = fm(p)
-            body = p.read_text(encoding="utf-8")
+            data = fields(p)
+            body = text_of(p)
             n = len(re.findall(r"^- .+ – .+ – wird (Aufgabe|Vorlage)", body, flags=re.M))
             audits.append((data, n))
     audit_avg = round(sum(n for _, n in audits) / len(audits), 1) if audits else None
 
     # ---- per model: outcomes of the runs each model did; review results count for the developer's model
     per_model = defaultdict(lambda: {"laeufe": 0, "rollen": set(), "blockiert": 0, "budget": 0, "tokens": 0, "reviews": 0, "befunde": 0, "runden": []})
-    runs = model_runs(events)
+    runs = model_runs(evs)
     model_of_agent = {r["agent_id"]: r["model"] for r in runs}
     dev_model = {}
     for r in runs:
@@ -278,7 +262,7 @@ def main():
         if ok is False:
             violations += 1
         report.append({"bereich": area, "kennzahl": key, "label": label, "wert": value, "korridor": corridor, "status": "n/a" if ok is None else ("ok" if ok else "verletzt")})
-    summary = {"projekt": project.name, "seit": since.date().isoformat() if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report, "modelle": modelle, "offene_modellwechsel": model_switches(project)}
+    summary = {"projekt": project.name, "uebersprungene_ereignisse": read.skipped, "seit": since.date().isoformat() if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report, "modelle": modelle, "offene_modellwechsel": model_switches(project)}
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return

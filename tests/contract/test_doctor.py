@@ -22,13 +22,11 @@ class DoctorTest(ContractTest):
         self.assertIn(check, found, data)
         return found[check]
 
-    @unittest.expectedFailure
     def test_healthy_project(self):
         proc, data = self.doctor(project())
         self.assertEqual(proc.returncode, 0, proc)
         self.assertTrue(all(b["stufe"] == "ok" for b in data["befunde"]), data)
 
-    @unittest.expectedFailure
     def test_config_with_a_wrong_value(self):
         p = project()
         with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:
@@ -38,19 +36,16 @@ class DoctorTest(ContractTest):
             encoding="utf-8")
         self.assertIn("tool_calls", self.finding(p, "konfiguration")["meldung"])
 
-    @unittest.expectedFailure
     def test_config_that_cannot_be_read(self):
         p = project()
         write(p / ".keel" / "config.yaml", "budget:\n\ttool_calls: 60\n")
         self.assertEqual(self.finding(p, "konfiguration")["stufe"], "fehler")
 
-    @unittest.expectedFailure
     def test_emergency_brake(self):
         p = project()
         write(self.runtime(p) / "state" / "kern-gesperrt", "Notbremse seit gestern\n")
         self.assertEqual(self.finding(p, "notbremse")["stufe"], "fehler")
 
-    @unittest.expectedFailure
     def test_stale_pending_marker(self):
         p = project()
         f = self.runtime(p) / "state" / "pending-entwickler"
@@ -59,17 +54,14 @@ class DoctorTest(ContractTest):
         os.utime(f, (old, old))
         self.finding(p, "pending")
 
-    @unittest.expectedFailure
     def test_broken_log_lines(self):
         p = project()
         write(self.runtime(p) / "events.jsonl", '{"event":"x","ts":"2026-10-01T00:00:00Z"}\nkaputt\n')
         self.assertIn("1", self.finding(p, "protokolle")["meldung"])
 
-    @unittest.expectedFailure
     def test_missing_jq(self):
         self.finding(project(), "jq", path=path_without("jq"))
 
-    @unittest.expectedFailure
     def test_missing_git(self):
         self.finding(project(), "git", path=path_without("git"))
 

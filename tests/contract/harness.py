@@ -78,13 +78,10 @@ def runtime_dir(metrics, proj):
     """Runtime folder of a project below the metrics root, as the plugin computes it (System-ADR 0020)."""
     key = (str(metrics), str(proj))
     if key not in _runtime:
-        keel = REPO / "bin" / "keel"
-        if not keel.exists():  # layout up to 0.14.0: one folder per project name
-            _runtime[key] = Path(metrics) / Path(proj).name
-        else:
-            out = subprocess.run([BASH, str(keel), "path", "runtime", "--project", str(proj)], capture_output=True,
-                                 text=True, check=True, env={**os.environ, "KEEL_METRICS_DIR": str(metrics)})
-            _runtime[key] = Path(out.stdout.strip())
+        out = subprocess.run([BASH, str(REPO / "bin" / "keel"), "path", "runtime", "--project", str(proj)],
+                             capture_output=True, text=True, check=True,
+                             env={**os.environ, "KEEL_METRICS_DIR": str(metrics)})
+        _runtime[key] = Path(out.stdout.strip())
     return _runtime[key]
 
 
