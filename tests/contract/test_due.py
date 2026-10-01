@@ -12,7 +12,6 @@ class DueContractTest(ContractTest):
         f.write_bytes(b"---\ntitel: \xff\xfe\n---\n")
         return f
 
-    @unittest.expectedFailure
     def test_event_without_timestamp_is_skipped(self):
         p = project()
         write(self.metrics / p.name / "events.jsonl", '{"event":"agent_stop","role":"tester"}\n')
@@ -20,26 +19,22 @@ class DueContractTest(ContractTest):
         self.assertIn(r.rc, (0, 1), r)
         self.assertNotIn("Traceback", r.err)
 
-    @unittest.expectedFailure
     def test_missing_argument_is_an_error(self):
         self.assertEqual(self.script("due.py").rc, 2)
         self.assertEqual(self.script("briefing_needed.py").rc, 2)
 
-    @unittest.expectedFailure
     def test_unreadable_adr_is_an_error_not_a_briefing(self):
         p = project()
         self.broken_adr(p)
         r = self.script("briefing_needed.py", p, proj=p)
         self.assertEqual(r.rc, 2, r)
 
-    @unittest.expectedFailure
     def test_due_reports_a_failing_briefing_check(self):
         p = project()
         self.broken_adr(p)
         r = self.script("due.py", p, "--json", proj=p)
         self.assertEqual(r.rc, 2, r)
 
-    @unittest.expectedFailure
     def test_role_start_is_denied_when_due_items_cannot_be_checked(self):
         p = project()
         root = plugin_copy({"scripts/due.py": CRASH_PY})
@@ -47,7 +42,6 @@ class DueContractTest(ContractTest):
         self.assertBlocked(r)
         self.assertIn("Fälligkeiten", r.out + r.err)
 
-    @unittest.expectedFailure
     def test_start_command_is_blocked_when_briefing_cannot_be_checked(self):
         p = project()
         self.broken_adr(p)
@@ -55,7 +49,6 @@ class DueContractTest(ContractTest):
                                      "session_id": "s1"}, proj=p)
         self.assertBlocked(r)
 
-    @unittest.expectedFailure
     def test_session_start_reports_a_failing_due_check(self):
         p = project()
         root = plugin_copy({"scripts/due.py": CRASH_PY})

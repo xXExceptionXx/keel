@@ -4,7 +4,7 @@
 Usage: briefing_needed.py <project-dir> [--json]
 Reasons: supervisor decisions not yet presented (ADRs with entscheider Supervisor and vorgelegt: offen),
 Vorlagen escalated as richtungsweisend (eskaliert: Supervisor), Coach Vorlagen, epics in kurskorrektur.
-Exit 1 when a briefing is needed, 0 otherwise.
+Exit codes (System-ADR 0019): 0 no briefing needed, 1 briefing needed, 2 cannot tell (usage, internal error).
 """
 import json
 import sys
@@ -20,6 +20,9 @@ def fm(p):
 
 
 def main():
+    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
     project = Path(sys.argv[1]).resolve()
     reasons = []
     adr = project / ".keel" / "adr"
@@ -57,4 +60,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:  # a crash must not read as "briefing needed" (exit 1)
+        print(f"briefing_needed: interner Fehler: {e!r}", file=sys.stderr)
+        sys.exit(2)

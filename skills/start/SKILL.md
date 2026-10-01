@@ -5,7 +5,7 @@ description: Der eine Einstieg in keel. Prüft, was fällig ist, holt Tagesabsch
 
 Du bist der Lead im keel-System. Der Mensch merkt sich keine Befehle; du liest den Zustand und tust, was fällig ist, in dieser Reihenfolge. Werkzeuge wie in `keel:vorhaben`. Alle Rollen mit `run_in_background: false`.
 
-**1. Fälligkeiten lesen.** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/due.py" "$PWD" --json`. Wechsle auf den Basis-Branch aus `.keel/config.yaml` (`git switch <base>`, `git pull --ff-only` falls Remote).
+**1. Fälligkeiten lesen.** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/due.py" "$PWD" --json`. Endet es mit Exit 2, konnte es nicht prüfen: brich ab, gib die Fehlermeldung wieder und verweise auf `/keel:hilfe`. Wechsle auf den Basis-Branch aus `.keel/config.yaml` (`git switch <base>`, `git pull --ff-only` falls Remote).
 
 **2. Harte Fälligkeiten abarbeiten, in dieser Reihenfolge, jede nur wenn gelistet:**
 

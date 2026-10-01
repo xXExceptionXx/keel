@@ -19,7 +19,11 @@ notify() {
 
 cd "$project" || exit 2
 python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
-if ! python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null; then
+rc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || rc=$?
+if [ "$rc" -ge 2 ]; then
+  notify "Ob ein Briefing nötig ist, lässt sich nicht prüfen (Code $rc); der Lauf startet nicht. /keel:hilfe erklärt den Stand."
+  exit 2
+elif [ "$rc" -eq 1 ]; then
   notify "Briefing nötig, bevor der Lead arbeitet: /keel:briefing"
   exit 3
 fi
@@ -37,7 +41,10 @@ while :; do
   fi
   break
 done
-if ! python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null; then
+brc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || brc=$?
+if [ "$brc" -eq 1 ]; then
   notify "Der Lead ist zu Ende; eine Entscheidung wartet auf dich: /keel:briefing"
+elif [ "$brc" -ge 2 ]; then
+  notify "Der Lead ist zu Ende; ob eine Entscheidung wartet, lässt sich nicht prüfen (Code $brc). /keel:hilfe erklärt den Stand."
 fi
 exit $rc

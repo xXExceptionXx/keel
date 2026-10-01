@@ -7,7 +7,11 @@ project="$(cd "${1:-.}" && pwd)"
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project" || exit 2
 python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
-if python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null 2>&1; then
+rc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || rc=$?
+if [ "$rc" -ge 2 ]; then
+  echo "keel: Ob ein Briefing nötig ist, lässt sich nicht prüfen (Code $rc). Öffne eine Session und frag /keel:hilfe." >&2
+  exit 2
+elif [ "$rc" -eq 0 ]; then
   exec claude "/keel:start"
 else
   model="$(python3 "$PLUGIN_ROOT/scripts/config.py" "$project" supervisor.model claude-fable-5-1)"

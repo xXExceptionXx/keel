@@ -35,10 +35,21 @@ if [ -f "$sd_early/pending-$role" ]; then
 fi
 
 # Due gate: while something hard is due, only the roles that satisfy it may run.
-due_json="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$(project_dir)" --json 2>/dev/null || true)"
-if [ -n "$due_json" ] && [ "$(printf '%s' "$due_json" | jq -r '.hart')" = "true" ]; then
+# due.py exits 1 when something hard is due; anything but 0 or 1 means it could not tell, and then no role runs.
+rc=0; due_json="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$(project_dir)" --json 2>"$ERRF")" || rc=$?
+case $rc in
+  0|1) ;;
+  *) deny "Fälligkeiten nicht prüfbar (due.py endete mit $rc: $(tail -1 "$ERRF")). Keine Rolle startet, bis das behoben ist. /keel:hilfe erklärt den Stand." ;;
+esac
+hart="$(printf '%s' "$due_json" | jq -r '.hart' 2>/dev/null || true)"
+case "$hart" in
+  true|false) ;;
+  *) deny "Fälligkeiten nicht prüfbar: due.py lieferte keine lesbare Antwort. /keel:hilfe erklärt den Stand." ;;
+esac
+if [ "$hart" = "true" ]; then
   allowed=""
-  for art in $(printf '%s' "$due_json" | jq -r '.faellig[] | select(.hart) | .art'); do
+  arts="$(printf '%s' "$due_json" | jq -r '.faellig[] | select(.hart) | .art')"
+  for art in $arts; do
     var="KEEL_DUE_${art//[^A-Za-z0-9]/_}"
     allowed="$allowed ${!var:-}"
   done

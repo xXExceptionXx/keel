@@ -7,7 +7,10 @@ proj="$(project_dir)"
 [ -f "$proj/.keel/config.yaml" ] || keel_ok
 rc=0; out="$(python3 "$PLUGIN_ROOT/scripts/due.py" "$proj" 2>/dev/null)" || rc=$?
 if [ "$rc" -eq 0 ] && [ "$out" = "nichts fällig" ]; then keel_ok; fi
-if [ "$rc" -ne 0 ]; then
+# exit 2, or exit 1 without output (a crash before due.py's own error handling), means it could not tell
+if [ "$rc" -ge 2 ] || { [ "$rc" -eq 1 ] && [ -z "$out" ]; }; then
+  msg="keel: Fälligkeiten nicht prüfbar (interner Fehler in due.py, Code $rc). keel-Rollen sind gesperrt, bis das behoben ist."
+elif [ "$rc" -eq 1 ]; then
   msg="keel: Fälligkeiten stehen aus, keel-Rollen sind bis dahin gesperrt. Starte /keel:start, es arbeitet sie in Reihenfolge ab. $out"
   case "$out" in
     *briefing*) msg="$msg Das Briefing braucht das Modell des Supervisors ($($CFG "$proj" supervisor.model claude-fable-5-1)); stelle es vor /keel:start um." ;;

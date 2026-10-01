@@ -34,8 +34,14 @@ case "$skill" in
     keel_ok ;;
   keel:briefing|briefing) needed=1 ;;
   keel:start|start)
-    python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$(project_dir)" >/dev/null 2>&1 && keel_ok
-    needed=1 ;;
+    rc=0; br="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$(project_dir)" --json 2>"$ERRF")" || rc=$?
+    # exit 1 counts only with a readable answer; a crash before the script's own error handling is exit 1 too
+    if [ "$rc" -eq 1 ] && ! printf '%s' "$br" | jq -e '.briefing_noetig == true' >/dev/null 2>&1; then rc=2; fi
+    case $rc in
+      0) keel_ok ;;
+      1) needed=1 ;;
+      *) deny "Ob ein Briefing nötig ist, lässt sich nicht prüfen (briefing_needed.py endete mit $rc: $(tail -1 "$ERRF")). /keel:hilfe erklärt den Stand." ;;
+    esac ;;
   *) keel_ok ;;
 esac
 proj="$(project_dir)"
