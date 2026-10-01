@@ -20,6 +20,10 @@ if [ "$(field '.tool_input.run_in_background')" = "true" ]; then
   deny "keel-Rollen laufen im Vordergrund und nacheinander. Starte '$type' erneut mit run_in_background: false."
 fi
 sd_early="$(state_dir)"
+# Emergency brake (System-ADR 0019): agent-stop could not check a handoff three times in a row.
+if [ -f "$sd_early/kern-gesperrt" ]; then
+  deny "keel ist gesperrt (Notbremse): $(head -1 "$sd_early/kern-gesperrt"). /keel:hilfe erklärt den Stand."
+fi
 # A helper session (/keel:hilfe) only observes; roles run in a fresh session.
 sid="$(field '.session_id')"
 if [ -n "$sid" ] && [ -f "$sd_early/hilfe-$sid" ]; then
@@ -169,7 +173,9 @@ case "$role" in
     ;;
   compliance)
     [ -n "$task" ] || deny "Compliance braucht die Zeile 'Aufgabe: <ID>' im Prompt"
-    [ "$($FM get "$tasks/$task.md" compliance 2>/dev/null || true)" = "pruefen" ] || deny "Compliance darf nicht starten: Aufgabe hat nicht compliance: pruefen"
+    [ -f "$tasks/$task.md" ] || deny "Compliance: Aufgabe $task fehlt"
+    comp="$(fm_get "$tasks/$task.md" compliance)"
+    [ "$comp" = "pruefen" ] || deny "Compliance darf nicht starten: Aufgabe hat nicht compliance: pruefen"
     [ -f "$proj/.keel/work/compliance/$task.scan.md" ] || deny "Compliance: Scan-Datei fehlt"
     ;;
   supervisor)
@@ -179,7 +185,8 @@ case "$role" in
     [ -n "$vfile" ] || deny "Supervisor braucht 'Vorlage: <pfad>'"
     [ -f "$proj/$vfile" ] || deny "Supervisor: Vorlage $vfile existiert nicht"
     $FM validate "$proj/$vfile" --type vorlage --status "$KEEL_S_supervisor_entscheiden" 2>"$ERRF" || deny "Supervisor: $(cat "$ERRF")"
-    [ -z "$($FM get "$proj/$vfile" eskaliert 2>/dev/null || true)" ] || deny "Supervisor: Vorlage ist bereits an den Menschen eskaliert"
+    esk="$(fm_get "$proj/$vfile" eskaliert)"
+    [ -z "$esk" ] || deny "Supervisor: Vorlage ist bereits an den Menschen eskaliert"
     task="$vfile"
     ;;
   auditor|coach)
@@ -200,7 +207,9 @@ case "$role" in
     ;;
   entwickler)
     [ -n "$task" ] || deny "Entwickler braucht die Zeile 'Aufgabe: <ID>' im Prompt"
-    if [ "$($FM get "$tasks/$task.md" status 2>/dev/null || true)" = "reparatur" ] || [ "$($FM get "$tasks/$task.md" vorhaben 2>/dev/null || true)" = "R" ]; then
+    st=""; vh=""
+    if [ -f "$tasks/$task.md" ]; then st="$(fm_get "$tasks/$task.md" status)"; vh="$(fm_get "$tasks/$task.md" vorhaben)"; fi
+    if [ "$st" = "reparatur" ] || [ "$vh" = "R" ]; then
       # Repair tasks have no tests of their own; rework after a review is allowed (System-ADR 0018)
       $FM validate "$tasks/$task.md" --type aufgabe --status "$KEEL_S_entwickler_reparatur" 2>"$ERRF" \
         || deny "Entwickler darf nicht starten: $(cat "$ERRF")"

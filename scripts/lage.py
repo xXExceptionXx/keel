@@ -244,6 +244,11 @@ def state_files(state_dir, starts, stops):
     cleanup = []
     if not state_dir.exists():
         return findings, cleanup
+    brake = state_dir / "kern-gesperrt"
+    if brake.exists():
+        # never cleaned up automatically: the human fixes the cause and removes the lock (System-ADR 0019)
+        text = brake.read_text(encoding="utf-8", errors="replace").strip()
+        findings.append(f"NOTBREMSE, alle Rollen gesperrt: {text}")
     for p in state_dir.glob("pending-*"):
         age = now - p.stat().st_mtime
         role = p.name[len("pending-"):]

@@ -20,7 +20,6 @@ def config_default(key):
 
 
 class GateTimeoutTest(ContractTest):
-    @unittest.expectedFailure
     def test_grandchildren_are_killed(self):
         cmd = 'bash -c \'(trap "" TERM; exec sleep 3713) & sleep 3712\''
         r = self.script("timeout.py", "1", "--", "bash", "-c", cmd, timeout=30)
@@ -31,7 +30,6 @@ class GateTimeoutTest(ContractTest):
             subprocess.run(["kill", "-9", pid])
         self.assertEqual(left, [])
 
-    @unittest.expectedFailure
     def test_limit_above_the_hook_timeout_is_capped(self):
         p = project()
         with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as f:

@@ -33,7 +33,9 @@ Jedes Skript hatte seine eigene Bedeutung für Exit-Codes, und kein Hook konnte 
 
 **Fehlende Daten werden benannt, nicht übergangen.** Wo ein Gate ein Feld braucht, prüft es ausdrücklich und lehnt mit einer Meldung ab, die Feld und Datei nennt, statt über einen Abbruch zu stolpern.
 
-**Internes Timeout kürzer als das Hook-Timeout.** Das Prüftor läuft über `scripts/timeout.py` mit `test.timeout` (Standard 480 Sekunden), der Stop-Hook hat in `hooks/hooks.json` ein Timeout von 600 Sekunden. So beendet immer das interne Timeout die Suite und das Gate entscheidet, nicht der Abbruch durch Claude Code.
+**Internes Timeout kürzer als das Hook-Timeout.** Das Prüftor läuft über `scripts/timeout.py` mit `test.timeout` (Standard 480 Sekunden, höchstens 540), der Stop-Hook hat in `hooks/hooks.json` ein Timeout von 600 Sekunden. So beendet immer das interne Timeout die Suite und das Gate entscheidet, nicht der Abbruch durch Claude Code. `timeout.py` beendet die ganze Prozessgruppe, nach einer Gnadenfrist immer mit SIGKILL, damit keine Test-Worker überleben.
+
+**Notbremse für das Rollenende.** Ein Stop-Hook, der intern scheitert, blockiert das Ende des Rollenlaufs. Die Rolle kann den Kern aber nicht reparieren und würde es endlos erneut versuchen. Nach dem dritten internen Fehler für denselben Agenten lässt `agent-stop.sh` das Ende deshalb durch, protokolliert `hook_error` und legt `kern-gesperrt` im Laufzeit-Ordner an. Solange die Datei existiert, lehnt `agent-gate.sh` jede Rolle ab. Der Mensch behebt die Ursache und löscht die Datei. So bleibt das System als Ganzes geschlossen, ohne dass eine Rolle Tokens verbrennt.
 
 **Gemeinsame Dateien werden atomar geschrieben.** Ereignisse und Hook-Protokoll schreibt `scripts/jsonl.py` mit einem einzigen Schreibvorgang unter einer Sperre.
 
@@ -42,7 +44,10 @@ Jedes Skript hatte seine eigene Bedeutung für Exit-Codes, und kein Hook konnte 
 ## Folgen
 
 - Fälle, die früher still durchgingen, blockieren jetzt, mit einer Meldung, die sagt, was fehlt. Ein kaputtes Hilfsskript sperrt Rollen, bis es repariert ist. Das ist gewollt: Ein Gate, das bei Fehlern öffnet, erzeugt Vertrauen, das nicht gedeckt ist.
-- Ohne `jq` ist jeder Bash-Aufruf gesperrt, weil `guard.sh` den Befehl nicht lesen kann. `jq` ist damit eine harte Voraussetzung; macOS bringt es mit, auf Linux kommt es aus der Paketverwaltung.
+- Ohne `jq` ist jeder Bash-Aufruf gesperrt, weil `guard.sh` den Befehl nicht lesen kann. `jq` ist damit eine harte Voraussetzung; macOS bringt es ab Version 15 mit, sonst kommt es aus Homebrew oder der Paketverwaltung.
+- Ein Wert im Frontmatter, der mit `#` beginnt (etwa `pr: #12`), gilt jetzt als Kommentar und damit als leer, wie in YAML. Solche Werte gehören in Anführungszeichen; `frontmatter.py set` schreibt sie so.
+- Die Notbremse beendet einen Rollenlauf ungeprüft. Das ist der Preis dafür, dass eine Rolle nicht endlos an einem Kernfehler hängt; danach arbeitet keine Rolle mehr, bis der Mensch eingreift.
+- Bekanntes Rest-Risiko: Die übrigen Gates laufen mit dem Standard-Timeout von Claude Code. Startet `agent-gate.sh` auf einem sehr großen Repository `due.py` mit Git-Abfragen, die länger dauern, wird der Hook abgebrochen und lässt durch. Behoben wird das mit dem schnelleren Dispatcher im Umbau (M2).
 - Unberührte Vorlagen, deren Pflichtfelder nur einen Kommentar enthalten, gelten jetzt als leer und scheitern an `--nonempty`.
 - Das Hook-Protokoll enthält keine Werkzeugantworten und Dateiinhalte mehr, nur noch, was Monitor und Coach lesen.
 - Jedes Protokoll und jedes Ereignis kostet einen Python-Start. Die Leistung der Hooks ist Thema des Umbaus (Schritt M2 in `docs/kern-architektur.md`), dort wird aus vielen Prozessen je Ereignis einer.

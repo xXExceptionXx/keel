@@ -36,6 +36,7 @@ fi
 
 # Time budget
 minutes="$(role_limit "$role" minutes 30)"
+is_number "$minutes" || gate_fail "Zeitbudget für $role in .keel/config.yaml ist keine ganze Zahl: '$minutes'"
 if [ -f "$sd/agent-$id.start" ]; then
   started="$(cat "$sd/agent-$id.start")"
   is_number "$started" || gate_fail "Startzeit in agent-$id.start unlesbar"
@@ -55,6 +56,7 @@ fi
 
 # Tool-call budget
 limit="$(role_limit "$role" tool_calls 60)"
+is_number "$limit" || gate_fail "Werkzeugbudget für $role in .keel/config.yaml ist keine ganze Zahl: '$limit'"
 calls=0
 if [ -f "$sd/agent-$id.calls" ]; then
   calls="$(cat "$sd/agent-$id.calls")"

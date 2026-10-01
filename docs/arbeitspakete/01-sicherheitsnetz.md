@@ -22,7 +22,7 @@ Nummern wie in `docs/kern-befunde.md`.
 
 | Nr. | Was | Fundstelle |
 | --- | --- | --- |
-| F4 | Trend ausdrücklich statt Tupel-Vergleich: „Befunde sinken“ nur, wenn keine Kategorie steigt und mindestens eine sinkt. | `scripts/review.py:182` |
+| F4 | Trend ausdrücklich statt Tupel-Vergleich: „Befunde sinken“ nur, wenn keine Kategorie steigt und mindestens eine sinkt. Umgesetzt wurde nach Abstimmung: lexikografisch kleiner und die Summe aus blockierend und wichtig steigt nicht (ADR 0018 ergänzt). | `scripts/review.py:182` |
 | F2 | Leeres Feld (`anmerkung:`) darf nicht abstürzen. | `scripts/review.py:131`, Ursache in `scripts/frontmatter.py` |
 
 ### B. Gates schließen bei Fehlern

@@ -22,8 +22,10 @@ sd="$(state_dir)"
 sid="$(field '.session_id')"
 step=$(( percent / 10 ))
 last="$(cat "$sd/context-$sid.step" 2>/dev/null || echo 0)"
+is_number "$last" || last=0
 [ "$step" -gt "$last" ] || keel_ok
-printf '%s\n' "$step" > "$sd/context-$sid.step"
-record "context_alarm" "$(jq -n --arg sid "$sid" --argjson used "$used" --argjson percent "$percent" '{session_id:$sid,used:$used,percent:$percent}')"
+# Say it first: a failing record must not swallow the alarm while the step already counts as reported.
 jq -n --arg msg "keel Kontext-Alarm: Der Kontext dieser Session ist zu $percent % gefüllt (Schwelle $threshold %). Schließe die aktuelle Aufgabe sauber ab, schreibe eine Zwischenübergabe nach .keel/work/handoff/ und beende dich. Ein frischer Lead setzt aus der Übergabe fort." '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:$msg}}'
+printf '%s\n' "$step" > "$sd/context-$sid.step" || true
+record "context_alarm" "$(jq -n --arg sid "$sid" --argjson used "$used" --argjson percent "$percent" '{session_id:$sid,used:$used,percent:$percent}')" || true
 keel_ok

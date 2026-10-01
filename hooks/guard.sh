@@ -30,13 +30,16 @@ if grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' <<<"$cm
   esc() { printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g'; }
   # Judge every command segment on its own; a segment may end with a redirection. The verdict is collected
   # first: "| grep -q" would end early and turn the loop's SIGPIPE into a pass under pipefail. The loop
-  # stops at the first offending segment; the resulting SIGPIPE upstream is expected, hence "|| true".
+  # stops at the first offending segment, so after DENY a non-zero status (SIGPIPE upstream) is expected;
+  # without DENY the pipeline must have succeeded, or the verdict is not trustworthy.
+  vrc=0
   verdict="$(printf '%s\n' "$cmd" | sed -E 's/&&|\|\||;|\|/\n/g' | while IFS= read -r seg; do
     seg="$(printf '%s' "$seg" | sed -E 's/[[:space:]]+[0-9]*>&?[0-9]*[[:space:]]*[^[:space:]]*//g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
     grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' <<<"$seg" || continue
     grep -Eq "^git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+$" <<<"$seg" || { echo DENY; break; }
-  done || true)"
+  done)" || vrc=$?
   case "$verdict" in *DENY*) deny "deleting remote branches is only allowed for merged $fp* and $xp* branches" ;; esac
+  [ "$vrc" -eq 0 ] || gate_fail "Prüfung der Branch-Löschung fehlgeschlagen (Code $vrc)"
 fi
 
 # File deletion outside the working directory

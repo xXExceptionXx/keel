@@ -19,6 +19,7 @@ keel_ok() { KEEL_DONE=1; exit 0; }
 gate_fail() {
   KEEL_DONE=1
   printf 'keel: %s konnte nicht prüfen (%s). Aus Sicherheitsgründen abgelehnt. /keel:hilfe erklärt den Stand.\n' "$KEEL_HOOK" "$1" >&2
+  _keel_brake "$1"
   exit 2
 }
 
@@ -26,10 +27,35 @@ _keel_gate_exit() {
   local rc=$?
   [ -n "$KEEL_TMP" ] && rm -rf "$KEEL_TMP"
   if [ "$KEEL_DONE" != 1 ]; then
-    printf 'keel: %s brach unerwartet ab (Code %s%s). Aus Sicherheitsgründen abgelehnt. /keel:hilfe erklärt den Stand.\n' \
-      "$KEEL_HOOK" "$rc" "${KEEL_ERR:+, $KEEL_ERR}" >&2
+    # Exit 2 here comes from gate_fail in a command substitution, which has already said why.
+    if [ "$rc" -ne 2 ]; then
+      printf 'keel: %s brach unerwartet ab (%s%s). Aus Sicherheitsgründen abgelehnt. /keel:hilfe erklärt den Stand.\n' \
+        "$KEEL_HOOK" "$([ "$rc" -eq 0 ] && echo "Ursache unbekannt" || echo "Code $rc")" "${KEEL_ERR:+, $KEEL_ERR}" >&2
+    fi
+    _keel_brake "${KEEL_ERR:-Code $rc}"
     exit 2
   fi
+}
+
+# Emergency brake (System-ADR 0019). A SubagentStop that fails internally blocks the stop, but the role
+# cannot repair the core and would retry forever. After the third internal failure of the same agent the
+# stop goes through, keel is locked (state file kern-gesperrt) and agent-gate refuses every role until a
+# human has fixed the cause and removed the lock. Applies only at the top level of agent-stop.sh.
+_keel_brake() {
+  [ "$KEEL_HOOK" = "agent-stop" ] && [ "${BASH_SUBSHELL:-0}" -eq 0 ] && [ -n "${sd:-}" ] && [ -n "${id:-}" ] || return 0
+  local f="$sd/agent-$id.stopfail" n
+  n="$(cat "$f" 2>/dev/null || echo 0)"
+  is_number "$n" || n=0
+  n=$((n + 1))
+  printf '%s\n' "$n" > "$f" 2>/dev/null || return 0
+  [ "$n" -ge 3 ] || return 0
+  printf 'Notbremse seit %s: agent-stop konnte dreimal nicht prüfen (%s; Rolle %s, Bezug %s). Behebe die Ursache, dann lösche %s.\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "${role:-?}" "${ref:-?}" "$sd/kern-gesperrt" > "$sd/kern-gesperrt" 2>/dev/null || return 0
+  hook_error "Notbremse: $1"
+  rm -f "$f"
+  KEEL_DONE=1
+  printf 'keel: Notbremse gezogen, der Rollenlauf endet ungeprüft und alle Rollen sind gesperrt. Siehe %s.\n' "$sd/kern-gesperrt" >&2
+  exit 0
 }
 
 # keel_gate_init [keel-only]: strict mode, fail-closed traps, tool and payload check, private temp dir.
@@ -72,8 +98,11 @@ keel_observer_init() {
 
 # hook_error <detail>: append a hook_error event without jq or python3, best effort.
 hook_error() {
-  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "${CLAUDE_PROJECT_DIR:-$PWD}")"
-  local detail; detail="$(printf '%s' "$1" | tr -d '"\\' | tr '\n\t' '  ' | cut -c1-300)"
+  local p="${CLAUDE_PROJECT_DIR:-}"
+  [ -n "$p" ] || p="$(field '.cwd' 2>/dev/null || true)"
+  [ -n "$p" ] || p="$PWD"
+  local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
+  local detail; detail="$(printf '%s' "$1" | tr '\n\t' '  ' | tr -d '\000-\037"\\' | cut -c1-300)"
   { mkdir -p "$d" && printf '{"event":"hook_error","ts":"%s","hook":"%s","detail":"%s"}\n' \
       "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$KEEL_HOOK" "$detail" >> "$d/events.jsonl"; } 2>/dev/null || true
 }

@@ -65,7 +65,6 @@ class BrokenStateTest(ContractTest):
         (sd / "agent-a1.ref").write_text("T-x\n")
         return sd
 
-    @unittest.expectedFailure
     def test_unreadable_task_file_does_not_unlock_the_testers_files(self):
         p = project()
         self.developer(p, b"---\ntyp: aufgabe\nid: T-x\ntests: [tests/a.test.js]\n---\nK\xe4se\n")
@@ -73,7 +72,6 @@ class BrokenStateTest(ContractTest):
                                              agent_type="keel:entwickler"), proj=p)
         self.assertBlocked(r)
 
-    @unittest.expectedFailure
     def test_budget_that_is_not_a_number_blocks(self):
         p = project()
         sd = self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")

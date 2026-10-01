@@ -11,7 +11,8 @@ Usage:
   frontmatter.py validate <file> --type <typ> [--status a,b] [--require k1,k2] [--nonempty k1,k2]
   frontmatter.py dump <file>                               (JSON)
 
-Exit codes: 0 ok, 1 validation failed, 2 usage or file error.
+Exit codes: 0 ok, 1 validation failed or key missing, 2 usage error, unreadable file or internal error
+(System-ADR 0019: a crash must not read as "key missing").
 """
 import json
 import re
@@ -115,7 +116,7 @@ def _quote(v):
 def load(path):
     try:
         text = Path(path).read_text(encoding="utf-8")
-    except OSError as exc:
+    except (OSError, UnicodeDecodeError) as exc:
         fail(f"cannot read {path}: {exc}", 2)
     data, body = parse(text)
     if data is None:
@@ -198,4 +199,7 @@ COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cm
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in COMMANDS:
         fail(__doc__, 2)
-    COMMANDS[sys.argv[1]](sys.argv[2:])
+    try:
+        COMMANDS[sys.argv[1]](sys.argv[2:])
+    except Exception as exc:  # a crash is exit 2, never the 1 of "key missing" or "invalid"
+        fail(f"frontmatter: interner Fehler: {exc!r}", 2)

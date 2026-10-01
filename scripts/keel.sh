@@ -7,7 +7,9 @@ project="$(cd "${1:-.}" && pwd)"
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$project" || exit 2
 python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
-rc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || rc=$?
+rc=0; br="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" --json)" || rc=$?
+# exit 1 counts only with a readable answer; a crash before the script's own error handling is exit 1 too
+if [ "$rc" -eq 1 ] && ! printf '%s' "$br" | jq -e '.briefing_noetig == true' >/dev/null 2>&1; then rc=2; fi
 if [ "$rc" -ge 2 ]; then
   echo "keel: Ob ein Briefing nötig ist, lässt sich nicht prüfen (Code $rc). Öffne eine Session und frag /keel:hilfe." >&2
   exit 2

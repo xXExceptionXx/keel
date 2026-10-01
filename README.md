@@ -78,7 +78,7 @@ Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metric
 
 ## Installation in einem Projekt
 
-Voraussetzungen: `git`, `python3` (ab 3.9, nur Standardbibliothek) und `jq`. macOS bringt alle drei mit, auf Linux kommt `jq` aus der Paketverwaltung. Fehlt `jq` oder `python3`, blockieren die keel-Hooks, statt ungeprüft durchzulassen (System-ADR 0019).
+Voraussetzungen: `git`, `python3` (ab 3.9, nur Standardbibliothek) und `jq`. Auf macOS kommen `git` und `python3` mit den Command Line Tools (`xcode-select --install`), `jq` liegt ab macOS 15 unter `/usr/bin/jq`, auf älteren Versionen über Homebrew. Auf Linux kommen alle drei aus der Paketverwaltung. Fehlt `jq` oder `python3`, blockieren die keel-Hooks, statt ungeprüft durchzulassen (System-ADR 0019).
 
 ```bash
 claude plugin marketplace add xXExceptionXx/keel

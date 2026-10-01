@@ -19,7 +19,9 @@ notify() {
 
 cd "$project" || exit 2
 python3 "$PLUGIN_ROOT/scripts/monitor.py" "$project" --ensure --if-autostart --plugin-root "$PLUGIN_ROOT" || true
-rc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || rc=$?
+rc=0; br="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" --json)" || rc=$?
+# exit 1 counts only with a readable answer; a crash before the script's own error handling is exit 1 too
+if [ "$rc" -eq 1 ] && ! printf '%s' "$br" | jq -e '.briefing_noetig == true' >/dev/null 2>&1; then rc=2; fi
 if [ "$rc" -ge 2 ]; then
   notify "Ob ein Briefing nötig ist, lässt sich nicht prüfen (Code $rc); der Lauf startet nicht. /keel:hilfe erklärt den Stand."
   exit 2
@@ -41,7 +43,8 @@ while :; do
   fi
   break
 done
-brc=0; python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" >/dev/null || brc=$?
+brc=0; br="$(python3 "$PLUGIN_ROOT/scripts/briefing_needed.py" "$project" --json)" || brc=$?
+if [ "$brc" -eq 1 ] && ! printf '%s' "$br" | jq -e '.briefing_noetig == true' >/dev/null 2>&1; then brc=2; fi
 if [ "$brc" -eq 1 ]; then
   notify "Der Lead ist zu Ende; eine Entscheidung wartet auf dich: /keel:briefing"
 elif [ "$brc" -ge 2 ]; then

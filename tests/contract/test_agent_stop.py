@@ -62,7 +62,6 @@ class AgentStopTest(ContractTest):
         root = plugin_copy({"scripts/models.py": CRASH_PY})
         self.assertBlocked(self.stop(p, "coach", "2026-10-01", root=root))
 
-    @unittest.expectedFailure
     def test_repeated_internal_failure_lets_the_role_end_and_stops_all_roles(self):
         p = project()
         write(p / ".keel" / "work" / "coach" / "2026-10-01.md",

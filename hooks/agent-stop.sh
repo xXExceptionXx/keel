@@ -14,6 +14,7 @@ ref="$(cat "$sd/agent-$id.ref" 2>/dev/null || true)"
 calls="$(cat "$sd/agent-$id.calls" 2>/dev/null || echo 0)"
 is_number "$calls" || calls=0
 limit="$(role_limit "$role" tool_calls 60)"
+is_number "$limit" || gate_fail "Werkzeugbudget für $role in .keel/config.yaml ist keine ganze Zahl: '$limit'"
 msg="$(field '.last_assistant_message')"
 lines="$(printf '%s\n' "$msg" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 tasks="$proj/.keel/work/tasks"
@@ -22,7 +23,7 @@ plans="$proj/.keel/work/plans"
 finish() {  # record, drop this run's state files, allow stop. The model is what actually ran, for the Coach.
   local tr; tr="$(field '.agent_transcript_path')"
   record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$tr" --arg model "$(transcript_model "$tr")" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript,model:$model}')" || true
-  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout"
+  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout" "$sd/agent-$id.stopfail"
   keel_ok
 }
 
@@ -76,14 +77,16 @@ case "$role" in
             for sec in "## Zielbild des Themas" "## Vorhaben" "## Leitfragen" "## Done-Condition"; do
               grep -q "^$sec" "$ep" || block_stop "Epic-Abschnitt fehlt: $sec"
             done
-            [ -n "$($FM get "$ep" vorhaben 2>/dev/null || true)" ] || block_stop "Epic: Frontmatter 'vorhaben' ist leer; trage die Plan-Namen der Vorhaben in Reihenfolge ein"
+            ep_vh="$(fm_get "$ep" vorhaben)"
+            [ -n "$ep_vh" ] || block_stop "Epic: Frontmatter 'vorhaben' ist leer; trage die Plan-Namen der Vorhaben in Reihenfolge ein"
             ;;
           bewertet) block_stop "Epic-Abstimmung nicht abgeschlossen: setze status=aktiv (alle Leitentscheidungen als ADR) oder status=leitentscheidungen-offen (Vorlagen geschrieben)" ;;
           leitentscheidungen-offen)
             ls "$proj/.keel/decisions/pending/"*epic-"${ref#epic:}"* >/dev/null 2>&1 || block_stop "status leitentscheidungen-offen ohne Vorlage unter .keel/decisions/pending/*epic-${ref#epic:}*"
             ;;
           aktiv)
-            [ -n "$($FM get "$ep" leitentscheidungen 2>/dev/null || true)" ] || block_stop "status aktiv verlangt Leitentscheidungen als ADR-Nummern im Frontmatter"
+            ep_le="$(fm_get "$ep" leitentscheidungen)"
+            [ -n "$ep_le" ] || block_stop "status aktiv verlangt Leitentscheidungen als ADR-Nummern im Frontmatter"
             grep -q "^## Leitentscheidungen" "$ep" || block_stop "Abschnitt '## Leitentscheidungen' fehlt"
             ;;
           fertig)
@@ -106,10 +109,12 @@ case "$role" in
           done
           ;;
         problemstellung)
-          [ "$($FM get "$planfile" abstimmung)" = "einig" ] || block_stop "status problemstellung verlangt abstimmung: einig"
+          ab="$(fm_get "$planfile" abstimmung)"
+          [ "$ab" = "einig" ] || block_stop "status problemstellung verlangt abstimmung: einig"
           ;;
         blockiert)
-          [ "$($FM get "$planfile" abstimmung)" = "vorlage" ] || block_stop "status blockiert verlangt abstimmung: vorlage"
+          ab="$(fm_get "$planfile" abstimmung)"
+          [ "$ab" = "vorlage" ] || block_stop "status blockiert verlangt abstimmung: vorlage"
           ;;
         abgenommen)
           $FM validate "$planfile" --nonempty abgenommen,abgenommen_von 2>/dev/null || block_stop "Abnahme braucht abgenommen=<Datum> und abgenommen_von=PO"
@@ -122,9 +127,11 @@ case "$role" in
       # Klärung: any task of this plan with a pending clarification must be answered
       for t in "$tasks"/*.md; do
         [ -f "$t" ] || continue
-        if grep -q "^## Klärung" "$t" && [ "$($FM get "$t" status 2>/dev/null)" = "neuschnitt" ]; then
-          k="$($FM get "$t" klaerung 2>/dev/null || true)"
-          [ "$k" = "beantwortet" ] || [ "$k" = "vorlage" ] || [ "$($FM get "$t" vorhaben)" != "$($FM get "$planfile" vorhaben)" ] \
+        grep -q "^## Klärung" "$t" || continue
+        t_st="$(fm_get "$t" status)"
+        if [ "$t_st" = "neuschnitt" ]; then
+          k="$(fm_get "$t" klaerung)"; t_vh="$(fm_get "$t" vorhaben)"; p_vh="$(fm_get "$planfile" vorhaben)"
+          [ "$k" = "beantwortet" ] || [ "$k" = "vorlage" ] || [ "$t_vh" != "$p_vh" ] \
             || block_stop "Klärung in $(basename "$t") nicht beantwortet: setze klaerung=beantwortet mit '## Antwort des PO' oder klaerung=vorlage"
         fi
       done
@@ -159,6 +166,7 @@ case "$role" in
         [ "$modus" = "bestandsaufnahme" ] && { grep -q "Referenzbeispiel" "$proj/.keel/architektur.md" || block_stop "architektur.md ohne Referenzbeispiele"; }
         if [ "$modus" = "wochenrunde" ]; then
           max_pflege="$($CFG "$proj" pflege.max_aufgaben_pro_runde 2)"
+          is_number "$max_pflege" || gate_fail "pflege.max_aufgaben_pro_runde in .keel/config.yaml ist keine ganze Zahl: '$max_pflege'"
           n_pflege="$(grep -cE '^- .+ – .+ – wird Pflege' "$rep" || true)"
           [ "${n_pflege:-0}" -le "$max_pflege" ] || block_stop "Wochenrunde schlägt $n_pflege Pflegeaufgaben vor, erlaubt sind $max_pflege. Bündeln oder den Rest offen lassen."
         fi
@@ -183,12 +191,15 @@ case "$role" in
     done_f="$proj/.keel/decisions/done/$vname"; pend_f="$proj/.keel/decisions/pending/$vname"
     if [ -f "$done_f" ]; then
       $FM validate "$done_f" --type vorlage --status entschieden --nonempty entscheidung,entschieden 2>"$ERRF" || block_stop "Entschiedene Vorlage unvollständig: $(cat "$ERRF")"
-      [ "$($FM get "$done_f" entscheider)" = "Supervisor" ] || block_stop "Setze entscheider=Supervisor in der Vorlage"
-      [ "$($FM get "$done_f" vorgelegt 2>/dev/null || true)" = "offen" ] || block_stop "Setze vorgelegt=offen, damit das Briefing die Entscheidung zeigt"
+      ent="$(fm_get "$done_f" entscheider)"
+      [ "$ent" = "Supervisor" ] || block_stop "Setze entscheider=Supervisor in der Vorlage"
+      vorg="$(fm_get "$done_f" vorgelegt)"
+      [ "$vorg" = "offen" ] || block_stop "Setze vorgelegt=offen, damit das Briefing die Entscheidung zeigt"
       grep -q "Warum nicht der Mensch" "$done_f" || block_stop "Abschnitt '## Entscheidung des Supervisors' mit 'Warum nicht der Mensch:' fehlt"
       grep -rlq "^vorlage: $vname" "$proj/.keel/adr/" 2>/dev/null || block_stop "Kein ADR mit 'vorlage: $vname' unter .keel/adr/ gefunden"
     elif [ -f "$pend_f" ]; then
-      [ "$($FM get "$pend_f" eskaliert 2>/dev/null || true)" = "Supervisor" ] || block_stop "Vorlage weder entschieden (nach done/ verschoben) noch eskaliert (eskaliert=Supervisor, richtungsweisend=<Grund>)"
+      esk="$(fm_get "$pend_f" eskaliert)"
+      [ "$esk" = "Supervisor" ] || block_stop "Vorlage weder entschieden (nach done/ verschoben) noch eskaliert (eskaliert=Supervisor, richtungsweisend=<Grund>)"
       $FM validate "$pend_f" --nonempty richtungsweisend,eskaliert_am 2>/dev/null || block_stop "Eskalation braucht richtungsweisend=<Grund> und eskaliert_am=<Datum>"
     else
       block_stop "Vorlage $vname weder unter pending/ noch unter done/"
@@ -198,7 +209,9 @@ case "$role" in
     rep="$proj/.keel/work/compliance/$ref.md"
     $FM validate "$rep" --type compliance --status frei,auflagen,vorlage --require aufgabe,datum 2>"$ERRF" \
       || block_stop "Compliance-Datei fehlt oder unvollständig ($rep): $(cat "$ERRF")"
-    [ "$($FM get "$tasks/$ref.md" compliance 2>/dev/null || true)" = "$($FM get "$rep" status)" ] || block_stop "Setze compliance=<ergebnis> in der Aufgaben-Datei, gleich dem Status der Compliance-Datei"
+    [ -f "$tasks/$ref.md" ] || block_stop "Aufgabe $ref fehlt"
+    t_comp="$(fm_get "$tasks/$ref.md" compliance)"; r_st="$(fm_get "$rep" status)"
+    [ -n "$r_st" ] && [ "$t_comp" = "$r_st" ] || block_stop "Setze compliance=<ergebnis> in der Aufgaben-Datei, gleich dem Status der Compliance-Datei"
     ;;
   coach)
     rep="$proj/.keel/work/coach/$ref.md"
@@ -211,7 +224,8 @@ case "$role" in
     [ "$rc" -eq 0 ] || gate_fail "Modellwechsel nicht prüfbar, models.py endete mit $rc: $(head -3 "$ERRF")"
     open_sw="$(printf '%s' "$sw_json" | jq -r --argjson n "$need" '[.offene_wechsel[] | select(.laeufe >= $n) | .modell] | join(", ")')"
     [ -z "$open_sw" ] || block_stop "Modellwechsel nicht bewertet: $open_sw. Vergleiche je Rolle altes und neues Modell (metrics.py, Tabelle 'Je Modell'), schreibe den Abschnitt '**Modellzuordnung:**' und setze modell_geprueft=[$open_sw] im Bericht."
-    if [ -n "$($FM get "$rep" modell_geprueft 2>/dev/null || true)" ]; then
+    geprueft="$(fm_get "$rep" modell_geprueft)"
+    if [ -n "$geprueft" ]; then
       grep -q "Modellzuordnung" "$rep" || block_stop "modell_geprueft ist gesetzt, aber der Abschnitt '**Modellzuordnung:**' fehlt im Bericht."
     fi
     ;;
@@ -243,6 +257,7 @@ case "$role" in
       git -C "$proj" rev-parse -q --verify HEAD >/dev/null || block_stop "Repository ohne Commit: der Diff der Aufgabe lässt sich nicht messen. Lege einen ersten Commit an."
       diff_lines="$(cd "$proj" && git diff --numstat HEAD -- . "${excl[@]}" | awk '{s+=$1+$2} END {print s+0}')"
       max_diff="$($CFG "$proj" budget.diff_lines 300)"
+      is_number "$max_diff" || gate_fail "budget.diff_lines in .keel/config.yaml ist keine ganze Zahl: '$max_diff'"
       [ "$diff_lines" -le "$max_diff" ] || block_stop "Diff hat $diff_lines Zeilen, erlaubt sind $max_diff. Setze status: budget-erschoepft und beschreibe den Stand, der Planer schneidet neu."
       # Compliance scan: secrets block, new dependencies and personal data are recorded for the Lead
       rc=0; scan="$(python3 "$PLUGIN_ROOT/scripts/compliance_scan.py" "$proj" 2>&1)" || rc=$?
@@ -271,7 +286,8 @@ case "$role" in
     # Threshold and trend are computed, not judged; the Lead reads review_ergebnis (System-ADR 0018)
     python3 "$PLUGIN_ROOT/scripts/review.py" pruefen "$proj" "$ref" >/dev/null 2>"$ERRF" \
       || block_stop "Review ungültig: $(cat "$ERRF")"
-    [ "$($FM get "$rev" status)" = "bestanden" ] && python3 "$PLUGIN_ROOT/scripts/pflege.py" sammeln "$proj" "$rev" >/dev/null 2>&1 || true
+    rev_st="$(fm_get "$rev" status)"
+    [ "$rev_st" = "bestanden" ] && python3 "$PLUGIN_ROOT/scripts/pflege.py" sammeln "$proj" "$rev" >/dev/null 2>&1 || true
     ;;
 esac
 finish "ok"
