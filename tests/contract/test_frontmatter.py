@@ -35,5 +35,23 @@ class FrontmatterTest(ContractTest):
         self.assertEqual(self.dump(self.file("tests: [a.py, b.py]\n"))["tests"], ["a.py", "b.py"])
 
 
+
+class RoundTripTest(ContractTest):
+    VALUES = ['Er sagt "hi": a #b \\ x', '"zitiert" am Anfang', "it's: fine", "a: b", "C:\\pfad\\datei", "#kein Kommentar"]
+
+    @unittest.expectedFailure
+    def test_values_survive_repeated_writes_of_other_fields(self):
+        f = write(self.tmp / "a.md", "---\ntyp: x\n---\n# Text\n")
+        for i, v in enumerate(self.VALUES):
+            self.assertEqual(self.script("frontmatter.py", "set", f, f"k{i}={v}").rc, 0)
+        for n in range(10):
+            self.assertEqual(self.script("frontmatter.py", "set", f, f"other={n}").rc, 0)
+        data = json.loads(self.script("frontmatter.py", "dump", f).out)
+        for i, v in enumerate(self.VALUES):
+            with self.subTest(value=v):
+                self.assertEqual(data[f"k{i}"], v)
+        self.assertTrue(f.read_text(encoding="utf-8").endswith("# Text\n"))
+
+
 if __name__ == "__main__":
     unittest.main()
