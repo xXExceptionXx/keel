@@ -15,7 +15,6 @@ class ContextAlarmTest(ContractTest):
             "input_tokens": used_tokens, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}}}))
         return write(self.tmp / "t.jsonl", "\n".join(lines) + "\n")
 
-    @unittest.expectedFailure
     def test_alarm_fires_on_a_large_transcript(self):
         p = project()
         t = self.transcript(150000, 300)

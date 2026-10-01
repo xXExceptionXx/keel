@@ -12,7 +12,9 @@ transcript="$(field '.transcript_path')"
 proj="$(project_dir)"
 window="$($CFG "$proj" budget.context_window 200000)"
 threshold="$($CFG "$proj" budget.context_percent 50)"
-used="$(tail -c 200000 "$transcript" | jq -s '[.[] | select(.type=="assistant") | .message.usage | (.input_tokens // 0) + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0)] | last // 0' 2>/dev/null || echo 0)"
+# Line by line: the tail starts in the middle of a line, which "jq -s" would reject as a whole.
+used="$(tail -c 400000 "$transcript" | jq -nR '[inputs | fromjson? | select(.type=="assistant") | .message.usage | select(. != null) | (.input_tokens // 0) + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0)] | last // 0' 2>/dev/null || echo 0)"
+is_number "$used" || used=0
 [ "$used" -gt 0 ] || keel_ok
 percent=$(( used * 100 / window ))
 [ "$percent" -ge "$threshold" ] || keel_ok
