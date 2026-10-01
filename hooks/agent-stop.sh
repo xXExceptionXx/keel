@@ -41,18 +41,24 @@ case "$role" in
       # Neuschnitt: the task is re-cut in place, replaced or discarded
       $FM validate "$tasks/$ref.md" --type aufgabe --status geplant,ersetzt,verworfen 2>"$ERRF" \
         || block_stop "Neuschnitt unvollständig: $(cat "$ERRF"). Erlaubt: geplant (neu geschnitten, tests: []), ersetzt (neue Aufgaben im Plan) oder verworfen."
-      st="$($FM get "$tasks/$ref.md" status)"
-      [ "$st" = "geplant" ] && [ -n "$($FM get "$tasks/$ref.md" tests 2>/dev/null || true)" ] && block_stop "Neu geschnittene Aufgabe muss tests: [] haben, der Tester schreibt sie neu."
-      vh="$($FM get "$tasks/$ref.md" vorhaben)"
-      planfile="$(grep -l "^vorhaben: $vh$" "$plans"/*.md | head -1)"
-      for t in $($FM get "$planfile" aufgaben | tr ',' ' '); do
+      st="$(fm_get "$tasks/$ref.md" status)"
+      if [ "$st" = "geplant" ] && [ -n "$(fm_get "$tasks/$ref.md" tests)" ]; then
+        block_stop "Neu geschnittene Aufgabe muss tests: [] haben, der Tester schreibt sie neu."
+      fi
+      vh="$(fm_get "$tasks/$ref.md" vorhaben)"
+      [ -n "$vh" ] || block_stop "Aufgabe $ref hat kein Feld 'vorhaben'; ohne es lässt sich die Aufgabenliste des Plans nicht prüfen."
+      planfile="$({ grep -l "^vorhaben: $vh$" "$plans"/*.md 2>/dev/null || true; } | head -1)"
+      [ -n "$planfile" ] || block_stop "Kein Plan mit 'vorhaben: $vh' unter .keel/work/plans/; prüfe das Feld 'vorhaben' der Aufgabe $ref."
+      aufgaben="$(fm_get "$planfile" aufgaben)"
+      for t in $(printf '%s' "$aufgaben" | tr ',' ' '); do
         $FM validate "$tasks/$t.md" --type aufgabe --status geplant,tests-bereit,in-arbeit,fertig,review,nacharbeit --require id,vorhaben,titel 2>"$ERRF" \
           || block_stop "Plan-Aufgabenliste verweist auf unbrauchbare Aufgabe: $(cat "$ERRF"). Ersetzte und verworfene Aufgaben gehören nicht in 'aufgaben'."
       done
     else
       $FM validate "$plans/$ref.md" --type plan --status geplant --nonempty aufgaben 2>"$ERRF" \
         || block_stop "Übergabe unvollständig: $(cat "$ERRF"). Setze status: geplant und trage die Aufgaben-IDs in 'aufgaben' ein."
-      for t in $($FM get "$plans/$ref.md" aufgaben | tr ',' ' '); do
+      aufgaben="$(fm_get "$plans/$ref.md" aufgaben)"
+      for t in $(printf '%s' "$aufgaben" | tr ',' ' '); do
         $FM validate "$tasks/$t.md" --type aufgabe --status geplant --require id,vorhaben,titel --nonempty dateien,referenz 2>"$ERRF" \
           || block_stop "Aufgaben-Datei fehlt oder unvollständig: $(cat "$ERRF")"
       done
@@ -64,7 +70,7 @@ case "$role" in
         ep="$proj/.keel/work/epics/${ref#epic:}.md"
         $FM validate "$ep" --type epic --status skizze,bewertet,leitentscheidungen-offen,aktiv,fertig --require epic,titel,backlog 2>"$ERRF" \
           || block_stop "Epic-Datei fehlt oder unvollständig: $(cat "$ERRF")"
-        st="$($FM get "$ep" status)"
+        st="$(fm_get "$ep" status)"
         case "$st" in
           skizze)
             for sec in "## Zielbild des Themas" "## Vorhaben" "## Leitfragen" "## Done-Condition"; do
@@ -89,7 +95,8 @@ case "$role" in
     esac
     planfile="$plans/$ref.md"
     if [ -f "$planfile" ]; then
-      st="$($FM get "$planfile" status)"
+      st="$(fm_get "$planfile" status)"
+      [ -n "$st" ] || block_stop "Plan $ref hat keinen Status; setze status im Frontmatter."
       case "$st" in
         entwurf)
           $FM validate "$planfile" --type plan --require vorhaben,titel,backlog,abstimmung 2>"$ERRF" \
@@ -129,7 +136,8 @@ case "$role" in
     case "$ref" in
       epic:*)
         ep="$proj/.keel/work/epics/${ref#epic:}.md"
-        st="$($FM get "$ep" status)"
+        [ -f "$ep" ] || block_stop "Epic-Datei $ep fehlt"
+        st="$(fm_get "$ep" status)"
         if [ "$st" = "bewertet" ]; then
           grep -q "^## Epic-Bewertung des Architekten" "$ep" || block_stop "Abschnitt '## Epic-Bewertung des Architekten' (Kurzfassung) fehlt in der Epic-Datei"
           anl="${ep%.md}.bewertung.md"
@@ -157,7 +165,8 @@ case "$role" in
         ;;
       *)
         planfile="$plans/$ref.md"
-        st="$($FM get "$planfile" status)"
+        [ -f "$planfile" ] || block_stop "Plan-Datei $planfile fehlt"
+        st="$(fm_get "$planfile" status)"
         if [ "$st" = "entwurf" ]; then
           $FM validate "$planfile" --nonempty bewertung,abstimmung_runde 2>/dev/null || block_stop "Bewertung fehlt: setze bewertung=passt|anpassung|struktur und abstimmung_runde"
           grep -q "^## Bewertung des Architekten" "$planfile" || block_stop "Abschnitt '## Bewertung des Architekten (Runde n)' fehlt"
@@ -197,7 +206,10 @@ case "$role" in
       || block_stop "Coach-Bericht fehlt oder unvollständig ($rep): $(cat "$ERRF")"
     # A model switch with enough runs for a comparison must be assessed (System-ADR 0015).
     need="$($CFG "$proj" faelligkeiten.coach_nach_modellwechsel_rollenlaeufe 10)"
-    open_sw="$(python3 "$PLUGIN_ROOT/scripts/models.py" "$proj" --json 2>/dev/null | jq -r --argjson n "$need" '[.offene_wechsel[] | select(.laeufe >= $n) | .modell] | join(", ")' 2>/dev/null || true)"
+    is_number "$need" || need=10
+    rc=0; sw_json="$(python3 "$PLUGIN_ROOT/scripts/models.py" "$proj" --json 2>"$ERRF")" || rc=$?
+    [ "$rc" -eq 0 ] || gate_fail "Modellwechsel nicht prüfbar, models.py endete mit $rc: $(head -3 "$ERRF")"
+    open_sw="$(printf '%s' "$sw_json" | jq -r --argjson n "$need" '[.offene_wechsel[] | select(.laeufe >= $n) | .modell] | join(", ")')"
     [ -z "$open_sw" ] || block_stop "Modellwechsel nicht bewertet: $open_sw. Vergleiche je Rolle altes und neues Modell (metrics.py, Tabelle 'Je Modell'), schreibe den Abschnitt '**Modellzuordnung:**' und setze modell_geprueft=[$open_sw] im Bericht."
     if [ -n "$($FM get "$rep" modell_geprueft 2>/dev/null || true)" ]; then
       grep -q "Modellzuordnung" "$rep" || block_stop "modell_geprueft ist gesetzt, aber der Abschnitt '**Modellzuordnung:**' fehlt im Bericht."
@@ -221,17 +233,23 @@ case "$role" in
   entwickler)
     $FM validate "$tasks/$ref.md" --type aufgabe --status fertig-gemeldet,testeinspruch 2>"$ERRF" \
       || block_stop "Übergabe unvollständig: $(cat "$ERRF"). Erlaubt: fertig-gemeldet (mit nachweis) oder testeinspruch (mit begruendung)."
-    status="$($FM get "$tasks/$ref.md" status)"
+    status="$(fm_get "$tasks/$ref.md" status)"
     if [ "$status" = "fertig-gemeldet" ]; then
       $FM validate "$tasks/$ref.md" --nonempty nachweis 2>/dev/null || block_stop "Feld 'nachweis' fehlt: trage die Testausgabe in Kurzform ein."
       out="$(bash "$PLUGIN_ROOT/scripts/gate.sh" "$proj" "$ref" 2>&1)" || block_stop "Prüftor rot. $out"
       excl=(':(exclude).keel')
-      for t in $($FM get "$tasks/$ref.md" tests | tr ',' ' '); do excl+=(":(exclude)$t"); done
+      tests="$(fm_get "$tasks/$ref.md" tests)"
+      for t in $(printf '%s' "$tests" | tr ',' ' '); do excl+=(":(exclude)$t"); done
+      git -C "$proj" rev-parse -q --verify HEAD >/dev/null || block_stop "Repository ohne Commit: der Diff der Aufgabe lässt sich nicht messen. Lege einen ersten Commit an."
       diff_lines="$(cd "$proj" && git diff --numstat HEAD -- . "${excl[@]}" | awk '{s+=$1+$2} END {print s+0}')"
       max_diff="$($CFG "$proj" budget.diff_lines 300)"
       [ "$diff_lines" -le "$max_diff" ] || block_stop "Diff hat $diff_lines Zeilen, erlaubt sind $max_diff. Setze status: budget-erschoepft und beschreibe den Stand, der Planer schneidet neu."
       # Compliance scan: secrets block, new dependencies and personal data are recorded for the Lead
       rc=0; scan="$(python3 "$PLUGIN_ROOT/scripts/compliance_scan.py" "$proj" 2>&1)" || rc=$?
+      case $rc in
+        0|3|4|5) ;;
+        *) block_stop "Compliance-Scan fehlgeschlagen (Code $rc), die Aufgabe ist ungeprüft: $(printf '%s' "$scan" | tail -3 | tr '\n' ' ')/keel:hilfe erklärt den Stand." ;;
+      esac
       mkdir -p "$proj/.keel/work/compliance"
       printf -- '---\ntyp: compliance-scan\naufgabe: %s\ndatum: %s\nergebnis: %s\n---\n\n```\n%s\n```\n' "$ref" "$(date +%F)" "$(printf '%s' "$scan" | head -1 | sed -E 's/^compliance: ([a-z]+).*/\1/')" "$scan" > "$proj/.keel/work/compliance/$ref.scan.md"
       case $rc in
@@ -245,7 +263,8 @@ case "$role" in
     fi
     ;;
   reviewer)
-    runde="$($FM get "$tasks/$ref.md" review_runde)"
+    runde="$(fm_get "$tasks/$ref.md" review_runde)"
+    [ -n "$runde" ] || block_stop "Aufgabe $ref hat kein Feld 'review_runde'; ohne es ist die Review-Datei nicht zuzuordnen."
     rev="$proj/.keel/work/reviews/$ref-r$runde.md"
     $FM validate "$rev" --type review --status bestanden,befunde --require aufgabe,runde 2>"$ERRF" \
       || block_stop "Review-Datei fehlt oder unvollständig ($rev): $(cat "$ERRF")"
