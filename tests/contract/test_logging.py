@@ -40,7 +40,6 @@ class HookLogTest(ContractTest):
         with ThreadPoolExecutor(max_workers=25) as pool:
             return list(pool.map(one, payloads))
 
-    @unittest.expectedFailure
     def test_parallel_large_payloads_give_valid_trimmed_lines(self):
         p = project()
         payloads = []
@@ -62,13 +61,11 @@ class HookLogTest(ContractTest):
                   (self.metrics / p.name / "events.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual(len([e for e in events if e["event"] == "denied"]), 50)
 
-    @unittest.expectedFailure
     def test_typed_keel_commands_reach_the_log(self):
         hooks = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
         commands = [h["command"] for entry in hooks["UserPromptSubmit"] for h in entry["hooks"]]
         self.assertTrue(any("log.sh" in c for c in commands), commands)
 
-    @unittest.expectedFailure
     def test_skill_and_prompt_are_kept(self):
         p = project()
         self.hook("log", {"hook_event_name": "UserPromptSubmit", "prompt": "/keel:start " + "z" * 2000,

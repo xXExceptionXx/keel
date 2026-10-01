@@ -16,6 +16,7 @@ deny() {
       permissionDecisionReason: ("keel guard: " + $reason)
     }
   }' || gate_fail "$1"
+  record "denied" "$(jq -n --arg reason "$1" '{hook:"guard",role:"",reason:$reason}')" || true
   keel_ok
 }
 

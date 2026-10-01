@@ -156,10 +156,9 @@ block_stop() {
   keel_ok
 }
 
-record() {  # record <event> <json-fields>: append a metrics line
+record() {  # record <event> <json-fields>: append a metrics line, atomically (scripts/jsonl.py)
   local p; p="$(project_dir)"
   local d="${KEEL_METRICS_DIR:-$HOME/.keel-metrics}/$(basename "$p")"
-  mkdir -p "$d"
   local line; line="$(jq -nc --arg ev "$1" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson f "$2" '{event:$ev,ts:$ts} + $f')" || return 0
-  printf '%s\n' "$line" >> "$d/events.jsonl"
+  printf '%s' "$line" | python3 "$PLUGIN_ROOT/scripts/jsonl.py" append "$d/events.jsonl"
 }
