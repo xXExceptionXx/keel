@@ -4,6 +4,16 @@ Schlankes Agentensystem für autonome Softwareentwicklung als Claude-Code-Plugin
 
 Das vollständige Konzept steht in [docs/konzept.md](docs/konzept.md), sieben Diagramme zu Rollen, Fälligkeiten, Zuständen, Epics, Hooks, Supervisor- und Lernschleife in [docs/system.md](docs/system.md).
 
+Konzeptentwürfe für die nächsten Schritte, noch ohne ADR:
+
+| Dokument | Worum es geht |
+| --- | --- |
+| [docs/kern-architektur.md](docs/kern-architektur.md) | Der Kern als Programm: Schichten, ein Einstiegspunkt `keel`, Hook-Dispatcher, Fehlervertrag, Lebenszeichen, Umbau in Schritten M0 bis M7 |
+| [docs/kern-befunde.md](docs/kern-befunde.md) | Reparaturliste aus der Prüfung von `scripts/` und `hooks/` |
+| [docs/kontext-scope.md](docs/kontext-scope.md) | Kontext per Regel statt per Prosa: Rollenkern und Auftrag je Anlass, Modulgraph, Zielarchitektur mit Ratsche |
+| [docs/ablauf-beschleunigen.md](docs/ablauf-beschleunigen.md) | Der Kern erledigt das Feststehende: `keel next` und `keel done`, Werkzeugbefehle, Fakten vorab |
+| [docs/arbeitspakete/](docs/arbeitspakete/) | Geschnürte Arbeitspakete zum Planen und Umsetzen |
+
 ## Aufbau
 
 keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische liegt im Projekt unter `.keel/`.
@@ -16,7 +26,7 @@ hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
 scripts/          frontmatter.py, config.py, gate.sh, init.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
-docs/             Konzept und System-ADRs
+docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
 ```
 
