@@ -122,6 +122,18 @@ fm_get() {
   esac
 }
 
+# fm_find <folder> key=value...: the first file whose frontmatter matches, empty when none; an unreadable file
+# ends the gate (fail closed), because "none found" could be wrong.
+fm_find() {
+  local rc=0 v
+  v="$($FM find "$@" 2>"$ERRF")" || rc=$?
+  case $rc in
+    0) printf '%s' "$v" | head -1 ;;
+    1) ;;
+    *) gate_fail "$1 nicht lesbar: $(cat "$ERRF" 2>/dev/null)" ;;
+  esac
+}
+
 field() { printf '%s' "$payload" | jq -r "$1 // empty"; }
 
 project_dir() {
@@ -131,7 +143,8 @@ project_dir() {
 
 # keel_paths: KEEL_PATH_ROOT, _RUNTIME, _STATE, _LOGS, _EVENTS, _HOOKLOG, _BRAKE for the project of this hook,
 # from bin/keel (System-ADR 0020), once per hook process. Call it at the top level, not in $(...), so the
-# values stay. Fails (return 1) when the path cannot be computed; errexit then ends the hook by its contract.
+# values stay. Fails (return 1) when the path cannot be computed; errexit then ends the hook by its contract,
+# but not inside an if, && or || list: there the caller checks it (keel_paths || gate_fail ...).
 keel_paths() {
   [ -n "$KEEL_PATH_RUNTIME" ] && return 0
   local out; out="$("$PLUGIN_ROOT/bin/keel" path --project "$(project_dir)" --ensure --shell)" || return 1

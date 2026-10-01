@@ -6,4 +6,4 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "keel: python3 fehlt im PATH (gebraucht: 3.9 oder neuer)" >&2
   exit 2
 fi
-PYTHONPATH="$root/lib${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m keel.interfaces.cli "$@"
+exec python3 "$root/lib/keel_main.py" "$@"

@@ -89,6 +89,35 @@ class BacklogTest(ContractTest):
         self.assertEqual(r.rc, 2, r)
         self.assertNotIn("Traceback", r.err)
 
+    def test_crlf_stays(self):
+        p = project()
+        write(p / ".keel" / "backlog.md", "")
+        (p / ".keel" / "backlog.md").write_bytes(BACKLOG.replace("\n", "\r\n").encode("utf-8"))
+        self.assertEqual(self.backlog(p, "status", "BL-2", "bereit").rc, 0)
+        data = (p / ".keel" / "backlog.md").read_bytes().decode("utf-8")
+        self.assertNotIn("\n", data.replace("\r\n", ""))
+        self.assertEqual(without(data.split("\r\n"), BLOCK), without(BACKLOG.split("\n"), BLOCK))
+
+    def test_ids_under_other_headings_count(self):
+        p = project()
+        write(p / ".keel" / "backlog.md", BACKLOG + "\n## Notizen\n\n- [BL-7] Alt\n")
+        f = p / "neu.md"
+        write(f, "---\ntitel: Neu\nproblem: p\nwarum: w\nherkunft: Audit\n---\n")
+        self.assertEqual(self.backlog(p, "propose", f).json["id"], "BL-8")
+
+    def test_prose_and_blank_lines_around_an_item(self):
+        p = project()
+        text = BACKLOG.replace("- [BL-2] Zweites\n  Problem: p2\n  Warum: w2\n",
+                               "- [BL-2] Zweites\n  Problem: p2\n\n  Warum: w2\nFließtext ohne Einrückung\n")
+        write(p / ".keel" / "backlog.md", text)
+        self.assertEqual(self.backlog(p, "status", "BL-2", "bereit").rc, 0)
+        lines = (p / ".keel" / "backlog.md").read_text(encoding="utf-8").split("\n")
+        block = ["", "- [BL-2] Zweites", "  Problem: p2", "", "  Warum: w2"]
+        self.assertEqual(without(lines, block), without(text.split("\n"), block))
+        self.assertLess(lines.index("Fließtext ohne Einrückung"), lines.index("## in Arbeit"))
+        self.assertGreater(lines.index("Fließtext ohne Einrückung"), lines.index("## vorgeschlagen"))
+        self.assertEqual(self.backlog(p, "show", "BL-2").json["warum"], "w2")
+
     def test_reading_still_works(self):
         p = self.setup_backlog()
         r = self.backlog(p, "list")

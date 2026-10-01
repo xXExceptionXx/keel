@@ -42,16 +42,20 @@ FIELD = re.compile(r"^\s+([A-Za-z]+):\s*(.*)$")
 
 class Markdown:
     """.keel/backlog.md. A change rewrites only the lines of the affected item (F5): unknown fields, multi-line
-    values, prose and headings stay byte for byte. An item is its line "- [ID] Titel" plus the following
-    non-blank lines up to the next item or heading. Changes run under a lock and are written atomically (N6)."""
+    values, prose and headings stay byte for byte, line endings (LF or CRLF) included. An item is its line
+    "- [ID] Titel" plus the following indented lines, also across blank lines; the first line that is not indented
+    (prose, another item, a heading) ends it. Changes run under a lock and are written atomically (N6)."""
 
     def __init__(self, project, cfg):
         self.path = project / ".keel" / "backlog.md"
+        self.newline = "\n"
 
     def _lines(self):
         if not self.path.exists():
             return self._empty()
-        return self.path.read_text(encoding="utf-8").split("\n")
+        text = self.path.read_bytes().decode("utf-8")
+        self.newline = "\r\n" if "\r\n" in text else "\n"
+        return text.replace("\r\n", "\n").split("\n")
 
     @staticmethod
     def _empty():
@@ -91,7 +95,9 @@ class Markdown:
                 current = {"id": m.group(1), "titel": m.group(2), "status": status, "rang": rank, "_start": i, "_end": i + 1}
                 items.append(current)
                 continue
-            if current is not None and line.strip() and current["_end"] == i:
+            if current is not None and not line.strip():
+                continue  # a blank line ends the item only if no indented line follows
+            if current is not None and line[:1] in (" ", "\t"):
                 current["_end"] = i + 1
                 m = FIELD.match(line)
                 if m and m.group(1).lower() not in current:
@@ -105,7 +111,7 @@ class Markdown:
         return {k: v for k, v in item.items() if not k.startswith("_")}
 
     def _save(self, lines):
-        atomic_write(self.path, "\n".join(lines))
+        atomic_write(self.path, self.newline.join(lines))
 
     def _find(self, items, id_):
         for i in items:
@@ -138,7 +144,8 @@ class Markdown:
         with file_lock(self.path):
             lines = self._lines()
             items, sections = self._parse(lines)
-            nums = [int(i["id"].split("-")[-1]) for i in items if re.match(r"^BL-\d+$", i["id"])]
+            # every BL id in the file counts, also one under a heading that is not a status
+            nums = [int(n) for n in re.findall(r"^- \[BL-(\d+)\]", "\n".join(lines), flags=re.M)]
             new_id = f"BL-{max(nums, default=0) + 1}"
             block = [f"- [{new_id}] {one_line(data['titel'])}"]
             block += [f"  {f.capitalize()}: {one_line(data[f])}" for f in FIELDS if data.get(f)]

@@ -101,7 +101,7 @@ def load_events(paths):
 
 
 def state(project, plugin_root, hours):
-    report, _ = build_report(project, hours, plugin_root)
+    report, _ = build_report(project, hours, plugin_root, fast=True)
     paths = Paths(project)
     events = load_events(paths)
     stops = {e.get("agent_id") for e in events if e.get("event") == "agent_stop"}
@@ -130,12 +130,13 @@ def state(project, plugin_root, hours):
                 starting.append({"rolle": p.name[len("pending-"):], "ref": p.read_text(encoding="utf-8").strip(), "seit_sekunden": int(age)})
 
     stream = sorted(events[-EVENT_TAIL:] + cmds[-50:], key=lambda e: e.get("ts") or "")
-    roles = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])
+    roles, unreadable = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])
     return {
         "lage": report,
         "aktiv": active,
         "startet": starting,
         "rollen": roles,
+        "unlesbar": unreadable,
         "ereignisse": stream[-EVENT_TAIL:],
         "zeit": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
@@ -256,6 +257,7 @@ def role_states(project, due, running):
     hard = [i for i in items if i.get("hart")]
     allowed = {r for i in hard for r in DUE_ROLES.get(i.get("art"), [])}
     ready = bereit(project)
+    unreadable = ready.pop("unlesbar", [])
     for role, art in list(BY_DUE.items()) + [("architekt", "architektur")]:
         for i in items:
             if i.get("art") == art:
@@ -274,7 +276,7 @@ def role_states(project, due, running):
         else:
             r["zustand"] = "ruht"
         out[role] = r
-    return out
+    return out, unreadable
 
 
 def keel_root(project):

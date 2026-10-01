@@ -13,6 +13,7 @@ PATTERNS = {
     "own config reader": re.compile(r"^\s*def read\(path\)|split\(\"#\", 1\)", re.M),
     "import of the old modules": re.compile(r"^\s*from (frontmatter|config|jsonl) import", re.M),
     "sys.path trick": re.compile(r"sys\.path\.insert"),
+    "frontmatter field read by grep": re.compile(r"grep [^|\n]*\"\^[a-z_]+: "),
 }
 ALLOWED = {("sys.path trick", "scripts/_keel.py")}
 
@@ -44,6 +45,7 @@ class LegacyPatternTest(unittest.TestCase):
             "own config reader": 'line = raw.split("#", 1)[0]',
             "import of the old modules": "from config import read as read_config",
             "sys.path trick": "sys.path.insert(0, str(Path(__file__).parent))",
+            "frontmatter field read by grep": 'grep -l "^vorhaben: $vh$" "$plans"/*.md',
         }
         for name, sample in old.items():
             self.assertRegex(sample, PATTERNS[name], name)

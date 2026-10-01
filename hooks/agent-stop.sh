@@ -49,7 +49,7 @@ case "$role" in
       fi
       vh="$(fm_get "$tasks/$ref.md" vorhaben)"
       [ -n "$vh" ] || block_stop "Aufgabe $ref hat kein Feld 'vorhaben'; ohne es lässt sich die Aufgabenliste des Plans nicht prüfen."
-      planfile="$({ grep -l "^vorhaben: $vh$" "$plans"/*.md 2>/dev/null || true; } | head -1)"
+      planfile="$(fm_find "$plans" "vorhaben=$vh")"
       [ -n "$planfile" ] || block_stop "Kein Plan mit 'vorhaben: $vh' unter .keel/work/plans/; prüfe das Feld 'vorhaben' der Aufgabe $ref."
       aufgaben="$(fm_get "$planfile" aufgaben)"
       for t in $(printf '%s' "$aufgaben" | tr ',' ' '); do
@@ -197,7 +197,8 @@ case "$role" in
       vorg="$(fm_get "$done_f" vorgelegt)"
       [ "$vorg" = "offen" ] || block_stop "Setze vorgelegt=offen, damit das Briefing die Entscheidung zeigt"
       grep -q "Warum nicht der Mensch" "$done_f" || block_stop "Abschnitt '## Entscheidung des Supervisors' mit 'Warum nicht der Mensch:' fehlt"
-      grep -rlq "^vorlage: $vname" "$proj/.keel/adr/" 2>/dev/null || block_stop "Kein ADR mit 'vorlage: $vname' unter .keel/adr/ gefunden"
+      adr="$(fm_find "$proj/.keel/adr" "vorlage=$vname")"
+      [ -n "$adr" ] || block_stop "Kein ADR mit 'vorlage: $vname' unter .keel/adr/ gefunden"
     elif [ -f "$pend_f" ]; then
       esk="$(fm_get "$pend_f" eskaliert)"
       [ "$esk" = "Supervisor" ] || block_stop "Vorlage weder entschieden (nach done/ verschoben) noch eskaliert (eskaliert=Supervisor, richtungsweisend=<Grund>)"

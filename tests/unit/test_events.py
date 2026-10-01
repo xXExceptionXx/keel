@@ -55,6 +55,12 @@ class EventsTest(TempTest):
         self.assertTrue(0 < len(tail) < 6)
         self.assertEqual(tail[-1]["event"], "99")
 
+    def test_tail_cut_on_a_line_boundary_keeps_the_line(self):
+        line = b'{"event":"%d","ts":"2026-10-01T10:00:00Z"}\n'
+        f = self.file(line % 1 + line % 2 + line % 3)
+        tail = events.read(f, tail_bytes=len(line % 2) * 2).events
+        self.assertEqual([e["event"] for e in tail], ["2", "3"])
+
     def test_missing_file(self):
         self.assertEqual(events.read(self.tmp / "fehlt.jsonl"), events.ReadResult([], 0, 0))
 

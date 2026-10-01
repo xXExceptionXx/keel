@@ -63,7 +63,8 @@ def read(path, since=None, start=0, tail_bytes=None) -> ReadResult:
             partial_head = False
             if tail_bytes is not None and size - begin > tail_bytes:
                 begin = size - tail_bytes
-                partial_head = begin > 0
+                f.seek(begin - 1)
+                partial_head = f.read(1) != b"\n"  # a cut right after a newline keeps the first line
             f.seek(begin)
             data = f.read()
     except OSError:

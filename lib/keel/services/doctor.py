@@ -2,6 +2,7 @@
 
 Each check gives one finding: (pruefung, stufe ok|warnung|fehler, meldung).
 """
+import os
 import shutil
 import subprocess
 import sys
@@ -10,7 +11,7 @@ from typing import List, NamedTuple
 
 from keel.domain.errors import ParseError, ReadError
 from keel.store import config, events, frontmatter
-from keel.store.paths import Paths
+from keel.store.paths import Paths, lock_dir
 
 STALE_PENDING_SECONDS = 600
 OK, WARNING, ERROR = "ok", "warnung", "fehler"
@@ -25,12 +26,18 @@ class Finding(NamedTuple):
         return self._asdict()
 
 
-def run(project) -> List[Finding]:
+LOG_TAIL_BYTES = 16_000_000  # as much as the monitor reads
+
+
+def run(project, tools=True) -> List[Finding]:
+    """All checks; tools=False skips starting git and jq (for callers that poll)."""
     paths = Paths(project)
-    return [
-        check_python(),
-        check_tool("git", "git fehlt im PATH; Review, Fälligkeiten und Compliance-Scan brauchen es"),
-        check_tool("jq", "jq fehlt im PATH; ohne jq sperren die Gates jeden Aufruf (System-ADR 0019)"),
+    found = [check_python()]
+    if tools:
+        found += [check_tool("git", "git fehlt im PATH; Review, Fälligkeiten und Compliance-Scan brauchen es"),
+                  check_tool("jq", "jq fehlt im PATH; ohne jq sperren die Gates jeden Aufruf (System-ADR 0019)")]
+    return found + [
+        check_locks(paths),
         check_config(paths),
         check_artifacts(paths),
         check_brake(paths),
@@ -59,6 +66,20 @@ def check_tool(name, missing):
     except (OSError, subprocess.SubprocessError):
         out = ""
     return Finding(name, OK, (out.splitlines() or [path])[0])
+
+
+def check_locks(paths):
+    """Locks for shared files live under the metrics root (System-ADR 0020); without write access there every
+    writer of pflege, backlog and frontmatter fails."""
+    folder = lock_dir()
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        probe = folder / f".probe-{os.getpid()}"
+        probe.write_text("")
+        probe.unlink()
+    except OSError as exc:
+        return Finding("sperren", ERROR, f"{folder} nicht beschreibbar ({exc}); Schreiben in .keel/ scheitert")
+    return Finding("sperren", OK, str(folder))
 
 
 def check_config(paths):
@@ -121,7 +142,7 @@ def check_logs(paths):
     broken = []
     for f in (paths.events, paths.hooklog):
         if f.exists():
-            n = events.read(f).skipped
+            n = events.read(f, tail_bytes=LOG_TAIL_BYTES).skipped
             if n:
                 broken.append(f"{f.name}: {n} unlesbare Zeilen")
     if broken:

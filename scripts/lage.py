@@ -276,7 +276,23 @@ def newest_dated(dirpath):
     return best
 
 
-def build_report(project, hours=24, plugin_root=None):
+_health = {}
+HEALTH_TTL = 60.0
+
+
+def health(project, fast):
+    """Findings of keel doctor that are not ok. fast (the monitor, polled every few seconds): without starting
+    git and jq, and reused for HEALTH_TTL seconds."""
+    if not fast:
+        return [f.as_dict() for f in doctor.run(project) if f.stufe != doctor.OK]
+    hit = _health.get(str(project))
+    if not hit or time.time() - hit[0] > HEALTH_TTL:
+        hit = (time.time(), [f.as_dict() for f in doctor.run(project, tools=False) if f.stufe != doctor.OK])
+        _health[str(project)] = hit
+    return hit[1]
+
+
+def build_report(project, hours=24, plugin_root=None, fast=False):
     """The situation report as a dict, plus the state files --clean would remove. Shared with monitor.py."""
     paths = Paths(project)
     try:
@@ -294,7 +310,7 @@ def build_report(project, hours=24, plugin_root=None):
         "arbeitsbaum_geaendert": len([l for l in sh(["git", "status", "--porcelain"], project).splitlines() if l]),
         "plugin": plugin_versions(project, plugin_root),
         "faellig": due(project),
-        "gesundheit": [f.as_dict() for f in doctor.run(project) if f.stufe != doctor.OK],
+        "gesundheit": health(project, fast),
         "vorhaben": vorhaben(project),
         "epics": epics(project),
         "vorlagen": vorlagen(project),

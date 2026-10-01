@@ -10,12 +10,14 @@ Usage:
   frontmatter.py set <file> key=value [key=value ...]     (value "[a, b]" becomes a list)
   frontmatter.py validate <file> --type <typ> [--status a,b] [--require k1,k2] [--nonempty k1,k2]
   frontmatter.py dump <file>                               (JSON)
+  frontmatter.py find <folder> key=value [key=value ...]   files under folder (recursive, *.md) whose fields all match
 
-Exit codes: 0 ok, 1 validation failed or key missing, 2 usage error, unreadable file, unknown syntax or
+Exit codes: 0 ok, 1 validation failed, key missing or nothing found, 2 usage error, unreadable file, unknown syntax or
 internal error (System-ADR 0019: a crash must not read as "key missing").
 """
 import json
 import sys
+from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain.errors import KeelError, ParseError, ReadError
@@ -94,6 +96,29 @@ def cmd_dump(args):
     print(json.dumps(data, ensure_ascii=False))
 
 
+def cmd_find(args):
+    """Every file whose frontmatter has all the given values; a file that cannot be read is exit 2, because an
+    answer "not found" could be wrong (System-ADR 0019)."""
+    folder = Path(args[0])
+    wanted = {}
+    for pair in args[1:]:
+        if "=" not in pair:
+            fail(f"expected key=value, got {pair}", 2)
+        key, value = pair.split("=", 1)
+        wanted[key] = value
+    hits = []
+    for p in sorted(folder.rglob("*.md")) if folder.is_dir() else []:
+        try:
+            data = frontmatter.fields(p)
+        except (ReadError, ParseError) as exc:
+            fail(str(exc), 2)
+        if all(str(data.get(k)) == v for k, v in wanted.items()):
+            hits.append(str(p))
+    if not hits:
+        sys.exit(1)
+    print("\n".join(hits))
+
+
 def _opts(args):
     opts = {}
     i = 0
@@ -106,7 +131,7 @@ def _opts(args):
     return opts
 
 
-COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cmd_dump}
+COMMANDS = {"get": cmd_get, "set": cmd_set, "validate": cmd_validate, "dump": cmd_dump, "find": cmd_find}
 
 if __name__ == "__main__":
     if len(sys.argv) < 3 or sys.argv[1] not in COMMANDS:
