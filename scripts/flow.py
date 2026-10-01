@@ -40,7 +40,7 @@ GATES = {
     "tester.abnahmetests": {"objekt": "plan", "status": ["problemstellung"]},
     "tester.aufgabe": {"objekt": "aufgabe", "status": ["geplant", "neuschnitt"]},
     "entwickler.aufgabe": {"objekt": "aufgabe", "status": ["tests-bereit", "nacharbeit"], "nonempty": ["tests", "dateien"]},
-    "entwickler.reparatur": {"objekt": "aufgabe", "status": ["reparatur"]},
+    "entwickler.reparatur": {"objekt": "aufgabe", "status": ["reparatur", "nacharbeit"]},
     "reviewer.aufgabe": {"objekt": "aufgabe", "status": ["review"], "nonempty": ["review_runde"]},
     "compliance.aufgabe": {"objekt": "aufgabe", "feld": {"compliance": "pruefen"}, "datei": "work/compliance/{name}.scan.md"},
     "supervisor.entscheiden": {"objekt": "vorlage", "status": ["offen"], "nicht": ["eskaliert"]},
@@ -91,6 +91,21 @@ NEXT_TASK = {
     "budget-erschoepft": "Planer (Neuschnitt)",
     "neuschnitt": "Planer (Neuschnitt) oder PO (Klärung)",
 }
+
+# After the Reviewer the task stays in "review"; the hook's verdict says what comes next (System-ADR 0018).
+NEXT_AFTER_REVIEW = {
+    "bestanden": "Lead committet",
+    "nacharbeit": "Entwickler (Nacharbeit, danach erneut Review)",
+    "vorlage": "Lead schreibt Review-Vorlage an den Supervisor",
+}
+
+
+def next_task(task):
+    """Next step for a task from its frontmatter."""
+    if task.get("status") == "review" and task.get("review_ergebnis") in NEXT_AFTER_REVIEW:
+        return NEXT_AFTER_REVIEW[task["review_ergebnis"]]
+    return NEXT_TASK.get(task.get("status"))
+
 
 ROLES = ["supervisor", "po", "architekt", "planer", "tester", "entwickler", "compliance", "reviewer", "auditor", "coach"]
 

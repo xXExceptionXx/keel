@@ -147,6 +147,11 @@ case "$role" in
         $FM validate "$rep" --type architekturbericht --status passt,abweichungen --require datum,modus 2>/tmp/keel-stop-err \
           || block_stop "Architekturbericht fehlt oder unvollständig ($rep): $(cat /tmp/keel-stop-err)"
         [ "$modus" = "bestandsaufnahme" ] && { grep -q "Referenzbeispiel" "$proj/.keel/architektur.md" || block_stop "architektur.md ohne Referenzbeispiele"; }
+        if [ "$modus" = "wochenrunde" ]; then
+          max_pflege="$($CFG "$proj" pflege.max_aufgaben_pro_runde 2)"
+          n_pflege="$(grep -cE '^- .+ – .+ – wird Pflege' "$rep" || true)"
+          [ "${n_pflege:-0}" -le "$max_pflege" ] || block_stop "Wochenrunde schlägt $n_pflege Pflegeaufgaben vor, erlaubt sind $max_pflege. Bündeln oder den Rest offen lassen."
+        fi
         ;;
       *)
         planfile="$plans/$ref.md"
@@ -242,6 +247,10 @@ case "$role" in
     rev="$proj/.keel/work/reviews/$ref-r$runde.md"
     $FM validate "$rev" --type review --status bestanden,befunde --require aufgabe,runde 2>/tmp/keel-stop-err \
       || block_stop "Review-Datei fehlt oder unvollständig ($rev): $(cat /tmp/keel-stop-err)"
+    # Threshold and trend are computed, not judged; the Lead reads review_ergebnis (System-ADR 0018)
+    python3 "$PLUGIN_ROOT/scripts/review.py" pruefen "$proj" "$ref" >/dev/null 2>/tmp/keel-stop-err \
+      || block_stop "Review ungültig: $(cat /tmp/keel-stop-err)"
+    [ "$($FM get "$rev" status)" = "bestanden" ] && python3 "$PLUGIN_ROOT/scripts/pflege.py" sammeln "$proj" "$rev" >/dev/null 2>&1 || true
     ;;
 esac
 finish "ok"

@@ -14,11 +14,11 @@ flowchart TD
     COACH["Coach<br/>Kennzahlen, Hypothesen, Umfeld"]
     LEAD["Lead (Haupt-Session)<br/>/keel:start, /keel:stop<br/>taktet, aggregiert, urteilt nicht"]
     PO["PO<br/>Problemstellung, Epic-Skizze<br/>Abstimmung, Klärung, Abnahme"]
-    ARC["Architekt<br/>Bewertung in 3 Stufen<br/>Epic-Bewertung nach Reichweite<br/>Bestandsaufnahme, Wochenrunde"]
+    ARC["Architekt<br/>Bewertung in 3 Stufen<br/>Epic-Bewertung nach Reichweite<br/>Bestandsaufnahme, Wochenrunde, Pflegeliste"]
     PLAN["Planer"]
     TEST["Tester"]
     DEV["Entwickler"]
-    REV["Reviewer"]
+    REV["Reviewer<br/>Schwelle, Nacharbeit als eigenes Delta"]
     COMP["Compliance<br/>Scan als Hook, Rolle bei Ermessen"]
 
     ICH <-->|Briefing, interaktiv| SUP
@@ -116,10 +116,12 @@ stateDiagram-v2
     compliance --> review: frei
     compliance --> blockiert: Vorlage (neue Abhängigkeit, Rechtsgrundlage)
     fertig_gemeldet --> review: Scan frei, Lead setzt Runde +1
-    review --> fertig: Reviewer bestanden, Lead committet
-    review --> nacharbeit: Befunde, Runde 1
+    review --> fertig: unter der Schwelle, Lead committet, Anmerkungen in die Pflegeliste
+    review --> nacharbeit: über der Schwelle, Runde 1 oder Befunde sinken
     nacharbeit --> fertig_gemeldet: frischer Entwickler mit Befunden und Auflagen
-    review --> neuschnitt: Befunde nach Runde 2
+    review --> blockiert_review: Befunde sinken nicht oder 4 Runden, Vorlage
+    blockiert_review --> neuschnitt: Supervisor
+    blockiert_review --> nacharbeit: Supervisor gibt Zusatzrunde
     testeinspruch --> neuschnitt
     budget_erschoepft --> neuschnitt
     neuschnitt --> klaerung: Planer fragt den PO
@@ -231,7 +233,8 @@ flowchart LR
 | `.keel/work/epics/<name>.md` (+ `.bewertung.md`) | PO, Architekt | PO, Architekt, Lead, Supervisor | agent-stop |
 | `.keel/work/plans/<name>.md` | PO, Architekt (Bewertung), Tester, Planer, Lead (Status) | alle Rollen des Vorhabens | agent-gate, agent-stop |
 | `.keel/work/tasks/<ID>.md` | Planer, Tester, Entwickler, Lead, Compliance-Scan | Tester, Entwickler, Reviewer, Compliance, Auditor | agent-gate, agent-stop |
-| `.keel/work/reviews/`, `compliance/` | Reviewer, Compliance | Entwickler (Nacharbeit), Auditor, metrics.py | agent-stop |
+| `.keel/work/reviews/`, `compliance/` | Reviewer, Compliance | Entwickler (Nacharbeit), Auditor, metrics.py | agent-stop (Schwelle und Trend über `review.py`) |
+| `.keel/work/pflege.md` | agent-stop (Anmerkungen bestandener Reviews), Architekt (Sichtung) | Architekt, metrics.py | agent-stop (höchstens n Pflegeaufgaben je Wochenrunde) |
 | `.keel/work/acceptance/<name>.md` | Lead | PO, Auditor | – |
 | `.keel/work/handoff/<Datum>.md` | Lead (Tagesabschluss) | Tagesstart, Auditor | check_references.py |
 | `.keel/work/audit/`, `architektur/` | Auditor, Architekt | Ich, Tagesstart (Routing), Coach | agent-stop, route_findings.py |

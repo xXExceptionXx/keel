@@ -35,6 +35,8 @@ korridore:
   einwaende_supervisor: 1-10       # zu niedrig heißt: redet nach dem Mund
   review_runden_pro_aufgabe: 1-2
   ruecklaufquote_review_prozent: 0-30
+  fix_befunde_prozent: 0-20         # Nacharbeitsrunden, in denen die Nacharbeit neue Befunde erzeugt hat
+  pflege_verfallen_prozent: 0-50    # hoch heißt: Anmerkungen sind Rauschen oder das Pflegebudget ist zu klein
   neuschnitt_quote_prozent: 0-20
   blockierte_uebergaben_prozent: 0-20
   budget_verstoesse: 0-0
@@ -42,6 +44,18 @@ korridore:
   audit_abweichungen_pro_bericht: 0-3
   diff_zeilen_pro_aufgabe: 20-300
   tokens_pro_aufgabe_k: 0-400
+
+# Review mit Schwelle (System-ADR 0018). Bestanden erst, wenn keine Zahl über ihrer Schwelle liegt.
+# Weitere Runden nur, solange (blockierend, wichtig) sinkt; sonst Vorlage an den Supervisor.
+review:
+  schwelle_blockierend: 0
+  schwelle_wichtig: 0
+  max_runden: 4          # Sicherung; der Supervisor kann je Aufgabe Zusatzrunden geben
+
+# Anmerkungen aus bestandenen Reviews sammelt die Pflegeliste; der Architekt sichtet sie in der Wochenrunde.
+pflege:
+  max_aufgaben_pro_runde: 2   # Pflegeaufgaben, die eine Wochenrunde höchstens vorschlägt
+  verfall_tage: 42            # offene Einträge verfallen danach
 
 supervisor:
   model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es

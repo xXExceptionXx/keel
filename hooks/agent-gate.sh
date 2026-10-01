@@ -187,7 +187,8 @@ case "$role" in
     ;;
   entwickler)
     [ -n "$task" ] || deny "Entwickler braucht die Zeile 'Aufgabe: <ID>' im Prompt"
-    if [ "$($FM get "$tasks/$task.md" status 2>/dev/null || true)" = "reparatur" ]; then
+    if [ "$($FM get "$tasks/$task.md" status 2>/dev/null || true)" = "reparatur" ] || [ "$($FM get "$tasks/$task.md" vorhaben 2>/dev/null || true)" = "R" ]; then
+      # Repair tasks have no tests of their own; rework after a review is allowed (System-ADR 0018)
       $FM validate "$tasks/$task.md" --type aufgabe --status "$KEEL_S_entwickler_reparatur" 2>/tmp/keel-gate-err \
         || deny "Entwickler darf nicht starten: $(cat /tmp/keel-gate-err)"
     else
@@ -199,6 +200,9 @@ case "$role" in
     [ -n "$task" ] || deny "Reviewer braucht die Zeile 'Aufgabe: <ID>' im Prompt"
     $FM validate "$tasks/$task.md" --type aufgabe --status "$KEEL_S_reviewer_aufgabe" --nonempty "$KEEL_N_reviewer_aufgabe" 2>/tmp/keel-gate-err \
       || deny "Reviewer darf nicht starten: $(cat /tmp/keel-gate-err)"
+    # Snapshot of this round, so the next round can review the rework on its own (System-ADR 0018)
+    python3 "$PLUGIN_ROOT/scripts/review.py" stand "$proj" "$task" >/dev/null 2>/tmp/keel-gate-err \
+      || deny "Reviewer: Stand der Runde nicht festgehalten: $(cat /tmp/keel-gate-err)"
     ;;
   *) deny "Unbekannte keel-Rolle '$role'" ;;
 esac

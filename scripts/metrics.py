@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import read as read_config  # noqa: E402
 from frontmatter import parse as parse_fm  # noqa: E402
 from models import runs as model_runs, switches as model_switches  # noqa: E402
+from review import findings as review_findings  # noqa: E402
 
 DEFAULT_CORRIDORS = {
     "vorlagen_pro_woche": "2-5",
@@ -32,6 +33,8 @@ DEFAULT_CORRIDORS = {
     "einwaende_supervisor": "1-10",
     "review_runden_pro_aufgabe": "1-2",
     "ruecklaufquote_review_prozent": "0-30",
+    "fix_befunde_prozent": "0-20",
+    "pflege_verfallen_prozent": "0-50",
     "neuschnitt_quote_prozent": "0-20",
     "blockierte_uebergaben_prozent": "0-20",
     "budget_verstoesse": "0-0",
@@ -133,6 +136,17 @@ def main():
         rounds[r.get("aufgabe")] = max(rounds[r.get("aufgabe")], int(r.get("runde") or 0))
     review_rounds = round(sum(rounds.values()) / len(rounds), 2) if rounds else None
     befunde = [r for r in reviews if r.get("status") == "befunde"]
+    # rework rounds whose rework introduced findings above Anmerkung (System-ADR 0018)
+    rework = []
+    for p in (reviews_dir.glob("*.md") if reviews_dir.exists() else []):
+        text = p.read_text(encoding="utf-8")
+        if int(fm(p).get("runde") or 0) >= 2:
+            rework.append(any(r["herkunft"] == "fix" and r["schweregrad"] != "anmerkung" for r in review_findings(text)))
+    fix_prozent = round(100 * sum(rework) / len(rework)) if rework else None
+    pflege_file = project / ".keel" / "work" / "pflege.md"
+    pflege_status = re.findall(r"^\| P-\d+ \|.*\| (\S+)[^|]*\|\s*$", pflege_file.read_text(encoding="utf-8"), flags=re.M) if pflege_file.exists() else []
+    pflege_closed = [st for st in pflege_status if st != "offen"]
+    pflege_verfallen = round(100 * pflege_closed.count("verfallen") / len(pflege_closed)) if pflege_closed else None
 
     # ---- diff lines per task from git
     diff_lines = []
@@ -248,6 +262,8 @@ def main():
         ("Planung", "neuschnitt_quote_prozent", "Neu geschnittene Aufgaben (%)", round(100 * len(neuschnitt) / len(tasks)) if tasks else None),
         ("Umsetzung", "review_runden_pro_aufgabe", "Review-Runden pro Aufgabe (Ø)", review_rounds),
         ("Umsetzung", "ruecklaufquote_review_prozent", "Reviews mit Befunden (%)", round(100 * len(befunde) / len(reviews)) if reviews else None),
+        ("Umsetzung", "fix_befunde_prozent", "Nacharbeitsrunden mit neuen Befunden aus der Nacharbeit (%)", fix_prozent),
+        ("Pflege", "pflege_verfallen_prozent", "Verfallene Pflege-Anmerkungen (% der erledigten)", pflege_verfallen),
         ("Übergaben", "blockierte_uebergaben_prozent", "Blockierte Übergaben (% der Rollenläufe)", round(100 * len(blocked) / len(stops)) if stops else None),
         ("Budget", "budget_verstoesse", "Budgetverstöße", len(budget)),
         ("Kontext", "kontext_alarme", "Kontext-Alarme beim Lead", len(context_alarms)),

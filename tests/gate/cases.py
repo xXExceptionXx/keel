@@ -2,7 +2,7 @@
 C = []
 def add(t, p, bg=False): C.append((t, p, bg))
 plans = ["p-entwurf", "p-entwurf-nobew", "p-problem", "p-atb", "p-nach", "p-geplant", "p-struktur", "p-abn", "p-abnrot-noacc", "p-integriert", "p-fehlt"]
-tasks = ["T-geplant", "T-neu", "T-neu-noklar", "T-tb", "T-tb-empty", "T-nach", "T-review", "T-review-norunde", "T-rep", "T-comp", "T-comp-noscan", "T-fertig", "T-fehlt"]
+tasks = ["T-geplant", "T-neu", "T-neu-noklar", "T-tb", "T-tb-empty", "T-nach", "T-review", "T-review-norunde", "T-rep", "T-rep-nach", "T-comp", "T-comp-noscan", "T-fertig", "T-fehlt"]
 epics = ["e-skizze", "e-bewertet", "e-leit", "e-aktiv", "e-neu"]
 for p in plans:
     add("keel:planer", f"Vorhaben: {p}")
