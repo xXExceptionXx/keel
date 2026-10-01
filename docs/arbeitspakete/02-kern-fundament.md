@@ -98,7 +98,8 @@ Die sinnvolle Reihenfolge der nächsten Pakete:
 
 | Paket | Inhalt | Warum dann |
 | --- | --- | --- |
-| 3 | M2: Hook-Dispatcher in Python, ein Prozess je Ereignis, Sperren für Zähler und `pending` (N1, N2), normalisierte Pfade in den Schutzregeln (U1 bis U4), Lebenszeichen Ebene 1 und 2 | baut auf `store` auf; größter Gewinn an Robustheit und Geschwindigkeit |
-| 4 | Messung K0 und B0: Ausgangsbasis aus den sauberen Protokollen seit 0.14.0 | braucht ein paar Wochen Betrieb nach dem Validierungslauf, kann parallel zu Paket 3 Daten sammeln |
-| 5 | K1: Rollenkern und Auftrag je Anlass für Architekt und PO | braucht den Dispatcher für das Einspielen über `SubagentStart` |
-| 6 | A1: Graph und Kennzahlen für Bestandsprojekte | unabhängig, kann jederzeit nach Paket 2 beginnen |
+| 3 | Wiedervorlagen und klare Entscheidungswege, Zeitbudget meldet nur (`03-wiedervorlagen.md`, aus dem Probelauf vom 2026-10-01) | berührt dieselben Skripte wie Paket 2, deshalb danach |
+| 4 | M2: Hook-Dispatcher in Python, ein Prozess je Ereignis, Sperren für Zähler und `pending` (N1, N2), normalisierte Pfade in den Schutzregeln (U1 bis U4), Lebenszeichen Ebene 1 und 2 | baut auf `store` auf; größter Gewinn an Robustheit und Geschwindigkeit |
+| 5 | Messung K0 und B0: Ausgangsbasis aus den sauberen Protokollen seit 0.14.0 | braucht ein paar Wochen Betrieb nach dem Validierungslauf, kann parallel Daten sammeln |
+| 6 | K1: Rollenkern und Auftrag je Anlass für Architekt und PO | braucht den Dispatcher für das Einspielen über `SubagentStart` |
+| 7 | A1: Graph und Kennzahlen für Bestandsprojekte | unabhängig, kann jederzeit nach Paket 2 beginnen |
