@@ -17,6 +17,7 @@ import re
 
 from keel.domain.errors import ParseError
 
+KEY_NAME = re.compile(r"[A-Za-z0-9_.-]+")
 KEY = re.compile(r"^([A-Za-z0-9_.-]+):(?:\s+(.*))?$")
 ITEM = re.compile(r"^-(?:\s+(.*))?$")
 SIMPLE = re.compile(r"[A-Za-z0-9_./#@:-]+")

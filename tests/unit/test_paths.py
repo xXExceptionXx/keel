@@ -32,6 +32,16 @@ class PathsTest(TempTest):
         finally:
             os.chdir(old)
 
+    def test_spelling_of_a_case_insensitive_file_system(self):
+        real = self.tmp / "Proj"
+        real.mkdir()
+        other = self.tmp / "proj"
+        if not other.exists():
+            self.skipTest("file system is case-sensitive")
+        self.assertEqual(project_key(other), project_key(real))
+        self.assertEqual(Paths(str(other).upper()).project, real)
+        self.assertTrue(Paths(other).runtime.name.startswith("Proj-"))
+
     def test_layout(self):
         p = Paths(self.tmp)
         self.assertEqual(p.state, p.runtime / "state")

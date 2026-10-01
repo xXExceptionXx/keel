@@ -14,8 +14,10 @@ def atomic_write(path, text, encoding="utf-8"):
     """Replace path with text in one step: a reader sees the old or the new file, never a part.
 
     Temp file in the same folder, fsync, permissions of the old file, os.replace, fsync of the folder.
+    A symlink is followed: the file it points to is replaced, the link stays (e.g. .claude/settings.json from a
+    dotfiles repository).
     """
-    path = Path(path)
+    path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     data = text.encode(encoding) if isinstance(text, str) else text
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.", suffix=".tmp")

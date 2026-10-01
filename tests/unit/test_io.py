@@ -48,6 +48,16 @@ class IoTest(TempTest):
         self.assertEqual((f.read_text(), f.stat().st_mode & 0o777), ("neu", 0o750))
         self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ["x.sh"])
 
+    def test_atomic_write_follows_a_symlink(self):
+        real = self.tmp / "dotfiles" / "settings.json"
+        real.parent.mkdir()
+        real.write_text("alt")
+        link = self.tmp / "settings.json"
+        link.symlink_to(real)
+        atomic_write(link, "neu")
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(real.read_text(), "neu")
+
     def test_create_exclusive(self):
         f = self.tmp / "d" / "v.md"
         self.assertTrue(create_exclusive(f, "eins"))

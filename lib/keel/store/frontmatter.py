@@ -85,7 +85,14 @@ def _clean(data):
 
 
 def update(path, values):
-    """Set fields in a file's frontmatter, under a lock and atomically. Raises ReadError, ParseError, ValueError."""
+    """Set fields in a file's frontmatter, under a lock and atomically. Raises ReadError or ParseError.
+
+    A key the codec could not read back is refused, and the new text is parsed once more before it is written:
+    the writer never leaves a file its own reader refuses.
+    """
+    for key in values:
+        if not codec.KEY_NAME.fullmatch(str(key)):
+            raise ParseError(f"ungültiger Schlüssel {key!r}: nur Buchstaben a-z, Ziffern und _ . -", source=str(path))
     with file_lock(path):
         data, body = load(path)
         if data is None:
@@ -94,4 +101,8 @@ def update(path, values):
             data[key] = value
             if key not in data["__order__"]:
                 data["__order__"].append(key)
-        atomic_write(path, render(data, body))
+        text = render(data, body)
+        check, _ = parse(text, source=str(path))
+        if {k: v for k, v in check.items() if k != "__order__"} != _clean(data):
+            raise ParseError("neuer Inhalt liest sich nicht unverändert zurück; nichts geschrieben", source=str(path))
+        atomic_write(path, text)

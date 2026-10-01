@@ -15,10 +15,11 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import _keel  # noqa: F401
+from keel.domain.errors import KeelError
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
 from keel.store.paths import Paths
@@ -86,12 +87,21 @@ def main():
     since = None
     if "--since" in sys.argv:
         i = sys.argv.index("--since") + 1
-        since = events.parse_ts(sys.argv[i]) if i < len(sys.argv) else None
+        text = sys.argv[i] if i < len(sys.argv) else ""
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+            # a calendar day starts at local midnight, as in due.py; a time without zone counts as UTC
+            since = datetime.combine(date.fromisoformat(text), datetime.min.time()).astimezone()
+        else:
+            since = events.parse_ts(text)
         if since is None:
             print("metrics: --since braucht ein Datum oder einen Zeitpunkt (ISO 8601)", file=sys.stderr)
             sys.exit(2)
     as_json = "--json" in sys.argv
-    corridors = config.section(config.load_file(paths.config), "korridore")
+    try:
+        corridors = config.section(config.load_file(paths.config), "korridore")
+    except KeelError as exc:
+        print(f"metrics: nicht prüfbar: {exc}", file=sys.stderr)
+        sys.exit(2)
 
     # ---- events
     read = events.read(paths.events, since=since)
@@ -262,7 +272,7 @@ def main():
         if ok is False:
             violations += 1
         report.append({"bereich": area, "kennzahl": key, "label": label, "wert": value, "korridor": corridor, "status": "n/a" if ok is None else ("ok" if ok else "verletzt")})
-    summary = {"projekt": project.name, "uebersprungene_ereignisse": read.skipped, "seit": since.date().isoformat() if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report, "modelle": modelle, "offene_modellwechsel": model_switches(project)}
+    summary = {"projekt": project.name, "uebersprungene_ereignisse": read.skipped, "seit": text[:10] if since else None, "rollenlaeufe": len(stops), "aufgaben": len(tasks), "verletzungen": violations, "kennzahlen": report, "modelle": modelle, "offene_modellwechsel": model_switches(project)}
     if as_json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return

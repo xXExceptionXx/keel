@@ -2,7 +2,7 @@
 
 The runtime folder of a project lies outside the repository, below the metrics root
 (KEEL_METRICS_DIR, default ~/.keel-metrics). Its name is the project key: folder name plus a short hash of
-the resolved absolute path, so two projects named "app" share no events, markers or due items.
+the resolved absolute path in its stored spelling, so two projects named "app" share no events, markers or due items.
 """
 import hashlib
 import os
@@ -16,8 +16,37 @@ def metrics_root():
     return Path(os.environ.get(ENV_ROOT) or Path.home() / ".keel-metrics")
 
 
+_canonical = {}
+
+
+def canonical(path):
+    """The resolved path in the spelling the file system stores. On a case-insensitive file system (macOS)
+    /users/x and /Users/x are the same folder; resolve() keeps whatever spelling it was given, the hooks get the
+    stored one from Claude Code. Each part is looked up in its parent; a part that is not found as exactly one
+    entry stays as it is."""
+    p = Path(path).resolve()
+    if p in _canonical:
+        return _canonical[p]
+    parts = [p.anchor]
+    current = Path(p.anchor)
+    for name in p.parts[1:]:
+        try:
+            entries = os.listdir(current)
+        except OSError:
+            entries = []
+        if name not in entries:
+            same = [e for e in entries if e.casefold() == name.casefold()]
+            if len(same) == 1:
+                name = same[0]
+        parts.append(name)
+        current = current / name
+    result = Path(*parts)
+    _canonical[p] = result
+    return result
+
+
 def project_key(project):
-    p = Path(project).resolve()
+    p = canonical(project)
     digest = hashlib.sha256(str(p).encode("utf-8")).hexdigest()[:KEY_HASH_CHARS]
     return f"{p.name}-{digest}"
 
@@ -26,7 +55,7 @@ class Paths:
     """Paths of one project. Nothing is created until ensure()."""
 
     def __init__(self, project):
-        self.project = Path(project).resolve()
+        self.project = canonical(project)
         self.keel = self.project / ".keel"
         self.config = self.keel / "config.yaml"
         self.root = metrics_root()
