@@ -20,7 +20,7 @@ Im Code heißt die Wiedervorlage `followup` (Typ) mit `due` (Termin); in Artefak
 
 ## Ziel
 
-Jede offene Frage hat genau einen Ort, den ein Skript sieht. Was eine Weichenstellung ist, sperrt; was nur auf die Tagesordnung gehört, kommt wieder, ohne die Arbeit anzuhalten. Fehlentscheidungen auf der falschen Stufe werden an der Quelle verhindert, nicht erst später gesucht.
+Jede offene Frage hat genau einen Ort, den ein Skript sieht, und Fragen zum Motor verlassen das Projekt in einen eigenen Entscheidungsweg. Was eine Weichenstellung ist, sperrt; was nur auf die Tagesordnung gehört, kommt wieder, ohne die Arbeit anzuhalten. Fehlentscheidungen auf der falschen Stufe werden an der Quelle verhindert, nicht erst später gesucht.
 
 ## Umfang
 
@@ -70,15 +70,28 @@ Was sich aus dem Zustand berechnen lässt, braucht keine Wiedervorlage-Datei; `b
 
 Nicht Teil des Motors, aber nach dem Einspielen nötig und im PR zu beschreiben: Die zwei Träger-Vorlagen, die der Supervisor im Briefing vom 2026-10-01 angelegt hat (`2026-10-01-briefing-audit-backlog-bereit-oder-verworfen.md`, `2026-10-01-briefing-zielbild-laufzeit-und-leitlinien-kandidaten.md`), werden im nächsten Briefing in Wiedervorlagen überführt. Das entscheidet der Mensch dort, nicht der Motor.
 
+### I. Motor-Vorschläge vom Projekt trennen
+
+Heute schreibt der Coach jeden Vorschlag als Vorlage ins Projekt, und das Briefing macht daraus ein Projekt-ADR, auch wenn die Änderung Hooks, Skripte oder Rollen des Plugins betrifft. Eine Brücke ins keel-Repo gibt es nicht; im Probelauf wurden die Abschnitte „Umzusetzen im keel-Repo“ von Hand übertragen. Folgen: Motor-Entscheidungen landen in der Projekt-Historie, mehrere Projekte können denselben Motor unterschiedlich entscheiden, angenommene Justierungen versanden, und eine Motor-Frage sperrt die Arbeit im Projekt.
+
+- **Ebene je Vorschlag.** Der Coach setzt im Frontmatter jeder Vorlage `ebene: projekt | motor`, nach fester Regel: `projekt` für alles unter `.keel/` (Korridorwerte der Projektkonfiguration, Projektregeln, Leitlinien), `motor` für alles im Plugin (Hooks, Skripte, Skills, Rollen, Standardwerte, Vorlagen). Ein Vorschlag, der beides betrifft, wird geteilt. `agent-stop.sh` prüft beim Ende des Coaches, dass das Feld gesetzt ist.
+- **Projekt-Vorschläge** laufen wie heute: Vorlage, Briefing, Projekt-ADR, Umsetzung im Projekt.
+- **Motor-Vorschläge** werden im Briefing nur weitergereicht oder verworfen, nicht entschieden. Bei „weiterreichen“ legt der Supervisor nach dem Ja des Menschen ein Issue im Motor-Repo an (`motor.repo`, Label `coach-vorschlag`): Problem, Optionen, Empfehlung, Hypothese, die belegenden Kennzahlen, Projektname und Plugin-Version, aber kein Code und keine Inhalte aus dem Projekt. Die Vorlage im Projekt wird mit `status: weitergereicht` und dem Link auf das Issue abgeschlossen und sperrt nicht mehr. Ein Projekt-ADR entsteht nicht.
+- **Im keel-Repo** entscheidet der Mensch einmal für alle Projekte, mit System-ADR und Hypothese. Gleiche Vorschläge aus mehreren Projekten werden im Issue zusammengeführt; das System-ADR verweist auf alle.
+- **Rückweg über die Version.** Kommt eine angenommene Justierung mit einer neuen Plugin-Version ins Projekt, prüft der Coach ihre Hypothese ab dieser Version; er liest die System-ADRs des Plugins schon heute. Ein weitergereichter Vorschlag, der nach einer festen Frist (Vorschlag: 30 Tage) weder umgesetzt noch abgelehnt ist, erscheint als Wiedervorlage im Briefing des Projekts, damit er nicht versandet.
+- **Kanal ohne GitHub.** Ist `gh` nicht verfügbar oder `motor.repo` nicht gesetzt, legt der Supervisor eine Datei unter `.keel/motor-vorschlaege/` ab und nennt den Pfad; die Vorlage wird trotzdem abgeschlossen.
+- **Coach und Briefing:** Rollen- und Skill-Texte für Coach, Supervisor und `/keel:briefing`; `/keel:hilfe` behält seinen Kanal für Motor-Befunde (Fehler), der Coach-Kanal ist für Vorschläge.
+
 ### H. Tests und Doku
 
-- Vertragstests für: `budget_slow` ohne Ablehnung; Tagesordnung ohne Sperre; Zurückstellen ohne Sperre und Rückkehr zur Sperre beim zweiten Termin; abgeleitete Punkte aus Backlog und `Proposed`-ADRs; Ablehnung eines ADR auf fremder Stufe; Integrationsprüfung; Kennzahlen ohne Wiedervorlagen in der Eskalationsquote; Vergabe der ADR-Nummer bei der Integration.
+- Vertragstests für: Coach-Vorlage ohne `ebene` wird beim Ende abgelehnt; weitergereichte Motor-Vorlage sperrt nicht und erzeugt kein Projekt-ADR; Rückkehr als Wiedervorlage nach Ablauf der Frist; Ablage unter `.keel/motor-vorschlaege/` ohne `gh`; `budget_slow` ohne Ablehnung; Tagesordnung ohne Sperre; Zurückstellen ohne Sperre und Rückkehr zur Sperre beim zweiten Termin; abgeleitete Punkte aus Backlog und `Proposed`-ADRs; Ablehnung eines ADR auf fremder Stufe; Integrationsprüfung; Kennzahlen ohne Wiedervorlagen in der Eskalationsquote; Vergabe der ADR-Nummer bei der Integration.
 - System-ADR mit der nächsten freien Nummer, mit den Hypothesen aus Projekt-ADR 0022 und 0023. Ergänzung in `docs/system.md` (Briefing und Fälligkeiten), Notiz in `docs/konzept.md`, Rollen- und Skill-Texte für Supervisor, Coach und Lead.
 
 ## Nicht im Umfang
 
 - Die Entscheidung über den Einwand-Korridor. Sie liegt beim Menschen im Briefing des Beispielprojekts.
 - Das vollständige Entfernen des Zeitbudgets. Laut Projekt-ADR 0023 eine spätere, eigene Entscheidung, wenn die Meldung belegt nie auslöst.
+- Ein Werkzeug, das Motor-Vorschläge mehrerer Projekte automatisch zusammenführt. Zunächst geschieht das von Hand im Issue.
 - Ein generierter ADR-Index in `.keel/CLAUDE.md`. Der Coach hat ihn zurückgestellt, bis der nächste Prüfbericht zeigt, ob die Klasse weiterlebt.
 
 ## Abnahme
@@ -90,6 +103,7 @@ Nicht Teil des Motors, aber nach dem Einspielen nötig und im PR zu beschreiben:
 - Ein Lauf über der Minutengrenze erzeugt genau ein `budget_slow` und keine Ablehnung.
 - Eskalationsquote und Vorlagen pro Woche ändern sich nicht, wenn Wiedervorlagen dazukommen.
 - Ein ADR-Entwurf auf einem Feature-Branch bekommt seine Nummer erst bei der Integration, ohne Kollision.
+- Eine Motor-Vorlage des Coaches führt nach dem Weiterreichen zu einem Issue im Motor-Repo (oder einer Datei ohne `gh`), schließt im Projekt ohne Projekt-ADR ab und sperrt keine Rolle; eine Projekt-Vorlage läuft unverändert.
 - Alle Vertragstests aus Arbeitspaket 1 und 2 grün, CI grün.
 
 ## Abhängigkeiten und Reihenfolge
@@ -99,6 +113,9 @@ Nicht Teil des Motors, aber nach dem Einspielen nötig und im PR zu beschreiben:
 - Die nachfolgenden Pakete aus `02-kern-fundament.md` verschieben sich um eins: Hook-Dispatcher wird Paket 4, Messung Paket 5, Rollenkern Paket 6, Graph Paket 7.
 
 ## Entscheidungen, die beim Planen fallen
+
+- **Kanal für Motor-Vorschläge:** GitHub-Issue im Motor-Repo (Vorschlag) oder eine gemeinsame Ablage außerhalb der Projekte? Und: Legt der Supervisor das Issue im Briefing an (nach dem Ja des Menschen) oder erst `/keel:hilfe` auf Nachfrage?
+- **Frist bis zur Wiedervorlage** eines weitergereichten Vorschlags: 30 Tage oder an die nächste Plugin-Version gekoppelt?
 
 - **Ablageort der Wiedervorlagen:** eigener Ordner unter `.keel/decisions/` (Vorschlag) oder Abschnitt in einer Datei?
 - **Zweiter Termin sperrt:** Ist „zweimal vertagt wird wieder sperrend“ die richtige Grenze, oder soll der Mensch einen Punkt ausdrücklich dauerhaft ohne Sperre parken können?
