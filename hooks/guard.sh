@@ -2,11 +2,11 @@
 # keel guard: second safety net behind the deny rules in .claude/settings.json.
 # Deny rules match prefixes; this hook matches patterns anywhere in the command.
 # Reads the PreToolUse payload from stdin and denies destructive Bash commands.
-set -euo pipefail
-
 payload="$(cat)"
-cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty')"
-[ -z "$cmd" ] && exit 0
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+keel_gate_init
+cmd="$(field '.tool_input.command')"
+[ -n "$cmd" ] || keel_ok
 
 deny() {
   jq -n --arg reason "$1" '{
@@ -15,50 +15,52 @@ deny() {
       permissionDecision: "deny",
       permissionDecisionReason: ("keel guard: " + $reason)
     }
-  }'
-  exit 0
+  }' || gate_fail "$1"
+  keel_ok
 }
 
 # Git history and remote rewrites. Deleting a merged keel branch (vorhaben/*, reparatur/*) on the remote is allowed.
-if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]-f\b|--force)'; then
+if grep -Eq 'git[[:space:]]+push\b.*([[:space:]]-f\b|--force)' <<<"$cmd"; then
   deny "force push is not allowed"
 fi
-if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)'; then
-  cwd="$(printf '%s' "$payload" | jq -r '.cwd // empty')"; [ -z "$cwd" ] && cwd="$(pwd)"
-  cfg="$(dirname "${BASH_SOURCE[0]}")/../scripts/config.py"
-  fp="$(python3 "$cfg" "$cwd" git.feature_prefix feature/)"; xp="$(python3 "$cfg" "$cwd" git.fix_prefix fix/)"
+if grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' <<<"$cmd"; then
+  cwd="$(project_dir)"
+  fp="$($CFG "$cwd" git.feature_prefix feature/)"; xp="$($CFG "$cwd" git.fix_prefix fix/)"
   esc() { printf '%s' "$1" | sed 's/[.[\*^$/]/\\&/g'; }
-  # Judge every command segment on its own; a segment may end with a redirection.
-  printf '%s\n' "$cmd" | sed -E 's/&&|\|\||;|\|/\n/g' | while IFS= read -r seg; do
+  # Judge every command segment on its own; a segment may end with a redirection. The verdict is collected
+  # first: "| grep -q" would end early and turn the loop's SIGPIPE into a pass under pipefail. The loop
+  # stops at the first offending segment; the resulting SIGPIPE upstream is expected, hence "|| true".
+  verdict="$(printf '%s\n' "$cmd" | sed -E 's/&&|\|\||;|\|/\n/g' | while IFS= read -r seg; do
     seg="$(printf '%s' "$seg" | sed -E 's/[[:space:]]+[0-9]*>&?[0-9]*[[:space:]]*[^[:space:]]*//g; s/^[[:space:]]+//; s/[[:space:]]+$//')"
-    printf '%s' "$seg" | grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' || continue
-    printf '%s' "$seg" | grep -Eq "^git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+$" || echo DENY
-  done | grep -q DENY && deny "deleting remote branches is only allowed for merged $fp* and $xp* branches"
+    grep -Eq 'git[[:space:]]+push\b.*([[:space:]]:[^[:space:]]|--delete)' <<<"$seg" || continue
+    grep -Eq "^git[[:space:]]+push[[:space:]]+[^[:space:]]+[[:space:]]+(--delete[[:space:]]+|:)($(esc "$fp")|$(esc "$xp"))[A-Za-z0-9._/-]+$" <<<"$seg" || { echo DENY; break; }
+  done || true)"
+  case "$verdict" in *DENY*) deny "deleting remote branches is only allowed for merged $fp* and $xp* branches" ;; esac
 fi
 
 # File deletion outside the working directory
-if printf '%s' "$cmd" | grep -Eq '(^|[[:space:];&|])rm[[:space:]]+-[a-zA-Z]*[rf]'; then
-  if printf '%s' "$cmd" | grep -Eq 'rm[[:space:]]+-[a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+([^[:space:]]*[[:space:]]+)*(/|~|\$HOME|\.\.)'; then
+if grep -Eq '(^|[[:space:];&|])rm[[:space:]]+-[a-zA-Z]*[rf]' <<<"$cmd"; then
+  if grep -Eq 'rm[[:space:]]+-[a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+([^[:space:]]*[[:space:]]+)*(/|~|\$HOME|\.\.)' <<<"$cmd"; then
     deny "recursive delete on an absolute path, home or parent directory is not allowed"
   fi
 fi
 
 # Databases and infrastructure
-if printf '%s' "$cmd" | grep -Eiq '\b(drop[[:space:]]+(database|table|schema)|truncate[[:space:]]+table)\b'; then
+if grep -Eiq '\b(drop[[:space:]]+(database|table|schema)|truncate[[:space:]]+table)\b' <<<"$cmd"; then
   deny "dropping or truncating database objects is not allowed"
 fi
-if printf '%s' "$cmd" | grep -Eq 'docker[[:space:]]+(system|volume|container|image)[[:space:]]+prune|mkfs\.|dd[[:space:]]+if=|:\(\)[[:space:]]*\{'; then
+if grep -Eq 'docker[[:space:]]+(system|volume|container|image)[[:space:]]+prune|mkfs\.|dd[[:space:]]+if=|:\(\)[[:space:]]*\{' <<<"$cmd"; then
   deny "destructive system command is not allowed"
 fi
 
 # Reading credentials: roles never need the values, scripts take them from the environment themselves
-if printf '%s' "$cmd" | grep -Eq '(^|[[:space:];&|])(env|printenv|export -p|set)([[:space:]]*$|[[:space:]]*\|)|gh[[:space:]]+auth[[:space:]]+token|\$\{?[A-Z_]*(TOKEN|SECRET|KEY|PASSWORD)[A-Z_]*\}?|(cat|less|head|tail|grep)[^|]*(\.env\b|\.netrc|id_rsa|credentials\.json|\.claude\.json)'; then
+if grep -Eq '(^|[[:space:];&|])(env|printenv|export -p|set)([[:space:]]*$|[[:space:]]*\|)|gh[[:space:]]+auth[[:space:]]+token|\$\{?[A-Z_]*(TOKEN|SECRET|KEY|PASSWORD)[A-Z_]*\}?|(cat|less|head|tail|grep)[^|]*(\.env\b|\.netrc|id_rsa|credentials\.json|\.claude\.json)' <<<"$cmd"; then
   deny "reading credentials or the environment is not allowed; scripts read what they need themselves"
 fi
 
 # Remote code execution
-if printf '%s' "$cmd" | grep -Eq '(curl|wget)[^|]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z)?sh\b'; then
+if grep -Eq '(curl|wget)[^|]*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z)?sh\b' <<<"$cmd"; then
   deny "piping downloaded content into a shell is not allowed"
 fi
 
-exit 0
+keel_ok

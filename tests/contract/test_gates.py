@@ -19,7 +19,6 @@ def gate_calls(p):
 
 
 class MissingToolsTest(ContractTest):
-    @unittest.expectedFailure
     def test_every_gate_blocks_without_jq(self):
         p = project()
         for name, payload in gate_calls(p):
@@ -28,7 +27,6 @@ class MissingToolsTest(ContractTest):
                 self.assertEqual(r.rc, 2, r)
                 self.assertIn("keel", r.err)
 
-    @unittest.expectedFailure
     def test_every_gate_blocks_without_python(self):
         p = project()
         for name, payload in gate_calls(p):
@@ -36,7 +34,6 @@ class MissingToolsTest(ContractTest):
                 r = self.hook(name, payload, proj=p, path=path_without("python3"))
                 self.assertEqual(r.rc, 2, r)
 
-    @unittest.expectedFailure
     def test_non_keel_calls_pass_without_jq(self):
         p = project()
         calls = [("tool-gate", tool_call(p, "Read", {"file_path": "/x"})),
@@ -48,13 +45,30 @@ class MissingToolsTest(ContractTest):
 
 
 class BrokenInputTest(ContractTest):
-    @unittest.expectedFailure
     def test_every_gate_blocks_a_broken_payload(self):
         p = project()
         for name in ("guard", "agent-gate", "tool-gate", "skill-gate", "agent-stop"):
             with self.subTest(hook=name):
                 r = self.hook(name, '{"tool_name": "Bash", "agent_type": "keel:entwickler", kaputt', proj=p)
                 self.assertEqual(r.rc, 2, r)
+
+
+class ObserverTest(ContractTest):
+    def test_observers_let_go_and_record_a_hook_error(self):
+        p = project()
+        for name in ("agent-start", "context-alarm", "session-gate"):
+            with self.subTest(hook=name):
+                r = self.hook(name, "{kaputt", proj=p, env={"CLAUDE_PROJECT_DIR": str(p)})
+                self.assertEqual(r.rc, 0, r)
+                self.assertEqual(r.events[-1]["event"], "hook_error", r)
+                self.assertEqual(r.events[-1]["hook"], name)
+
+    def test_observers_let_go_without_jq(self):
+        p = project()
+        payload = {"hook_event_name": "SubagentStart", "agent_type": "keel:entwickler", "agent_id": "a1", "cwd": str(p)}
+        r = self.hook("agent-start", payload, proj=p, path=path_without("jq"), env={"CLAUDE_PROJECT_DIR": str(p)})
+        self.assertEqual(r.rc, 0, r)
+        self.assertEqual(r.events[-1]["event"], "hook_error", r)
 
 
 class TempFilesTest(ContractTest):
@@ -74,7 +88,6 @@ class LargeInputTest(ContractTest):
             with self.subTest(run=i):
                 self.assertBlocked(self.hook("tool-gate", payload, proj=p))
 
-    @unittest.expectedFailure
     def test_remote_branch_delete_is_denied_in_long_commands(self):
         p = project()
         cmd = "; ".join(["git push origin --delete foreign/x"] * 3000)
