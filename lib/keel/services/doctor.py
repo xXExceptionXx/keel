@@ -9,7 +9,7 @@ import time
 from typing import List, NamedTuple
 
 from keel.domain.errors import ParseError, ReadError
-from keel.store import config, events
+from keel.store import config, events, frontmatter
 from keel.store.paths import Paths
 
 STALE_PENDING_SECONDS = 600
@@ -32,6 +32,7 @@ def run(project) -> List[Finding]:
         check_tool("git", "git fehlt im PATH; Review, Fälligkeiten und Compliance-Scan brauchen es"),
         check_tool("jq", "jq fehlt im PATH; ohne jq sperren die Gates jeden Aufruf (System-ADR 0019)"),
         check_config(paths),
+        check_artifacts(paths),
         check_brake(paths),
         check_pending(paths),
         check_logs(paths),
@@ -71,6 +72,22 @@ def check_config(paths):
     if problems:
         return Finding("konfiguration", WARNING, "; ".join(problems))
     return Finding("konfiguration", OK, "gültig")
+
+
+def check_artifacts(paths):
+    """Frontmatter of every Markdown file under .keel/. One the codec refuses stops due.py and with it every role
+    (System-ADR 0019); this names the files so the human can fix them."""
+    broken = []
+    if paths.keel.is_dir():
+        for p in sorted(paths.keel.rglob("*.md")):
+            try:
+                frontmatter.load(p)
+            except (ReadError, ParseError) as exc:
+                broken.append(str(exc).replace(str(paths.project) + "/", ""))
+    if broken:
+        return Finding("artefakte", ERROR, f"{len(broken)} Datei(en) nicht lesbar (sperren Rollen, wenn Fälligkeiten sie lesen): "
+                       + "; ".join(broken[:10]) + (" …" if len(broken) > 10 else ""))
+    return Finding("artefakte", OK, "alle Frontmatter lesbar")
 
 
 def check_brake(paths):

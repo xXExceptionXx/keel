@@ -13,6 +13,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import _keel  # noqa: F401
+from keel.domain.errors import KeelError
 from keel.store import config, events, frontmatter
 from keel.store.paths import Paths
 from models import switches as model_switches  # noqa: E402
@@ -34,9 +35,9 @@ def newest(dirpath, pattern="*.md"):
         d = frontmatter.fields(p).get("datum")
         if d:
             try:
-                dated.append((date.fromisoformat(d), p))
-            except ValueError:
-                pass
+                dated.append((date.fromisoformat(str(d)), p))
+            except (TypeError, ValueError):
+                pass  # not a date (e.g. a list): the report does not count for this due item
     return max(dated)[0] if dated else None
 
 
@@ -137,7 +138,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except DueError as e:
+    except (DueError, KeelError) as e:  # an unreadable artifact names its file and line
         print(f"due: nicht prüfbar: {e}", file=sys.stderr)
         sys.exit(2)
     except Exception as e:  # a crash must not read as "something is due" (exit 1)
