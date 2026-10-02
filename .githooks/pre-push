@@ -1,6 +1,7 @@
 #!/bin/bash
-# Before a push: the leak check over every commit that is new to the remote, on every system. On macOS also the
-# unit and contract tests with the system python 3.9 and bash 3.2.
+# Before a push: the leak check over every commit that is new to the remote, on every system. CI covers Linux and
+# macOS; for feedback before the push, opt in to the tests with the macOS system python 3.9 and bash 3.2:
+#   git config keel.prePushTests true
 # Enable once per clone: git config core.hooksPath .githooks
 # Skip a single push:    git push --no-verify
 
@@ -12,7 +13,7 @@ while read -r _ local_sha _ _; do
   python3 tests/leak_check.py --range "$local_sha --not --remotes" || exit 1
 done
 
-[ "$(uname -s)" = Darwin ] || exit 0
+[ "$(git config --bool keel.prePushTests)" = true ] && [ "$(uname -s)" = Darwin ] || exit 0
 
 shim=$(mktemp -d)
 trap 'rm -rf "$shim"' EXIT
