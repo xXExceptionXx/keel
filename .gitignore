@@ -3,3 +3,4 @@ report.html
 aggregate-result.json
 .DS_Store
 __pycache__/
+.idea/

@@ -35,7 +35,7 @@ tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest disc
 tests/unit/       Unit-Tests für lib/keel, Schichtrichtung, alte Muster: python3 -m unittest discover -s tests/unit -t .
 tests/run.py      Unit- und Vertragstests parallel, je Testmethode ein Job: python3 tests/run.py [-j N]
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
-.githooks/        pre-push: Unit- und Vertragstests mit macOS-System-Python und Bash 3.2 (git config core.hooksPath .githooks)
+.githooks/        pre-commit und pre-push: Leak-Prüfung (tests/leak_check.py), auf macOS zusätzlich die Tests mit System-Python und Bash 3.2
 ```
 
 Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen.
@@ -47,7 +47,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | `/keel:start` | Liest, was fällig ist, und tut es in Reihenfolge: vergessener Tagesabschluss, Audit, Coach, Architektur-Runde, dann das Briefing mit dem Supervisor, falls eines aussteht. Sonst Tagesstart und das nächste Vorhaben. |
 | `/keel:stop` | Tagesabschluss mit Übergabenotiz und Tag, Audit, ein Satz zu morgen. |
 | `/keel:hilfe [Frage]` | Erklärt den Stand aus Zustand und Ereignissen und nennt den nächsten Befehl. Beobachtet nur: entscheidet nichts, startet keine Rolle, ändert nichts. Auf Wunsch räumt sie Reste auf, legt einen Hinweis für den Coach ab oder meldet einen Motor-Befund als Issue. |
-| `/keel:monitor [Port\|stop]` | Öffnet den Ablauf-Monitor auf `http://127.0.0.1:8765/`: ein Ablaufdiagramm mit den Rollen als aktiv, bereit oder gesperrt, welche Rolle gerade woran arbeitet und wer sie gerufen hat, Fälligkeiten, Vorlagen, Ereignisse mit Gründen für Blockaden, je Vorhaben eine Zeitleiste mit Phase, Aufgaben, Reviews und Rollenläufen, dazu alle Übergaben unter `.keel/` als lesbare Dokumente. Beobachtet nur und läuft nach der Session weiter. Mit `monitor.autostart: true` in `.keel/config.yaml` starten ihn die Befehle, die das System arbeiten lassen, von selbst mit. Aus dem Terminal: `python3 <plugin>/scripts/monitor.py <projekt>`. |
+| `/keel:monitor [Port\|stop]` | Öffnet den Ablauf-Monitor auf `http://127.0.0.1:8765/`: ein Ablaufdiagramm mit den Rollen als aktiv, bereit oder gesperrt, welche Rolle gerade woran arbeitet und wer sie gerufen hat, Fälligkeiten, Vorlagen, Ereignisse mit Gründen für Blockaden, je Vorhaben eine Zeitleiste mit Phase, Aufgaben, Reviews und Rollenläufen, dazu alle Übergaben unter `.keel/` als lesbare Dokumente. Beobachtet nur und läuft nach der Session weiter. Das Ablaufdiagramm lädt Mermaid vom CDN jsDelivr, sonst bleibt der Monitor lokal. Mit `monitor.autostart: true` in `.keel/config.yaml` starten ihn die Befehle, die das System arbeiten lassen, von selbst mit. Aus dem Terminal: `python3 <plugin>/scripts/monitor.py <projekt>`. |
 
 Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Steht ein Briefing an, muss die Session auf dem Modell des Supervisors laufen; ein Hook prüft das und sagt, wie umgestellt wird. Aus dem Terminal wählt `scripts/keel.sh <projekt>` das Modell selbst und öffnet die Session mit `/keel:start`. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Läuft eine Rolle auf einem neuen Modell, meldet der Sessionstart das, und der Coach wird nach zehn Läufen auf dem neuen Modell vorgezogen, um alt und neu zu vergleichen (System-ADR 0015). Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
 
@@ -104,6 +104,22 @@ Der Marketplace wird in den User-Settings des Rechners eingetragen, nicht im Pro
 
 Das legt `.keel/` mit Vorlagen an, verlinkt `.claude/skills` dorthin, ergänzt Deny-Regeln für destruktive Befehle in `.claude/settings.json` und fügt `@.keel/CLAUDE.md` in die `CLAUDE.md` des Projekts ein. Bestehende Dateien werden nie überschrieben.
 
+## Mitarbeit
+
+Einmal pro Klon die Hooks einschalten und eine Identität setzen, die nichts Privates verrät: den GitHub-Login und die noreply-Adresse aus den GitHub-Einstellungen unter Emails.
+
+```bash
+git config core.hooksPath .githooks
+git config user.name <login>
+git config user.email <id>+<login>@users.noreply.github.com
+```
+
+`pre-commit` und `pre-push` prüfen mit `tests/leak_check.py` Identität, Home-Pfade, E-Mail-Adressen und Secrets; dieselbe Prüfung läuft in der CI bei jedem PR. Eigene Begriffe, die nie öffentlich werden sollen, gehören in `~/.config/keel/leak-denylist` (ein regulärer Ausdruck pro Zeile), nie ins Repo. Sicherheitslücken bitte nach `SECURITY.md` melden.
+
 ## Stand
 
 Alle Rollen des Konzepts sind gebaut und im Beispielprojekt erprobt, dazu die Epic-Ebene für große Themen. Der Mensch schreibt Backlog-Einträge, entscheidet Vorlagen und die Reihenfolge, pflegt die Maßstab-Dateien. Offen: Linear-Adapter, Basisregel-Pakete pro Sprache, Einsatz in einem bestehenden Projekt mit Bestandsaufnahme.
+
+## Lizenz
+
+MIT, siehe `LICENSE`.

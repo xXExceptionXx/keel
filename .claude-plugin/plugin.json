@@ -2,6 +2,16 @@
   "name": "keel",
   "version": "0.15.0",
   "description": "Schlankes Agentensystem für autonome Softwareentwicklung: Rollen, Übergaben als Dateien, Prüftore und Lernschleife.",
-  "author": { "name": "xXExceptionXx" },
-  "keywords": ["agents", "orchestration", "autonomous", "software-development"]
+  "author": {
+    "name": "xXExceptionXx"
+  },
+  "keywords": [
+    "agents",
+    "orchestration",
+    "autonomous",
+    "software-development"
+  ],
+  "homepage": "https://github.com/xXExceptionXx/keel",
+  "repository": "https://github.com/xXExceptionXx/keel",
+  "license": "MIT"
 }

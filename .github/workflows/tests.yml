@@ -13,6 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Blocks private data before it is merged: identities, private names, home paths, emails, secrets. The private
+  # denylist comes from the secret KEEL_LEAK_DENYLIST; pull requests from forks get the generic rules only.
+  # On a push the leak is already public, so the job there only raises the alarm.
+  leak-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Leak check of the new commits
+        env:
+          KEEL_LEAK_DENYLIST: ${{ secrets.KEEL_LEAK_DENYLIST }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$KEEL_LEAK_DENYLIST" ]; then unset KEEL_LEAK_DENYLIST; fi
+          if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ]; then
+            python3 tests/leak_check.py --range "$HEAD"
+          else
+            python3 tests/leak_check.py --range "$BASE..$HEAD"
+          fi
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
