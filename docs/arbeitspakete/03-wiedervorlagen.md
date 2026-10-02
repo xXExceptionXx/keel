@@ -2,6 +2,8 @@
 
 2026-10-01 · Grundlage: Coach-Bericht und Briefing vom 2026-10-01 im Beispielprojekt (Projekt-ADRs 0022 und 0023, Abschnitte „Umzusetzen im keel-Repo“), dazu die Nachschärfung von ADR 0022 aus der Auswertung des Briefings. Zum Planen im Plan-Modus, dann Umsetzung auf einem eigenen Branch.
 
+**Stand 2026-10-02: umgesetzt** auf `feature/wiedervorlagen`, System-ADR 0021, Version 0.16.0. Abweichungen von diesem Entwurf: Motor-Vorschläge und Motor-Befunde gehen nicht als GitHub-Issue in das inzwischen öffentliche Plugin-Repo, sondern in die lokale Motor-Ablage `~/.keel-metrics/motor/` (`keel motor`); `.keel/motor-vorschlaege/` und `motor.repo` entfallen. Eine Coach-Vorlage mit `ebene: motor` sperrt nicht, sie steht bis zum Weiterreichen auf der Tagesordnung. Eine Wiedervorlage, die mehr als sieben Tage über ihrem Termin liegt, sperrt wieder. Das Briefing bleibt auf dem ausgecheckten Branch; ADRs entstehen dort als Entwurf. Teil G (Übergang im Beispielprojekt) entfällt, das Beispielprojekt ist gelöscht.
+
 ## Ausgangslage
 
 Der erste Probelauf mit 0.14.0 und Opus 5.5 hat zwei Lücken im Entscheidungsweg sichtbar gemacht:

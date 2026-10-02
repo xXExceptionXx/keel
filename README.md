@@ -23,11 +23,12 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
-bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel --version
-lib/keel/         Kern als Python-Paket (System-ADR 0020): domain, store (einzige Stelle für Pfade, Frontmatter,
-                  Konfiguration, Ereignisse, atomares Schreiben), services (doctor), interfaces (Kommandozeile)
+bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel motor (lokale Motor-Ablage), keel --version
+lib/keel/         Kern als Python-Paket (System-ADR 0020): domain (Regeln), store (einzige Stelle für Pfade,
+                  Frontmatter, Konfiguration, Ereignisse, atomares Schreiben), integrations (git), services
+                  (doctor, agenda, adr, motor), interfaces (Kommandozeile)
 scripts/          Übergang bis zum Umbau-Schritt M7: dünne Skripte auf lib/keel, z. B. frontmatter.py, config.py,
-                  gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py
+                  gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py, adr.py, wiedervorlage.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete

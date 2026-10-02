@@ -48,6 +48,8 @@ Auditor und Coach stehen außerhalb der Befehlskette und ändern nichts außer i
 
 ## 2. Zwei Befehle und die Fälligkeiten
 
+**Sperren oder auf die Tagesordnung (System-ADR 0021).** `briefing_needed.py` trennt zwei Listen. Sperrend sind Supervisor-Entscheidungen mit `vorgelegt: offen`, eskalierte Vorlagen, Coach-Vorlagen zum Projekt, Epics in `kurskorrektur`, zurückgestellte Vorlagen im zweiten Termin oder ohne Wiedervorlage und Wiedervorlagen, die mehr als sieben Tage über ihrem Termin liegen. Auf die Tagesordnung, ohne Sperre, kommen fällige Wiedervorlagen, zurückgestellte Vorlagen im ersten Termin, Audit-Vorschläge, die länger als zwei Tage warten, `Proposed`-ADRs auf der Basis, Motor-Vorschläge des Coachs und weitergereichte Vorschläge, die nach 30 Tagen im keel-Repo niemand entschieden hat. `due.py` macht daraus einen weichen Hinweis; Lage und Monitor zeigen die Tagesordnung. Am Ende des Briefings prüft ein Hook, dass kein offener Punkt nur im Protokoll steht.
+
 `/keel:start` liest den Zustand und tut, was fällig ist. Harte Fälligkeiten sperren per Hook alle Rollen außer der, die sie erledigt. `/keel:hilfe` steht daneben als Beobachter: Es erklärt den Stand aus `lage.py` (Fälligkeiten, Vorhaben, Vorlagen, Ereignisse nach Grund, Reste), nennt den nächsten Befehl und darf nur mit Ja des Menschen Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund in der Motor-Ablage `~/.keel-metrics/motor/` ablegen (`keel motor add`; System-ADR 0021 ersetzt die Issues aus 0014, weil das Plugin-Repo öffentlich ist). Jede Ablehnung, die den Menschen erreicht, verweist darauf (System-ADR 0014). `/keel:monitor` zeigt dieselbe Lage laufend als lokale Webseite, mit einem Ablaufdiagramm (aktiv, bereit, gesperrt), Ereignisstrom, einer Zeitleiste je Vorhaben und allen Übergaben als Dokumente, und schreibt ebenfalls nichts; mit `monitor.autostart: true` starten ihn die Startbefehle mit. Die Startbedingungen der Rollen stehen in `scripts/flow.py`, aus dem Gate und Monitor lesen (System-ADR 0017).
 
 ```mermaid
@@ -61,7 +63,7 @@ flowchart TD
     CO --> D
     D -->|≥ 7 Tage und ≥ 10 Commits| AR["Architekt, Wochenrunde"]
     AR --> D
-    D -->|Supervisor-Entscheidungen offen,<br/>Eskalationen, Kurskorrektur| BR(["Briefing mit dem Supervisor<br/>interaktiv, Modell des Supervisors<br/>Session endet danach"])
+    D -->|Supervisor-Entscheidungen offen,<br/>Eskalationen, Kurskorrektur,<br/>Wiedervorlage im 2. Termin oder > 7 Tage über| BR(["Briefing mit dem Supervisor<br/>interaktiv, Modell des Supervisors<br/>Session endet danach"])
     D -->|nichts Hartes| TS["Tagesstart<br/>Startcheck, offene Vorlagen → Supervisor<br/>Befunde routen, Inbox"]
     TS --> V["nächstes Vorhaben oder Epic<br/>ein Vorhaben pro Aufruf"]
     V --> E["/keel:stop<br/>Tagesabschluss, Audit, Ausblick"]
@@ -242,6 +244,8 @@ flowchart LR
 | `.keel/work/audit/`, `architektur/` | Auditor, Architekt | Ich, Tagesstart (Routing), Coach | agent-stop, route_findings.py |
 | `.keel/work/coach/`, `briefing/` | Coach, Supervisor | Ich, Coach | agent-stop |
 | `.keel/work/hinweise/` | Ich, über `/keel:hilfe` | Coach (prüft, übernimmt nicht) | – |
-| `.keel/decisions/pending/` → `done/` | PO, Lead, Coach, Tagesstart; entschieden vom Supervisor oder Mensch | Supervisor, Briefing, Inbox | agent-stop (Supervisor), briefing_needed.py |
-| `.keel/adr/` | Planer (Entwurf), Architekt (Entwurf), PO (delegiert), Supervisor, Ich | alle | Inbox, Briefing, due.py |
+| `.keel/decisions/pending/` → `done/` | PO, Lead, Coach (mit `ebene`), Tagesstart; entschieden vom Supervisor oder Mensch, zurückgestellt oder weitergereicht im Briefing | Supervisor, Briefing, Inbox | agent-stop (Supervisor, Coach), briefing_needed.py |
+| `.keel/decisions/wiedervorlagen/` | Briefing, Lead, nur über `wiedervorlage.py neu` | briefing_needed.py, Briefing, Inbox, Lage, Monitor, metrics.py | briefing-stop (Protokoll) |
+| `.keel/adr/` (auf Feature-Branches `entwurf-<slug>.md`, Nummer bei der Integration) | Planer (Proposed), Architekt (Proposed), PO (delegiert), Supervisor, Ich im Briefing; Pfad immer über `adr.py neu` | alle | agent-stop (Stufe gegen den Stand beim Start), `adr.py check-integration` |
 | `~/.keel-metrics/<projekt>-<hash>/` (System-ADR 0020, `bin/keel path runtime`) | Hooks | Coach, metrics.py, due.py, lage.py (Hilfe, Monitor) | tool-gate sperrt alle anderen Rollen |
+| `~/.keel-metrics/motor/` (System-ADR 0021), für alle Projekte des Rechners | Briefing (weitergereichte Motor-Vorschläge), `/keel:hilfe` (Motor-Befunde), nur über `keel motor add` | eine Session im keel-Repo (`keel motor list`), Coach (Rückweg), briefing_needed.py (30 Tage) | `keel motor add` lehnt Projektinterna ab |

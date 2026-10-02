@@ -696,6 +696,10 @@ Ergänzt am 2026-09-22. Die rechte Hand aus dem Zweck-Abschnitt ist nicht der PO
 
 Ergänzt am 2026-09-21 nach dem Szenario „Freigabe-Pipeline“ und einer Recherche zu Dach-Artefakten in Anthropic-Harnesses, Cursor, Spec Kit, Kiro und BMAD. Große Themen bekommen vor dem ersten Vorhaben ein Epic: Zielbild des Themas, Vorhaben-Liste, Leitfragen, Done-Condition. Der Architekt bewertet Leitentscheidungen nach Reichweite, also danach, welche Entscheidung im ersten Vorhaben ein späteres wieder umstoßen müsste. Leitentscheidungen werden ADR, außerhalb der Befugnisse des PO als Vorlage an mich, bevor eine Zeile Code entsteht. Nach jeder Integration prüft der Architekt in einer Retrospektive gegen die Leitentscheidungen; eine Kurskorrektur wird eine Vorlage, bevor das nächste Vorhaben geplant wird. Das erste Vorhaben ist immer der dünnste Ende-zu-Ende-Pfad. Siehe System-ADR 0009 und `docs/system.md`.
 
+## Wiedervorlagen und lokale Motor-Ablage
+
+Ergänzt am 2026-10-02 nach dem ersten Probelauf. Offene Fragen gingen verloren, und es gab nur „sperrt alles“ oder „unsichtbar“. Jetzt hat jede offene Frage einen Ort, den ein Skript sieht: Was eine Weichenstellung ist, bleibt eine sperrende Vorlage; was nur wiederkommen soll, wird eine Wiedervorlage mit Termin und steht auf der Tagesordnung des nächsten Briefings, ohne die Arbeit anzuhalten. Eine zurückgestellte Vorlage sperrt beim zweiten Termin wieder. Am Ende des Briefings prüft ein Hook, dass nichts nur im Protokoll steht. Rollen schreiben ADRs nur auf ihrer Stufe, ein Hook vergleicht den Stand vor und nach dem Lauf; auf Feature-Branches entstehen ADRs als Entwurf und bekommen ihre Nummer bei der Integration. Das Zeitbudget meldet nur noch. Vorschläge des Coachs zum Plugin selbst und Befunde aus `/keel:hilfe` gehen nicht mehr als Issue in das öffentliche Plugin-Repo, sondern in eine lokale Ablage für alle Projekte des Rechners; entschieden werden sie im keel-Repo, einmal für alle. Siehe System-ADR 0021 und `docs/arbeitspakete/03-wiedervorlagen.md`.
+
 ## Referenzen
 
 Startpunkt der Referenzliste für die Umfeld-Recherche des System-Coachs.

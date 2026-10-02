@@ -177,13 +177,14 @@ Umgesetzt in M1: `domain/errors.py`; `store/` mit `paths.py`, `codec.py`, `front
 - `store/io.py`: `atomic_write` (Temp-Datei im selben Ordner, `fsync`, `os.replace`) und `file_lock` (`fcntl.flock`).
 - Jede Schreiboperation im `store` nutzt beides. Ereignisse werden mit einem einzigen `os.write` auf eine mit `O_APPEND` geöffnete Datei unter Sperre angehängt.
 
-**Ablage in drei getrennten Bereichen.**
+**Ablage in drei getrennten Bereichen**, seit System-ADR 0021 mit einem vierten für den ganzen Rechner.
 
 | Bereich | Ort | Inhalt | Versioniert |
 | --- | --- | --- | --- |
 | Motor | Plugin | Agenten, Skills, Aufträge, Vorlagen, Schema | im keel-Repo |
 | Projekt | `.keel/` im Projekt | Artefakte, Konfiguration, Kontext | im Projekt-Repo |
 | Laufzeit | `~/.keel-metrics/<schlüssel>/` | Ereignisse, Protokolle, Laufzeitzustand | nein |
+| Maschine | `~/.keel-metrics/motor/` | Motor-Vorschläge und Motor-Befunde aller Projekte, bis eine Session im keel-Repo sie entscheidet | nein |
 
 Der Schlüssel für die Laufzeit wird an einer Stelle aus Ordnername plus kurzem Hash des absoluten Pfads berechnet. Zwei Projekte namens `app` teilen sich dann nichts mehr.
 
