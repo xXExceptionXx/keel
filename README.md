@@ -35,7 +35,7 @@ tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest disc
 tests/unit/       Unit-Tests für lib/keel, Schichtrichtung, alte Muster: python3 -m unittest discover -s tests/unit -t .
 tests/run.py      Unit- und Vertragstests parallel, je Testmethode ein Job: python3 tests/run.py [-j N]
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
-.githooks/        pre-commit und pre-push: Leak-Prüfung (tests/leak_check.py), auf macOS zusätzlich die Tests mit System-Python und Bash 3.2
+.githooks/        pre-commit und pre-push: Leak-Prüfung (tests/leak_check.py); Tests vor dem Push auf Wunsch: git config keel.prePushTests true
 ```
 
 Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code englisch: Bezeichner, Kommentare, Testbeschreibungen, Commit-Nachrichten, Branch-Namen.
