@@ -686,7 +686,7 @@ Ergänzt am 2026-09-30. Fixes nach einem Review haben oft selbst Fehler eingebau
 
 ## Fehlervertrag: Gates schließen bei Fehlern
 
-Ergänzt am 2026-10-01 nach einer Prüfung des Kerns. Claude Code blockiert nur, wenn ein Hook mit Exit-Code 2 endet oder ausdrücklich ablehnt; jeder andere Fehler lässt den Aufruf durch. Mehrere Gates haben deshalb still durchgelassen, sobald ein Werkzeug fehlte, ein Feld leer war oder ein Hilfsskript abstürzte. Jetzt gilt ein Fehlervertrag: Skripte des Kerns antworten mit 0 für nein, 1 für ja und 2 für „konnte nicht prüfen“. Gates schließen bei jedem unerwarteten Ende mit einer Meldung, Beobachter protokollieren den Fehler und lassen weiterlaufen. Das Prüftor hat eine eigene Zeitgrenze unter dem Hook-Timeout. Vertragstests unter `tests/contract/` belegen jeden bekannten Fall, eine CI führt sie auf Linux und macOS aus. Siehe System-ADR 0019 und `docs/kern-befunde.md`.
+Ergänzt am 2026-10-01 nach einer Prüfung des Kerns. Claude Code blockiert nur, wenn ein Hook mit Exit-Code 2 endet oder ausdrücklich ablehnt; jeder andere Fehler lässt den Aufruf durch. Mehrere Gates haben deshalb still durchgelassen, sobald ein Werkzeug fehlte, ein Feld leer war oder ein Hilfsskript abstürzte. Jetzt gilt ein Fehlervertrag: Skripte des Kerns antworten mit 0 für nein, 1 für ja und 2 für „konnte nicht prüfen“. Gates schließen bei jedem unerwarteten Ende mit einer Meldung, Beobachter protokollieren den Fehler und lassen weiterlaufen. Das Prüftor hat eine eigene Zeitgrenze unter dem Hook-Timeout. Vertragstests unter `tests/contract/` belegen jeden bekannten Fall, eine CI führt sie auf Linux aus, ein pre-push-Hook lokal auf macOS. Siehe System-ADR 0019 und `docs/kern-befunde.md`.
 
 ## Supervisor und Morgen-Briefing
 

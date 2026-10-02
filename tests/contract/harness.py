@@ -5,7 +5,7 @@ stdout, files under the runtime folder), so they survive restructuring of the co
 of a project lies is asked from the plugin (`keel path`), never rebuilt here.
 
 Environment:
-  KEEL_TEST_BASH  bash to run the hooks with (CI sets /bin/bash on macOS to cover bash 3.2)
+  KEEL_TEST_BASH  bash to run the hooks with (.githooks/pre-push sets /bin/bash on macOS to cover bash 3.2)
 """
 import atexit
 import json
