@@ -163,7 +163,7 @@ def runs_for(events, refs):
                          "stop": None, "ergebnis": None, "werkzeugaufrufe": None, "modell": None, "vorfaelle": []}
         elif aid in runs and ev == "agent_stop":
             runs[aid].update(stop=e.get("ts"), ergebnis=e.get("result"), werkzeugaufrufe=e.get("calls"), modell=e.get("model"))
-        elif aid in runs and ev in ("stop_blocked", "budget_exhausted"):
+        elif aid in runs and ev in ("stop_blocked", "budget_exhausted", "budget_slow"):
             runs[aid]["vorfaelle"].append({"art": ev, "ts": e.get("ts"), "grund": e.get("reason") or
                                            (f"{e['calls']} Werkzeugaufrufe" if e.get("calls") else f"{e.get('minutes')} Minuten")})
     return sorted(runs.values(), key=lambda r: r["start"] or "")

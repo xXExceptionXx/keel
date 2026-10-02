@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse for every tool inside a keel role: tool-call budget, test protection, metrics folder protection.
+# PreToolUse for every tool inside a keel role: tool-call budget, test protection, metrics folder protection,
+# a report when a run takes longer than its minutes.
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 keel_gate_init keel-only
@@ -35,23 +36,16 @@ if [ "$role" = "entwickler" ] && [ -n "$ref" ] && [ -f "$proj/.keel/work/tasks/$
   esac
 fi
 
-# Time budget
+# Time budget: only reports (System-ADR 0021). Once per run a budget_slow event, never a refusal.
 minutes="$(role_limit "$role" minutes 30)"
 is_number "$minutes" || gate_fail "Zeitbudget für $role in .keel/config.yaml ist keine ganze Zahl: '$minutes'"
-if [ -f "$sd/agent-$id.start" ]; then
+if [ -f "$sd/agent-$id.start" ] && [ ! -f "$sd/agent-$id.slow" ]; then
   started="$(cat "$sd/agent-$id.start")"
   is_number "$started" || gate_fail "Startzeit in agent-$id.start unlesbar"
   elapsed=$(( ($(date +%s) - started) / 60 ))
   if [ "$elapsed" -ge "$minutes" ]; then
-    target="$(field '.tool_input.file_path')"
-    case "$tool:$target" in
-      Edit:"$proj"/.keel/work/*|Write:"$proj"/.keel/work/*) ;;
-      *)
-        record "budget_exhausted" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson minutes "$elapsed" '{role:$role,agent_id:$id,ref:$ref,minutes:$minutes}')" || true
-        echo "$elapsed" > "$sd/agent-$id.timeout"
-        deny "Zeitbudget erschöpft ($minutes Minuten). Schreibe deinen Stand in die Aufgaben-Datei unter .keel/work/ und beende dich. Keine weiteren Werkzeuge."
-        ;;
-    esac
+    echo "$elapsed" > "$sd/agent-$id.slow"
+    record "budget_slow" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson minutes "$elapsed" --argjson limit "$minutes" '{role:$role,agent_id:$id,ref:$ref,minutes:$minutes,limit:$limit}')" || true
   fi
 fi
 

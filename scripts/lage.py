@@ -150,6 +150,7 @@ def grouped_events(paths, hours):
     runs = Counter()
     blocked = defaultdict(Counter)
     budget = Counter()
+    slow = Counter()
     denied = defaultdict(Counter)
     alarms = 0
     stops = {}
@@ -168,6 +169,8 @@ def grouped_events(paths, hours):
             blocked[e.get("role")][reason_key(e)] += 1
         elif ev == "budget_exhausted":
             budget[e.get("role")] += 1
+        elif ev == "budget_slow":
+            slow[e.get("role")] += 1
         elif ev == "denied":
             denied[e.get("hook")][reason_key(e)] += 1
         elif ev == "context_alarm":
@@ -176,6 +179,7 @@ def grouped_events(paths, hours):
         "rollenlaeufe": dict(runs),
         "blockierte_uebergaben": {r: dict(c) for r, c in blocked.items()},
         "budget_erschoepft": dict(budget),
+        "langsame_laeufe": dict(slow),
         "ablehnungen": {h: dict(c) for h, c in denied.items()},
         "kontext_alarme": alarms,
         "_starts": starts,
@@ -218,7 +222,7 @@ def agent_runs(state_dir, stops, now=None):
             "start": started,
             "seit_sekunden": age,
             "werkzeugaufrufe": read_text(state_dir / f"agent-{aid}.calls") or None,
-            "zeitbudget_erschoepft": (state_dir / f"agent-{aid}.timeout").exists(),
+            "langsam": (state_dir / f"agent-{aid}.slow").exists(),
             "zustand": zustand,
             "_files": files,
         })
@@ -392,6 +396,9 @@ def main():
                 print(f"  blockierte Übergabe {role} ×{n}: {reason}")
     if e["budget_erschoepft"]:
         print("  Budget erschöpft: " + ", ".join(f"{k} {n}" for k, n in e["budget_erschoepft"].items()))
+    if e["langsame_laeufe"]:
+        print("  Langsamer als die Minutenschwelle (Hinweis): "
+              + ", ".join(f"{k} {n}" for k, n in e["langsame_laeufe"].items()))
     if e["ablehnungen"]:
         for hook, reasons in e["ablehnungen"].items():
             for reason, n in sorted(reasons.items(), key=lambda x: -x[1]):

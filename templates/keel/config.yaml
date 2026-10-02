@@ -13,7 +13,7 @@ test:
 budget:
   tool_calls: 60           # Standard je Rollenlauf
   diff_lines: 300
-  minutes: 30
+  minutes: 30              # Meldeschwelle: darüber meldet der Lauf einmal budget_slow, gesperrt wird nicht
   # Je Rolle überschreibbar als <rolle>_<schlüssel>. Lesende Rollen brauchen mehr, in großen Repos deutlich mehr.
   architekt_tool_calls: 200
   architekt_minutes: 60

@@ -109,6 +109,7 @@ def main():
     stops = [e for e in evs if e.get("event") == "agent_stop"]
     blocked = [e for e in evs if e.get("event") == "stop_blocked"]
     budget = [e for e in evs if e.get("event") == "budget_exhausted"]
+    slow = [e for e in evs if e.get("event") == "budget_slow"]
     context_alarms = [e for e in evs if e.get("event") == "context_alarm"]
 
     # ---- tokens per task from subagent transcripts
@@ -260,6 +261,7 @@ def main():
         ("Pflege", "pflege_verfallen_prozent", "Verfallene Pflege-Anmerkungen (% der erledigten)", pflege_verfallen),
         ("Übergaben", "blockierte_uebergaben_prozent", "Blockierte Übergaben (% der Rollenläufe)", round(100 * len(blocked) / len(stops)) if stops else None),
         ("Budget", "budget_verstoesse", "Budgetverstöße", len(budget)),
+        ("Budget", "langsame_laeufe", "Läufe über der Minutenschwelle (Hinweis)", len(slow)),
         ("Kontext", "kontext_alarme", "Kontext-Alarme beim Lead", len(context_alarms)),
         ("Drift", "audit_abweichungen_pro_bericht", "Audit-Abweichungen pro Bericht (Ø)", audit_avg),
         ("Kosten", "tokens_pro_aufgabe_k", "Ausgabe-Tokens pro Aufgabe (k, Ø über Rollen)", tokens_per_task),

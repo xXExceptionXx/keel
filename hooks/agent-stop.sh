@@ -24,12 +24,12 @@ plans="$proj/.keel/work/plans"
 finish() {  # record, drop this run's state files, allow stop. The model is what actually ran, for the Coach.
   local tr; tr="$(field '.agent_transcript_path')"
   record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$tr" --arg model "$(transcript_model "$tr")" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript,model:$model}')" || true
-  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout" "$sd/agent-$id.stopfail"
+  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.slow" "$sd/agent-$id.stopfail"
   keel_ok
 }
 
-# Budget exhausted (calls or time): force the state, allow the stop so the loop ends deterministically.
-if { [ "$calls" -gt "$limit" ] || [ -f "$sd/agent-$id.timeout" ]; } && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
+# Tool-call budget exhausted: force the state, allow the stop so the loop ends deterministically. Time only reports.
+if [ "$calls" -gt "$limit" ] && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
   $FM set "$tasks/$ref.md" status=budget-erschoepft
   finish "budget-erschoepft"
 fi

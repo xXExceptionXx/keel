@@ -110,7 +110,7 @@ stateDiagram-v2
     geplant --> tests_bereit: Tester schreibt Aufgabentests
     tests_bereit --> fertig_gemeldet: Entwickler, Prüftor und Compliance-Scan beim Beenden
     tests_bereit --> testeinspruch: Entwickler hält Test für falsch
-    tests_bereit --> budget_erschoepft: Hook stoppt bei Aufrufen, Zeit oder Diff
+    tests_bereit --> budget_erschoepft: Hook stoppt bei Aufrufen oder Diff
     fertig_gemeldet --> compliance: Scan meldet pruefen oder vorlage
     compliance --> nacharbeit: Auflagen
     compliance --> review: frei
@@ -174,7 +174,7 @@ sequenceDiagram
     S->>S: agent_id an V1-T02 gebunden, Zähler und Uhr auf 0
     loop jeder Werkzeugaufruf
         D->>T: Read, Edit, Bash …
-        T->>T: Testdatei des Testers? Kennzahlen-Ordner?<br/>Aufrufe oder Zeit über dem Rollenbudget?
+        T->>T: Testdatei des Testers? Kennzahlen-Ordner?<br/>Aufrufe über dem Rollenbudget? (Zeit meldet nur)
         T-->>D: deny mit Grund (bei Verstoß)
     end
     D->>E: fertig, Abschlussnachricht
