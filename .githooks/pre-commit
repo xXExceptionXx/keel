@@ -1,0 +1,5 @@
+#!/bin/bash
+# Blocks a commit that would publish private data: identity, private names, home paths, emails, secrets.
+# Enable once per clone: git config core.hooksPath .githooks
+cd "$(git rev-parse --show-toplevel)" || exit 1
+exec python3 tests/leak_check.py --staged

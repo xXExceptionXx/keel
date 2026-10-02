@@ -1,12 +1,18 @@
 #!/bin/bash
-# Runs the unit and contract tests with the macOS system python 3.9 and bash 3.2 before a push.
-# CI covers Linux only, so this is where the macOS baseline gets tested.
+# Before a push: the leak check over every commit that is new to the remote, on every system. On macOS also the
+# unit and contract tests with the system python 3.9 and bash 3.2.
 # Enable once per clone: git config core.hooksPath .githooks
 # Skip a single push:    git push --no-verify
 
-[ "$(uname -s)" = Darwin ] || exit 0
-
 cd "$(git rev-parse --show-toplevel)" || exit 1
+
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha _ _; do
+  [ "$local_sha" = "$zero" ] && continue
+  python3 tests/leak_check.py --range "$local_sha --not --remotes" || exit 1
+done
+
+[ "$(uname -s)" = Darwin ] || exit 0
 
 shim=$(mktemp -d)
 trap 'rm -rf "$shim"' EXIT
