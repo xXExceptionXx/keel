@@ -49,7 +49,7 @@ SCHEMA = {
     "monitor": {"autostart": False, "port": 8765},
     "faelligkeiten": {
         "coach_tage": 30, "coach_min_rollenlaeufe": 40, "coach_nach_modellwechsel_rollenlaeufe": 10,
-        "architektur_tage": 7, "architektur_min_commits": 10,
+        "architektur_tage": 7, "architektur_min_commits": 10, "wiedervorlage_ueberfaellig_tage": 7,
     },
     "compliance": {"pii_patterns": ""},
     "backlog": {

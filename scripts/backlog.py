@@ -6,6 +6,7 @@ Usage (run from the project root or pass --project):
   backlog.py show <id>                one item
   backlog.py list [--status s]        items as JSON
   backlog.py propose <file.md>        new item with status "vorgeschlagen"; file has frontmatter titel, problem, warum, herkunft
+                                      (datum defaults to today: the agenda sees how long a proposal waits)
   backlog.py status <id> <status>     status change within the canonical set
   backlog.py link <id> <plan-path>    link an item to its plan file
 
@@ -17,6 +18,7 @@ import json
 import re
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 import _keel  # noqa: F401
@@ -26,7 +28,7 @@ from keel.store.io import atomic_write, file_lock
 
 STATUSES = ["vorgeschlagen", "bereit", "in-arbeit", "erledigt", "verworfen"]
 SECTION_TITLES = {"vorgeschlagen": "vorgeschlagen", "bereit": "bereit", "in-arbeit": "in Arbeit", "erledigt": "erledigt", "verworfen": "verworfen"}
-FIELDS = ["problem", "warum", "herkunft", "plan"]
+FIELDS = ["problem", "warum", "herkunft", "datum", "plan"]
 
 
 def fail(msg, code=1):
@@ -215,6 +217,8 @@ class GitHub:
             m = re.match(r"^([A-Za-z]+):\s*(.*)$", line)
             if m and m.group(1).lower() in FIELDS:
                 item[m.group(1).lower()] = m.group(2).strip()
+        if not item.get("datum") and issue.get("createdAt"):
+            item["datum"] = str(issue["createdAt"])[:10]
         return item
 
     def list(self, status=None):
@@ -314,6 +318,7 @@ def main(argv):
         data = {k: (", ".join(v) if isinstance(v, list) else v) for k, v in data.items() if k != "__order__"}
         if not data.get("titel"):
             fail("propose file needs a titel")
+        data.setdefault("datum", date.today().isoformat())
         result = a.propose(data)
     elif cmd == "status":
         if args[1] not in STATUSES:

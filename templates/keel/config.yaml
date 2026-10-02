@@ -75,6 +75,7 @@ faelligkeiten:
   coach_nach_modellwechsel_rollenlaeufe: 10   # Modellwechsel: Coach vorgezogen, sobald so viele Läufe auf dem neuen Modell vorliegen
   architektur_tage: 7
   architektur_min_commits: 10
+  wiedervorlage_ueberfaellig_tage: 7   # so viele Tage über dem Termin macht eine Wiedervorlage das Briefing hart fällig
 
 compliance:
   pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. 'mitgliedsnummer|\bkundennummer\b'

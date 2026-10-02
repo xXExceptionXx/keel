@@ -20,7 +20,7 @@ from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain.errors import KeelError
-from keel.services import doctor
+from keel.services import agenda, doctor
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
 from keel.store.paths import Paths
@@ -135,8 +135,35 @@ def vorlagen(project):
             age = (today - date.fromisoformat(str(d.get("datum")))).days
         except (TypeError, ValueError):
             age = None
-        out.append({"datei": str(p.relative_to(project)), "titel": d.get("titel"), "von": d.get("von"), "eskaliert": d.get("eskaliert"), "alter_tage": age})
+        out.append({"datei": str(p.relative_to(project)), "titel": d.get("titel"), "von": d.get("von"),
+                    "eskaliert": d.get("eskaliert"), "status": d.get("status") or "offen", "ebene": d.get("ebene"),
+                    "alter_tage": age})
     return out
+
+
+def tagesordnung(project):
+    """The agenda of the next briefing (System-ADR 0021); a local backlog only, never a network call."""
+    import backlog
+    try:
+        cfg = config.section(config.load(project), "backlog")
+        items = backlog.ADAPTERS["markdown"](project, cfg).list("vorgeschlagen") \
+            if (cfg.get("provider") or "markdown") == "markdown" else None
+    except (KeelError, OSError, ValueError):
+        items = None
+    try:
+        return agenda.collect(project, backlog_items=items)["tagesordnung"]
+    except KeelError as exc:
+        return [{"art": "nicht-pruefbar", "datei": "", "titel": str(exc)}]
+
+
+def vorlage_tag(v):
+    if v.get("status") == "zurueckgestellt":
+        return "zurückgestellt, kommt mit ihrer Wiedervorlage zurück"
+    if v.get("von") == "Coach" and v.get("ebene") == "motor":
+        return "Motor-Vorschlag, im Briefing weiterreichen oder verwerfen (sperrt nicht)"
+    if v.get("eskaliert") or v.get("von") == "Coach":
+        return "richtungsweisend, wartet auf dich im Briefing"
+    return "entscheidet der Supervisor beim nächsten Start"
 
 
 def reason_key(e):
@@ -318,6 +345,7 @@ def build_report(project, hours=24, plugin_root=None, fast=False):
         "vorhaben": vorhaben(project),
         "epics": epics(project),
         "vorlagen": vorlagen(project),
+        "tagesordnung": tagesordnung(project),
         "ereignisse": ev,
         "ereignisse_stunden": hours,
         "zustandsdateien": findings,
@@ -384,8 +412,14 @@ def main():
     if not report["vorlagen"]:
         print("  keine")
     for v in report["vorlagen"]:
-        tag = "richtungsweisend, wartet auf dich im Briefing" if v["eskaliert"] else "entscheidet der Supervisor beim nächsten Start"
-        print(f"  {v['titel'] or v['datei']} (von {v['von'] or '?'}, {v['alter_tage']} Tage alt): {tag}")
+        print(f"  {v['titel'] or v['datei']} (von {v['von'] or '?'}, {v['alter_tage']} Tage alt): {vorlage_tag(v)}")
+
+    print("\nTagesordnung des nächsten Briefings (sperrt nicht):")
+    if not report["tagesordnung"]:
+        print("  leer")
+    for t in report["tagesordnung"]:
+        print(f"  {t['art']}: {t['titel']}" + (f" ({t['datei']})" if t.get("datei") else "")
+              + (f": {t['grund']}" if t.get("grund") else ""))
 
     print(f"\nEreignisse der letzten {hours} Stunden:")
     e = report["ereignisse"]

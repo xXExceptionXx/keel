@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Decide whether a morning briefing with the Supervisor is required before the Lead may work.
+"""Decide whether a morning briefing with the Supervisor is required before the Lead may work, and what is on its agenda.
 
-Usage: briefing_needed.py <project-dir> [--json]
-Reasons: supervisor decisions not yet presented (ADRs with entscheider Supervisor and vorgelegt: offen),
-Vorlagen escalated as richtungsweisend (eskaliert: Supervisor), Coach Vorlagen, epics in kurskorrektur.
+Usage: briefing_needed.py <project-dir> [--json] [--voll]
+Blocking reasons (gruende): supervisor decisions not yet presented, Vorlagen escalated as richtungsweisend, Coach
+Vorlagen of the project level, postponed Vorlagen whose follow-up is due the second time or that lost their
+follow-up, follow-ups far past their date, epics in kurskorrektur.
+Agenda (tagesordnung, never blocking): due follow-ups, postponed Vorlagen due the first time, Audit backlog items
+waiting for a decision, Proposed ADRs on the base branch, motor proposals of the Coach, passed-on motor proposals
+nobody decided within 30 days (System-ADR 0021). --voll also asks a GitHub backlog; without it only a local one.
 Exit codes (System-ADR 0019): 0 no briefing needed, 1 briefing needed, 2 cannot tell (usage, internal error).
 """
 import json
@@ -12,7 +16,21 @@ from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain.errors import KeelError
-from keel.store.frontmatter import fields as fm
+from keel.services import agenda
+
+
+def backlog_items(project, full):
+    """Backlog items for the agenda; a text when the backlog cannot be read, None when it is not asked."""
+    import backlog
+    try:
+        from keel.store import config
+        cfg = config.section(config.load(project), "backlog")
+        provider = cfg.get("provider") or "markdown"
+        if provider != "markdown" and not full:
+            return None
+        return backlog.ADAPTERS[provider](project, cfg).list("vorgeschlagen")
+    except (KeelError, OSError, ValueError, KeyError, SystemExit) as exc:
+        return f"{type(exc).__name__}: {exc}"
 
 
 def main():
@@ -20,38 +38,23 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     project = Path(sys.argv[1]).resolve()
-    reasons = []
-    adr = project / ".keel" / "adr"
-    if adr.exists():
-        for p in sorted(adr.glob("[0-9]*.md")):
-            d = fm(p)
-            if d.get("entscheider") == "Supervisor" and str(d.get("vorgelegt", "")).lower() == "offen":
-                reasons.append({"art": "supervisor-entscheidung", "datei": str(p.relative_to(project)), "titel": d.get("titel", "")})
-    pending = project / ".keel" / "decisions" / "pending"
-    if pending.exists():
-        for p in sorted(pending.glob("*.md")):
-            d = fm(p)
-            if d.get("eskaliert") == "Supervisor":
-                reasons.append({"art": "richtungsweisend", "datei": str(p.relative_to(project)), "titel": d.get("titel", "")})
-            elif d.get("von") == "Coach":
-                reasons.append({"art": "coach-vorlage", "datei": str(p.relative_to(project)), "titel": d.get("titel", "")})
-    epics = project / ".keel" / "work" / "epics"
-    if epics.exists():
-        for p in sorted(epics.glob("*.md")):
-            if p.name.endswith(".bewertung.md"):
-                continue
-            d = fm(p)
-            if d.get("status") == "kurskorrektur":
-                reasons.append({"art": "kurskorrektur", "datei": str(p.relative_to(project)), "titel": d.get("titel", "")})
+    result = agenda.collect(project, backlog_items=backlog_items(project, "--voll" in sys.argv))
+    reasons, items = result["gruende"], result["tagesordnung"]
     if "--json" in sys.argv:
-        print(json.dumps({"briefing_noetig": bool(reasons), "gruende": reasons}, ensure_ascii=False, indent=2))
+        print(json.dumps({"briefing_noetig": bool(reasons), "gruende": reasons, "tagesordnung": items},
+                         ensure_ascii=False, indent=2))
     else:
         if reasons:
             print(f"Briefing nötig ({len(reasons)}):")
             for r in reasons:
-                print(f"  {r['art']}: {r['titel']} ({r['datei']})")
+                print(f"  {r['art']}: {r['titel']} ({r['datei'] or r.get('grund', '')})")
         else:
             print("kein Briefing nötig")
+        if items:
+            print(f"Tagesordnung ({len(items)}):")
+            for r in items:
+                print(f"  {r['art']}: {r['titel']}" + (f" ({r['datei']})" if r["datei"] else "")
+                      + (f": {r['grund']}" if r.get("grund") else ""))
     sys.exit(1 if reasons else 0)
 
 

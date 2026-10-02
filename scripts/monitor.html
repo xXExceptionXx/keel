@@ -200,6 +200,10 @@ table.tasks tr.out td { opacity: .55; }
       <h2>Offene Vorlagen <span class="count" id="dec-count"></span></h2>
       <div id="decisions"></div>
     </section>
+    <section>
+      <h2>Tagesordnung <span class="count" id="agenda-count"></span></h2>
+      <div id="agenda"></div>
+    </section>
   </div>
 
   <div class="col-events">
@@ -339,6 +343,7 @@ function render(s) {
   renderDue(l.faellig, l.gesundheit, s.unlesbar);
   renderPlans(l);
   renderDecisions(l.vorlagen);
+  renderAgenda(l.tagesordnung || []);
   renderEvents(s.ereignisse);
 }
 
@@ -475,9 +480,18 @@ function renderDecisions(v) {
   $("dec-count").textContent = v.length || "";
   $("decisions").innerHTML = v.length ? `<ul class="plain">${v.map(d => `<li>
       <span class="link" data-open="${esc(d.datei)}">${esc(d.titel || d.datei)}</span>
-      ${d.eskaliert ? `<span class="badge info">richtungsweisend</span>` : ""}
-      <div class="muted">von ${esc(d.von || "?")}, ${d.alter_tage ?? "?"} Tage alt · ${d.eskaliert ? "entscheidest du im Briefing" : "entscheidet der Supervisor"}</div></li>`).join("")}</ul>`
+      ${d.status === "zurueckgestellt" ? `<span class="badge">zurückgestellt</span>` : d.ebene === "motor" ? `<span class="badge">Motor</span>` : d.eskaliert || d.von === "Coach" ? `<span class="badge info">richtungsweisend</span>` : ""}
+      <div class="muted">von ${esc(d.von || "?")}, ${d.alter_tage ?? "?"} Tage alt · ${d.status === "zurueckgestellt" ? "kommt mit ihrer Wiedervorlage zurück" : d.ebene === "motor" ? "im Briefing weiterreichen oder verwerfen" : d.eskaliert || d.von === "Coach" ? "entscheidest du im Briefing" : "entscheidet der Supervisor"}</div></li>`).join("")}</ul>`
     : `<div class="empty">Keine.</div>`;
+}
+
+function renderAgenda(v) {
+  $("agenda-count").textContent = v.length || "";
+  $("agenda").innerHTML = v.length ? `<ul class="plain">${v.map(t => `<li>
+      ${t.datei ? `<span class="link" data-open="${esc(t.datei)}">${esc(t.titel || t.datei)}</span>` : esc(t.titel)}
+      <span class="badge">${esc(t.art)}</span>
+      ${t.grund || t.faellig ? `<div class="muted">${esc(t.grund || "fällig " + t.faellig)}</div>` : ""}</li>`).join("")}</ul>`
+    : `<div class="empty">Nichts für das nächste Briefing.</div>`;
 }
 
 // ---- events

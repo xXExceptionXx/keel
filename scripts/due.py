@@ -45,6 +45,11 @@ class DueError(Exception):
     pass
 
 
+def _decides_at_start(d):
+    """An open Vorlage the Supervisor decides at /keel:start: not escalated, not the Coach's, not postponed."""
+    return d.get("status", "offen") == "offen" and not d.get("eskaliert") and d.get("von") != "Coach"
+
+
 def main():
     if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
         print(__doc__, file=sys.stderr)
@@ -66,6 +71,8 @@ def main():
         raise DueError(f"briefing_needed.py endete mit {r.returncode}: {r.stderr.strip()[-300:]}")
     if br.get("briefing_noetig"):
         items.append({"art": "briefing", "hart": True, "rolle": "supervisor", "grund": f"{len(br['gruende'])} Punkt(e) für das Briefing", "befehl": "/keel:start (wird zum Briefing)"})
+    elif br.get("tagesordnung"):
+        items.append({"art": "tagesordnung", "hart": False, "rolle": "supervisor", "grund": f"{len(br['tagesordnung'])} Punkt(e) für das nächste Briefing, ohne Sperre", "befehl": "/keel:briefing"})
 
     # day close-out: commits after the last day tag from a day before today
     last_tag = sh(["git", "tag", "-l", "day-*", "--sort=-creatordate"], project).split("\n")[0] if sh(["git", "tag", "-l", "day-*"], project) else ""
@@ -120,7 +127,7 @@ def main():
 
     # soft: inbox items
     pending = project / ".keel" / "decisions" / "pending"
-    n_pending = len(list(pending.glob("*.md"))) if pending.exists() else 0
+    n_pending = len([p for p in pending.glob("*.md") if _decides_at_start(frontmatter.fields_tolerant(p))]) if pending.exists() else 0
     if n_pending and not br.get("briefing_noetig"):
         items.append({"art": "vorlagen", "hart": False, "rolle": "supervisor", "grund": f"{n_pending} offene Vorlage(n), der Supervisor entscheidet sie beim Start", "befehl": "/keel:start"})
 

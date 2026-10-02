@@ -1,6 +1,7 @@
 """Markdown backlog (F5): a change touches only the affected item; unknown fields, prose and headings survive."""
 import json
 import unittest
+from datetime import date
 
 from harness import ContractTest, project, write
 
@@ -80,8 +81,10 @@ class BacklogTest(ContractTest):
         lines = (p / ".keel" / "backlog.md").read_text(encoding="utf-8").split("\n")
         heads = [l for l in lines if l.startswith("## ")]
         self.assertEqual(heads, ["## bereit", "## vorgeschlagen", "## in Arbeit", "## erledigt", "## verworfen"])
-        self.assertEqual(without(lines, ["", "- [BL-3] Neu", "  Problem: p3", "  Warum: w3", "  Herkunft: Audit"]),
-                         BACKLOG.split("\n"))
+        today = date.today().isoformat()
+        self.assertEqual(without(lines, ["", "- [BL-3] Neu", "  Problem: p3", "  Warum: w3", "  Herkunft: Audit",
+                                         f"  Datum: {today}"]), BACKLOG.split("\n"))
+        self.assertEqual(r.json["datum"], today)
 
     def test_show_without_id_is_a_usage_error(self):
         p = self.setup_backlog()
