@@ -33,6 +33,7 @@ templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
 tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest discover -s tests/contract
 tests/unit/       Unit-Tests für lib/keel, Schichtrichtung, alte Muster: python3 -m unittest discover -s tests/unit -t .
+tests/run.py      Unit- und Vertragstests parallel, je Testmethode ein Job: python3 tests/run.py [-j N]
 tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
 .githooks/        pre-push: Unit- und Vertragstests mit macOS-System-Python und Bash 3.2 (git config core.hooksPath .githooks)
 ```

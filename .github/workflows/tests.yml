@@ -37,11 +37,9 @@ jobs:
           git config --global user.email ci@example.com
           git config --global user.name ci
 
-      - name: Unit tests of lib/keel
-        run: python3 -m unittest discover -s tests/unit -t . -v
-
-      - name: Contract tests
-        run: python3 -m unittest discover -s tests/contract -v
+      # Three workers fit the GitHub runner; each test method is one job (tests/run.py).
+      - name: Unit and contract tests
+        run: python3 tests/run.py -j 3 -v
 
       # Differential test: lists every agent-gate call whose outcome changed against the base. Intended
       # changes show up here too, so it informs the review instead of failing the build.

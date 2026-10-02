@@ -16,5 +16,4 @@ export PATH="$shim:$PATH"
 export KEEL_TEST_BASH=/bin/bash
 
 echo "pre-push: tests with $(python3 --version), bash ${BASH_VERSION%%(*} (skip with --no-verify)"
-python3 -m unittest discover -s tests/unit -t . -q || exit 1
-python3 -m unittest discover -s tests/contract -q || exit 1
+python3 tests/run.py
