@@ -5,8 +5,8 @@ import unittest
 from harness import ContractTest, project, write
 
 CONFIG = """# Kommentar
-motor:
-  repo: "o/r#1"   # Kommentar nach Anführungszeichen
+supervisor:
+  model: "o/r#1"   # Kommentar nach Anführungszeichen
 backlog:
   provider: github
   github:
@@ -30,7 +30,7 @@ class ConfigCodecTest(ContractTest):
     def test_hash_inside_quotes_is_not_a_comment(self):
         p = project()
         write(p / ".keel" / "config.yaml", CONFIG)
-        self.assertEqual(self.config(p, "motor.repo").out.strip(), "o/r#1")
+        self.assertEqual(self.config(p, "supervisor.model").out.strip(), "o/r#1")
 
     def test_three_levels_and_lists(self):
         p = project()

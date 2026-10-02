@@ -233,6 +233,16 @@ case "$role" in
     rep="$proj/.keel/work/coach/$ref.md"
     $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>"$ERRF" \
       || block_stop "Coach-Bericht fehlt oder unvollständig ($rep): $(cat "$ERRF")"
+    # Every Vorlage of the Coach says whether it concerns the project or the motor (System-ADR 0021).
+    rc=0; mine="$($FM find "$proj/.keel/decisions/pending" von=Coach 2>"$ERRF")" || rc=$?
+    [ "$rc" -le 1 ] || gate_fail "Vorlagen nicht lesbar: $(cat "$ERRF")"
+    while IFS= read -r v; do
+      [ -n "$v" ] || continue
+      case "$(fm_get "$v" ebene)" in
+        projekt|motor) ;;
+        *) block_stop "Vorlage ${v#"$proj"/} ohne gültige ebene: setze ebene=projekt (alles unter .keel/) oder ebene=motor (Hooks, Skripte, Skills, Rollen, Standardwerte des Plugins); betrifft sie beides, teile sie." ;;
+      esac
+    done <<< "$mine"
     # A model switch with enough runs for a comparison must be assessed (System-ADR 0015).
     need="$($CFG "$proj" faelligkeiten.coach_nach_modellwechsel_rollenlaeufe 10)"
     is_number "$need" || need=10

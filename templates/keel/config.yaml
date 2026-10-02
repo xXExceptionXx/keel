@@ -61,9 +61,6 @@ pflege:
 supervisor:
   model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es
 
-motor:
-  repo: xXExceptionXx/keel  # Repo des Plugins; /keel:hilfe meldet Motor-Befunde dort als Issue
-
 monitor:
   autostart: false          # true: /keel:start, vorhaben, epic, tagesstart, briefing, keel.sh und keel-run.sh starten den Ablauf-Monitor mit
   port: 8765                # http://127.0.0.1:<port>/; je Projekt ein eigener Port, wenn mehrere Monitore laufen

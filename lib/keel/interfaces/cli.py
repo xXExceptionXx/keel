@@ -3,6 +3,11 @@
   keel --version
   keel doctor [--project DIR] [--json]
   keel path [--project DIR] [--ensure] (root|runtime|state|logs|events|hooklog|brake | --shell)
+  keel motor add [--project DIR] --typ motorvorschlag|motorbefund --titel T [--hypothese H] [--kennzahlen K]
+                 [--quelle-vorlage V] < text      a proposal or finding for the plugin, into the machine-wide inbox
+  keel motor list [--status S] [--json]           the inbox (~/.keel-metrics/motor/), for a session in the keel repo
+  keel motor show <id>
+  keel motor set <id> key=value ...               status (offen|angenommen|abgelehnt|umgesetzt), system_adr, ...
 
 Exit codes (System-ADR 0019): 0 ok, 1 findings, 2 usage or internal error.
 """
@@ -36,6 +41,24 @@ def build_parser():
     pa.add_argument("--ensure", action="store_true", help="create the runtime folders")
     pa.add_argument("--shell", action="store_true", help="all paths as shell assignments for eval")
     pa.add_argument("name", nargs="?", choices=PATH_NAMES)
+
+    m = sub.add_parser("motor", help="machine-wide inbox for motor proposals and findings")
+    msub = m.add_subparsers(dest="action")
+    ma = msub.add_parser("add")
+    ma.add_argument("--project", default=".")
+    ma.add_argument("--typ", required=True)
+    ma.add_argument("--titel", required=True)
+    ma.add_argument("--hypothese", default="")
+    ma.add_argument("--kennzahlen", default="")
+    ma.add_argument("--quelle-vorlage", dest="quelle_vorlage", default="")
+    ml = msub.add_parser("list")
+    ml.add_argument("--status")
+    ml.add_argument("--json", action="store_true")
+    ms = msub.add_parser("show")
+    ms.add_argument("id")
+    mt = msub.add_parser("set")
+    mt.add_argument("id")
+    mt.add_argument("values", nargs="+")
     return p
 
 
@@ -71,7 +94,40 @@ def cmd_path(args):
     return 0
 
 
-COMMANDS = {"doctor": cmd_doctor, "path": cmd_path}
+def cmd_motor(args):
+    import json
+
+    from keel.services import motor
+
+    if args.action == "add":
+        body = sys.stdin.read()
+        print(motor.add(args.project, args.typ, args.titel, body, args.hypothese, args.kennzahlen,
+                        args.quelle_vorlage))
+    elif args.action == "list":
+        rows = motor.entries(args.status)
+        if args.json:
+            print(json.dumps(rows, ensure_ascii=False, indent=2))
+        for r in [] if args.json else rows:
+            print(f"{r['id']}: " + ("UNLESBAR" if r.get("unlesbar") else
+                                     f"{r['status']}, {r['typ']}, {r['projekt']}, {r['plugin_version']}: {r['titel']}"))
+        if not rows and not args.json:
+            print("keine Einträge")
+    elif args.action == "show":
+        print(motor.show(args.id), end="")
+    elif args.action == "set":
+        values = {}
+        for pair in args.values:
+            key, sep, value = pair.partition("=")
+            if not sep:
+                raise UsageError(f"{pair!r} ist nicht key=value")
+            values[key] = value
+        motor.set_fields(args.id, values)
+    else:
+        raise UsageError("keel motor add|list|show|set")
+    return 0
+
+
+COMMANDS = {"doctor": cmd_doctor, "path": cmd_path, "motor": cmd_motor}
 
 
 def main(argv=None):

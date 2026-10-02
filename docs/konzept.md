@@ -670,7 +670,7 @@ Ergänzt am 2026-09-22. Ich merke mir keine Befehle: `/keel:start` liest, was f�
 
 ## Hilfe statt Stützräder
 
-Ergänzt am 2026-09-26. Für die ersten Wochen im echten Projekt stand eine Proxy-Session über keel zur Debatte, die beaufsichtigt, korrigiert und Vorlagen durchreicht. Verworfen: Es gibt genau einen Entscheider, und die Vorlage wartet auf ihn; eine zweite Aufsicht verwischt die Kalibrierung von Supervisor und Coach. Geblieben ist `/keel:hilfe`, eine Skill ohne Befugnisse: Sie erklärt den Stand aus Zustand und Ereignissen, nennt den nächsten Befehl und darf mit meinem Ja Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund als Issue im Plugin-Repo melden. Motor-Reparaturen finden dort statt, nie im Projekt. Siehe System-ADR 0014.
+Ergänzt am 2026-09-26. Für die ersten Wochen im echten Projekt stand eine Proxy-Session über keel zur Debatte, die beaufsichtigt, korrigiert und Vorlagen durchreicht. Verworfen: Es gibt genau einen Entscheider, und die Vorlage wartet auf ihn; eine zweite Aufsicht verwischt die Kalibrierung von Supervisor und Coach. Geblieben ist `/keel:hilfe`, eine Skill ohne Befugnisse: Sie erklärt den Stand aus Zustand und Ereignissen, nennt den nächsten Befehl und darf mit meinem Ja Reste aufräumen, einen Hinweis für den Coach ablegen oder einen Motor-Befund melden. Motor-Reparaturen finden im Plugin-Repo statt, nie im Projekt. Siehe System-ADR 0014; seit System-ADR 0021 gehen Motor-Befunde und Motor-Vorschläge nicht mehr als Issue in das öffentliche Plugin-Repo, sondern in die lokale Motor-Ablage `~/.keel-metrics/motor/`.
 
 ## Modellwechsel
 

@@ -45,7 +45,6 @@ SCHEMA = {
     "review": {"schwelle_blockierend": 0, "schwelle_wichtig": 0, "max_runden": 4},
     "pflege": {"max_aufgaben_pro_runde": 2, "verfall_tage": 42},
     "supervisor": {"model": "claude-fable-5-1"},
-    "motor": {"repo": "xXExceptionXx/keel"},
     "monitor": {"autostart": False, "port": 8765},
     "faelligkeiten": {
         "coach_tage": 30, "coach_min_rollenlaeufe": 40, "coach_nach_modellwechsel_rollenlaeufe": 10,

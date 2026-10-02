@@ -53,6 +53,10 @@ modell_geprueft: [claude-opus-5-5]   # nur wenn ein Modellwechsel bewertet wurde
 
 **Vorlagen** unter `.keel/decisions/pending/<Datum>-coach-<slug>.md` nach dem Format in `.keel/decisions/VORLAGE.md`, `von: Coach`, eine je Justierung. Jede Vorlage enthält eine Hypothese: „<Justierung>, erwartet: <Kennzahl> bewegt sich von <jetzt> nach <Ziel> bis <Datum>“. Ohne Hypothese kein Vorschlag.
 
+**Ebene je Vorlage** (System-ADR 0021), nach fester Regel: `ebene: projekt` für alles unter `.keel/` (Korridorwerte der Projektkonfiguration, Projektregeln, Leitlinien, Maßstab-Dateien), `ebene: motor` für alles im Plugin (Hooks, Skripte, Skills, Rollen, Standardwerte, Vorlagen). Betrifft eine Justierung beides, schreibe zwei Vorlagen. Ein Hook lehnt dein Ende ab, solange eine deiner Vorlagen keine gültige Ebene hat. Projekt-Vorlagen entscheidet der Mensch im Briefing und sie sperren bis dahin; Motor-Vorlagen sperren nicht, im Briefing werden sie nur weitergereicht (in die lokale Motor-Ablage, `keel motor`) oder verworfen und im keel-Repo für alle Projekte entschieden. Schreib Motor-Vorlagen deshalb so, dass sie ohne das Projekt verständlich sind: Problem, Optionen, Empfehlung, Hypothese, Kennzahlen; keine Pfade, kein Code, keine Namen aus dem Projekt.
+
+**Rückweg.** `"${CLAUDE_PLUGIN_ROOT}/bin/keel" motor list --json` zeigt die Einträge der Motor-Ablage mit `projekt` (dein Projektschlüssel steht in `keel path runtime`), `status` und `system_adr`. Ist ein Vorschlag dieses Projekts `angenommen` oder `umgesetzt`, prüfe seine Hypothese ab der Plugin-Version, die das System-ADR umsetzt, wie die Hypothesen der System-ADRs unter `${CLAUDE_PLUGIN_ROOT}/docs/adr/`.
+
 ## Regeln
 
 - **Nur bei gemessenem Problem, offenem Risiko oder deutlicher Vereinfachung.** Etwas ist nicht deshalb ein Vorschlag, weil es neu ist.
