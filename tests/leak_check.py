@@ -6,7 +6,7 @@
 
 Checks:
   identity   author and committer email must be a noreply address; names must not hit the private denylist
-  secrets    the SECRETS patterns of scripts/compliance_scan.py
+  secrets    the SECRETS patterns of lib/keel/domain/leakpatterns.py
   home path  /Users/<name>/ or /home/<name>/ other than generic placeholders
   email      any address outside example domains and noreply addresses
   denylist   private patterns, one regex per line, case-insensitive. They never live in this repo: read from
@@ -17,22 +17,16 @@ Only added lines and commit messages are checked. A line containing `leak-check:
 Exit codes: 0 clean, 1 findings, 2 cannot check (System-ADR 0019).
 """
 import argparse
-import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO / "scripts"))
-from compliance_scan import SECRETS  # noqa: E402
-
-ALLOW_MARKER = "leak-check: allow"
-NOREPLY_EMAIL = re.compile(r"^(\d+\+)?[A-Za-z0-9-]+@users\.noreply\.github\.com$|^noreply@(github|anthropic)\.com$")
-EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-EXAMPLE_EMAIL = re.compile(r"@(example\.(com|org|net)|users\.noreply\.github\.com)$|^noreply@(github|anthropic)\.com$")
-HOME_PATH = re.compile(r"(?:/Users|/home)/(?!(?:x|user|username|name|me|runner|you|<[^>]*>|\$\w+|\$\{\w+\})(?:/|\b))[A-Za-z0-9._-]+")
-DEFAULT_DENYLIST = Path.home() / ".config" / "keel" / "leak-denylist"
+sys.path.insert(0, str(REPO / "lib"))
+from keel.domain.leakpatterns import ALLOW_MARKER, NOREPLY_EMAIL, scan  # noqa: E402
+from keel.domain.errors import KeelError  # noqa: E402
+from keel.store import denylist as private_denylist  # noqa: E402
 
 
 def git(*args):
@@ -42,38 +36,9 @@ def git(*args):
     return r.stdout
 
 
-def load_denylist():
-    """Private patterns from the environment or the local file; None when neither exists."""
-    text = os.environ.get("KEEL_LEAK_DENYLIST")
-    if text is None:
-        path = Path(os.environ.get("KEEL_LEAK_DENYLIST_FILE") or DEFAULT_DENYLIST)
-        if not path.is_file():
-            return None
-        text = path.read_text(encoding="utf-8")
-    patterns = []
-    for line in text.splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            patterns.append(re.compile(line, re.IGNORECASE))
-    return patterns
-
-
 def scan_text(text, denylist):
     """Findings of one line or message: a list of short reasons, never the matched private text."""
-    if ALLOW_MARKER in text:
-        return []
-    found = []
-    for pattern, label in SECRETS:
-        if re.search(pattern, text):
-            found.append(label)
-    if HOME_PATH.search(text):
-        found.append("home path")
-    if any(not EXAMPLE_EMAIL.search(m) for m in EMAIL.findall(text)):
-        found.append("email address")
-    for i, pattern in enumerate(denylist or []):
-        if pattern.search(text):
-            found.append(f"denylist entry {i + 1}")
-    return found
+    return scan(text, denylist or ())
 
 
 def scan_identity(where, name, email, denylist):
@@ -131,12 +96,12 @@ def main():
     mode.add_argument("--range", metavar="A..B")
     args = ap.parse_args()
     try:
-        denylist = load_denylist()
+        denylist = private_denylist.load()
         if denylist is None:
-            print(f"leak-check: no private denylist (set KEEL_LEAK_DENYLIST or create {DEFAULT_DENYLIST}); "
+            print(f"leak-check: no private denylist (set KEEL_LEAK_DENYLIST or create {private_denylist.DEFAULT}); "
                   "checking the generic rules only", file=sys.stderr)
         found = check_staged(denylist) if args.staged else check_range(args.range, denylist)
-    except (RuntimeError, OSError, re.error) as e:
+    except (RuntimeError, OSError, re.error, KeelError) as e:
         print(f"leak-check: cannot check: {e}", file=sys.stderr)
         return 2
     if not found:

@@ -103,6 +103,7 @@ ul.plain li:first-child { border-top: 0; }
 .ev .reason { color: var(--muted); display: block; overflow-wrap: anywhere; }
 .ev.k-denied .i, .ev.k-stop_blocked .i { color: var(--bad); }
 .ev.k-budget_exhausted .i { color: var(--warn); }
+.ev.k-budget_slow .i { color: var(--muted); }
 .ev.k-befehl { background: linear-gradient(90deg, var(--chip), transparent 60%); }
 #events { max-height: calc(100vh - 150px); overflow: auto; }
 
@@ -198,6 +199,10 @@ table.tasks tr.out td { opacity: .55; }
     <section>
       <h2>Offene Vorlagen <span class="count" id="dec-count"></span></h2>
       <div id="decisions"></div>
+    </section>
+    <section>
+      <h2>Tagesordnung <span class="count" id="agenda-count"></span></h2>
+      <div id="agenda"></div>
     </section>
   </div>
 
@@ -338,6 +343,7 @@ function render(s) {
   renderDue(l.faellig, l.gesundheit, s.unlesbar);
   renderPlans(l);
   renderDecisions(l.vorlagen);
+  renderAgenda(l.tagesordnung || []);
   renderEvents(s.ereignisse);
 }
 
@@ -351,7 +357,7 @@ function renderNow(s) {
         <dt>seit</dt><dd>${ago(a.seit_sekunden)}</dd>
         <dt>gerufen von</dt><dd>Lead${a.befehl ? ` in <span class="mono">${esc(a.befehl)}</span>` : ""}</dd>
         ${a.werkzeugaufrufe ? `<dt>Werkzeugaufrufe</dt><dd>${esc(a.werkzeugaufrufe)}</dd>` : ""}
-        ${a.zeitbudget_erschoepft ? `<dt>Budget</dt><dd><span class="badge warn">Zeitbudget erschöpft</span></dd>` : ""}
+        ${a.langsam ? `<dt>Zeit</dt><dd><span class="badge">über der Minutenschwelle (Hinweis)</span></dd>` : ""}
         ${a.lead_model ? `<dt>Modell Lead</dt><dd class="mono">${esc(a.lead_model)}</dd>` : ""}
       </dl></div>`);
   }
@@ -474,9 +480,18 @@ function renderDecisions(v) {
   $("dec-count").textContent = v.length || "";
   $("decisions").innerHTML = v.length ? `<ul class="plain">${v.map(d => `<li>
       <span class="link" data-open="${esc(d.datei)}">${esc(d.titel || d.datei)}</span>
-      ${d.eskaliert ? `<span class="badge info">richtungsweisend</span>` : ""}
-      <div class="muted">von ${esc(d.von || "?")}, ${d.alter_tage ?? "?"} Tage alt · ${d.eskaliert ? "entscheidest du im Briefing" : "entscheidet der Supervisor"}</div></li>`).join("")}</ul>`
+      ${d.status === "zurueckgestellt" ? `<span class="badge">zurückgestellt</span>` : d.ebene === "motor" ? `<span class="badge">Motor</span>` : d.eskaliert || d.von === "Coach" ? `<span class="badge info">richtungsweisend</span>` : ""}
+      <div class="muted">von ${esc(d.von || "?")}, ${d.alter_tage ?? "?"} Tage alt · ${d.status === "zurueckgestellt" ? "kommt mit ihrer Wiedervorlage zurück" : d.ebene === "motor" ? "im Briefing weiterreichen oder verwerfen" : d.eskaliert || d.von === "Coach" ? "entscheidest du im Briefing" : "entscheidet der Supervisor"}</div></li>`).join("")}</ul>`
     : `<div class="empty">Keine.</div>`;
+}
+
+function renderAgenda(v) {
+  $("agenda-count").textContent = v.length || "";
+  $("agenda").innerHTML = v.length ? `<ul class="plain">${v.map(t => `<li>
+      ${t.datei ? `<span class="link" data-open="${esc(t.datei)}">${esc(t.titel || t.datei)}</span>` : esc(t.titel)}
+      <span class="badge">${esc(t.art)}</span>
+      ${t.grund || t.faellig ? `<div class="muted">${esc(t.grund || "fällig " + t.faellig)}</div>` : ""}</li>`).join("")}</ul>`
+    : `<div class="empty">Nichts für das nächste Briefing.</div>`;
 }
 
 // ---- events
@@ -487,6 +502,7 @@ const EV = {
   stop_blocked: { f: "problem", i: "⛔", t: e => `Übergabe von <b>${esc(roleName(e.role))}</b> blockiert${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${esc(e.reason)}</span>` },
   denied: { f: "problem", i: "✋", t: e => `Abgelehnt von ${esc(e.hook)}${e.role ? " für <b>" + esc(roleName(e.role)) + "</b>" : ""}<span class="reason">${esc(e.reason)}</span>` },
   budget_exhausted: { f: "problem", i: "⏱", t: e => `Budget erschöpft: <b>${esc(roleName(e.role))}</b>${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${e.calls ? e.calls + " Aufrufe" : ""}${e.minutes ? e.minutes + " Minuten" : ""}</span>` },
+  budget_slow: { f: "sonst", i: "⏱", t: e => `Langsam (Hinweis): <b>${esc(roleName(e.role))}</b>${e.ref ? " · " + refLink(e.ref) : ""}<span class="reason">${e.minutes} von ${e.limit} Minuten</span>` },
   context_alarm: { f: "sonst", i: "◔", t: e => `Kontext-Alarm<span class="reason">${esc(e.reason || e.step || "")}</span>` },
 };
 function renderEvents(list) {
@@ -631,7 +647,7 @@ function renderVorhaben(v) {
     return `<li class="${cls}"><span class="when">${esc(clock(r.start))}</span>
       <b>${esc(roleName(r.rolle))}</b> · ${refLink(r.ref)} · ${r.stop ? `${dur(r.start, r.stop)} ${statusBadge(r.ergebnis)}` : `<span class="badge info">läuft seit ${dur(r.start)}</span>`}
       ${r.werkzeugaufrufe != null ? `<span class="muted">· ${esc(r.werkzeugaufrufe)} Aufrufe</span>` : ""}
-      ${r.vorfaelle.map(i => `<span class="inc">${i.art === "stop_blocked" ? "⛔ Übergabe blockiert" : "⏱ Budget erschöpft"}: ${esc(i.grund)}</span>`).join("")}</li>`;
+      ${r.vorfaelle.map(i => `<span class="inc">${i.art === "stop_blocked" ? "⛔ Übergabe blockiert" : i.art === "budget_slow" ? "⏱ langsam" : "⏱ Budget erschöpft"}: ${esc(i.grund)}</span>`).join("")}</li>`;
   }).join("");
   return `<div class="vh-head"><h2>${esc(v.titel || v.name)}</h2>${statusBadge(v.status)}</div>
     <div class="vh-links"><span class="link" data-open="${esc(v.pfad)}">Plan öffnen</span>

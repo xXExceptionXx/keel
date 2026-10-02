@@ -20,7 +20,7 @@ from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain.errors import KeelError
-from keel.services import doctor
+from keel.services import agenda, doctor
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
 from keel.store.paths import Paths
@@ -135,8 +135,35 @@ def vorlagen(project):
             age = (today - date.fromisoformat(str(d.get("datum")))).days
         except (TypeError, ValueError):
             age = None
-        out.append({"datei": str(p.relative_to(project)), "titel": d.get("titel"), "von": d.get("von"), "eskaliert": d.get("eskaliert"), "alter_tage": age})
+        out.append({"datei": str(p.relative_to(project)), "titel": d.get("titel"), "von": d.get("von"),
+                    "eskaliert": d.get("eskaliert"), "status": d.get("status") or "offen", "ebene": d.get("ebene"),
+                    "alter_tage": age})
     return out
+
+
+def tagesordnung(project):
+    """The agenda of the next briefing (System-ADR 0021); a local backlog only, never a network call."""
+    import backlog
+    try:
+        cfg = config.section(config.load(project), "backlog")
+        items = backlog.ADAPTERS["markdown"](project, cfg).list("vorgeschlagen") \
+            if (cfg.get("provider") or "markdown") == "markdown" else None
+    except (KeelError, OSError, ValueError):
+        items = None
+    try:
+        return agenda.collect(project, backlog_items=items)["tagesordnung"]
+    except KeelError as exc:
+        return [{"art": "nicht-pruefbar", "datei": "", "titel": str(exc)}]
+
+
+def vorlage_tag(v):
+    if v.get("status") == "zurueckgestellt":
+        return "zurückgestellt, kommt mit ihrer Wiedervorlage zurück"
+    if v.get("von") == "Coach" and v.get("ebene") == "motor":
+        return "Motor-Vorschlag, im Briefing weiterreichen oder verwerfen (sperrt nicht)"
+    if v.get("eskaliert") or v.get("von") == "Coach":
+        return "richtungsweisend, wartet auf dich im Briefing"
+    return "entscheidet der Supervisor beim nächsten Start"
 
 
 def reason_key(e):
@@ -150,6 +177,7 @@ def grouped_events(paths, hours):
     runs = Counter()
     blocked = defaultdict(Counter)
     budget = Counter()
+    slow = Counter()
     denied = defaultdict(Counter)
     alarms = 0
     stops = {}
@@ -168,6 +196,8 @@ def grouped_events(paths, hours):
             blocked[e.get("role")][reason_key(e)] += 1
         elif ev == "budget_exhausted":
             budget[e.get("role")] += 1
+        elif ev == "budget_slow":
+            slow[e.get("role")] += 1
         elif ev == "denied":
             denied[e.get("hook")][reason_key(e)] += 1
         elif ev == "context_alarm":
@@ -176,6 +206,7 @@ def grouped_events(paths, hours):
         "rollenlaeufe": dict(runs),
         "blockierte_uebergaben": {r: dict(c) for r, c in blocked.items()},
         "budget_erschoepft": dict(budget),
+        "langsame_laeufe": dict(slow),
         "ablehnungen": {h: dict(c) for h, c in denied.items()},
         "kontext_alarme": alarms,
         "_starts": starts,
@@ -218,7 +249,7 @@ def agent_runs(state_dir, stops, now=None):
             "start": started,
             "seit_sekunden": age,
             "werkzeugaufrufe": read_text(state_dir / f"agent-{aid}.calls") or None,
-            "zeitbudget_erschoepft": (state_dir / f"agent-{aid}.timeout").exists(),
+            "langsam": (state_dir / f"agent-{aid}.slow").exists(),
             "zustand": zustand,
             "_files": files,
         })
@@ -259,7 +290,8 @@ def state_files(state_dir, starts, stops):
         findings.append("Läuft oder liegengeblieben: " + "; ".join(running))
     if finished or stale:
         findings.append(f"Reste beendeter Läufe: {finished} mit Stopp-Ereignis, {stale} ohne (älter als ein Tag). Aufräumen mit --clean.")
-    for p in list(state_dir.glob("context-*.step")) + list(state_dir.glob("hilfe-*")):
+    for p in (list(state_dir.glob("context-*.step")) + list(state_dir.glob("hilfe-*"))
+              + list(state_dir.glob("briefing-*.json")) + list(state_dir.glob("adrstand-*.json"))):
         if now - p.stat().st_mtime > STALE_AGENT_SECONDS:
             cleanup.append(p)
     return findings, cleanup
@@ -314,6 +346,7 @@ def build_report(project, hours=24, plugin_root=None, fast=False):
         "vorhaben": vorhaben(project),
         "epics": epics(project),
         "vorlagen": vorlagen(project),
+        "tagesordnung": tagesordnung(project),
         "ereignisse": ev,
         "ereignisse_stunden": hours,
         "zustandsdateien": findings,
@@ -380,8 +413,14 @@ def main():
     if not report["vorlagen"]:
         print("  keine")
     for v in report["vorlagen"]:
-        tag = "richtungsweisend, wartet auf dich im Briefing" if v["eskaliert"] else "entscheidet der Supervisor beim nächsten Start"
-        print(f"  {v['titel'] or v['datei']} (von {v['von'] or '?'}, {v['alter_tage']} Tage alt): {tag}")
+        print(f"  {v['titel'] or v['datei']} (von {v['von'] or '?'}, {v['alter_tage']} Tage alt): {vorlage_tag(v)}")
+
+    print("\nTagesordnung des nächsten Briefings (sperrt nicht):")
+    if not report["tagesordnung"]:
+        print("  leer")
+    for t in report["tagesordnung"]:
+        print(f"  {t['art']}: {t['titel']}" + (f" ({t['datei']})" if t.get("datei") else "")
+              + (f": {t['grund']}" if t.get("grund") else ""))
 
     print(f"\nEreignisse der letzten {hours} Stunden:")
     e = report["ereignisse"]
@@ -392,6 +431,9 @@ def main():
                 print(f"  blockierte Übergabe {role} ×{n}: {reason}")
     if e["budget_erschoepft"]:
         print("  Budget erschöpft: " + ", ".join(f"{k} {n}" for k, n in e["budget_erschoepft"].items()))
+    if e["langsame_laeufe"]:
+        print("  Langsamer als die Minutenschwelle (Hinweis): "
+              + ", ".join(f"{k} {n}" for k, n in e["langsame_laeufe"].items()))
     if e["ablehnungen"]:
         for hook, reasons in e["ablehnungen"].items():
             for reason, n in sorted(reasons.items(), key=lambda x: -x[1]):

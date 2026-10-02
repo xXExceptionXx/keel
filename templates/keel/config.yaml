@@ -13,7 +13,7 @@ test:
 budget:
   tool_calls: 60           # Standard je Rollenlauf
   diff_lines: 300
-  minutes: 30
+  minutes: 30              # Meldeschwelle: darüber meldet der Lauf einmal budget_slow, gesperrt wird nicht
   # Je Rolle überschreibbar als <rolle>_<schlüssel>. Lesende Rollen brauchen mehr, in großen Repos deutlich mehr.
   architekt_tool_calls: 200
   architekt_minutes: 60
@@ -61,9 +61,6 @@ pflege:
 supervisor:
   model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es
 
-motor:
-  repo: xXExceptionXx/keel  # Repo des Plugins; /keel:hilfe meldet Motor-Befunde dort als Issue
-
 monitor:
   autostart: false          # true: /keel:start, vorhaben, epic, tagesstart, briefing, keel.sh und keel-run.sh starten den Ablauf-Monitor mit
   port: 8765                # http://127.0.0.1:<port>/; je Projekt ein eigener Port, wenn mehrere Monitore laufen
@@ -75,6 +72,7 @@ faelligkeiten:
   coach_nach_modellwechsel_rollenlaeufe: 10   # Modellwechsel: Coach vorgezogen, sobald so viele Läufe auf dem neuen Modell vorliegen
   architektur_tage: 7
   architektur_min_commits: 10
+  wiedervorlage_ueberfaellig_tage: 7   # so viele Tage über dem Termin macht eine Wiedervorlage das Briefing hart fällig
 
 compliance:
   pii_patterns: ""       # zusätzliche Muster, mit | getrennt, z. B. 'mitgliedsnummer|\bkundennummer\b'

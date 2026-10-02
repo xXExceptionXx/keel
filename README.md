@@ -23,11 +23,12 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
 hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
-bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel --version
-lib/keel/         Kern als Python-Paket (System-ADR 0020): domain, store (einzige Stelle für Pfade, Frontmatter,
-                  Konfiguration, Ereignisse, atomares Schreiben), services (doctor), interfaces (Kommandozeile)
+bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel motor (lokale Motor-Ablage), keel --version
+lib/keel/         Kern als Python-Paket (System-ADR 0020): domain (Regeln), store (einzige Stelle für Pfade,
+                  Frontmatter, Konfiguration, Ereignisse, atomares Schreiben), integrations (git), services
+                  (doctor, agenda, adr, motor), interfaces (Kommandozeile)
 scripts/          Übergang bis zum Umbau-Schritt M7: dünne Skripte auf lib/keel, z. B. frontmatter.py, config.py,
-                  gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py
+                  gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py, adr.py, wiedervorlage.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
 templates/settings/  Allow- und Deny-Regeln für .claude/settings.json
 docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
@@ -46,7 +47,7 @@ Sprachen: Prompts, Vorlagen und Artefakte unter `.keel/` deutsch. Alles im Code 
 | --- | --- |
 | `/keel:start` | Liest, was fällig ist, und tut es in Reihenfolge: vergessener Tagesabschluss, Audit, Coach, Architektur-Runde, dann das Briefing mit dem Supervisor, falls eines aussteht. Sonst Tagesstart und das nächste Vorhaben. |
 | `/keel:stop` | Tagesabschluss mit Übergabenotiz und Tag, Audit, ein Satz zu morgen. |
-| `/keel:hilfe [Frage]` | Erklärt den Stand aus Zustand und Ereignissen und nennt den nächsten Befehl. Beobachtet nur: entscheidet nichts, startet keine Rolle, ändert nichts. Auf Wunsch räumt sie Reste auf, legt einen Hinweis für den Coach ab oder meldet einen Motor-Befund als Issue. |
+| `/keel:hilfe [Frage]` | Erklärt den Stand aus Zustand und Ereignissen und nennt den nächsten Befehl. Beobachtet nur: entscheidet nichts, startet keine Rolle, ändert nichts. Auf Wunsch räumt sie Reste auf, legt einen Hinweis für den Coach ab oder legt einen Motor-Befund in der lokalen Motor-Ablage ab (`keel motor`, System-ADR 0021). |
 | `/keel:monitor [Port\|stop]` | Öffnet den Ablauf-Monitor auf `http://127.0.0.1:8765/`: ein Ablaufdiagramm mit den Rollen als aktiv, bereit oder gesperrt, welche Rolle gerade woran arbeitet und wer sie gerufen hat, Fälligkeiten, Vorlagen, Ereignisse mit Gründen für Blockaden, je Vorhaben eine Zeitleiste mit Phase, Aufgaben, Reviews und Rollenläufen, dazu alle Übergaben unter `.keel/` als lesbare Dokumente. Beobachtet nur und läuft nach der Session weiter. Das Ablaufdiagramm lädt Mermaid vom CDN jsDelivr, sonst bleibt der Monitor lokal. Mit `monitor.autostart: true` in `.keel/config.yaml` starten ihn die Befehle, die das System arbeiten lassen, von selbst mit. Aus dem Terminal: `python3 <plugin>/scripts/monitor.py <projekt>`. |
 
 Was fällig ist, ergibt sich aus dem Zustand des Projekts, und ein Hook sperrt die Rollen, bis es erledigt ist. Steht ein Briefing an, muss die Session auf dem Modell des Supervisors laufen; ein Hook prüft das und sagt, wie umgestellt wird. Aus dem Terminal wählt `scripts/keel.sh <projekt>` das Modell selbst und öffnet die Session mit `/keel:start`. Coach und Architektur-Runde werden nur fällig, wenn genug Betrieb stattgefunden hat; die Schwellen stehen in `.keel/config.yaml`. Läuft eine Rolle auf einem neuen Modell, meldet der Sessionstart das, und der Coach wird nach zehn Läufen auf dem neuen Modell vorgezogen, um alt und neu zu vergleichen (System-ADR 0015). Die folgenden Befehle sind die Bausteine dahinter und bleiben für den gezielten Einsatz.
