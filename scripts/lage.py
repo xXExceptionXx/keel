@@ -290,7 +290,8 @@ def state_files(state_dir, starts, stops):
         findings.append("Läuft oder liegengeblieben: " + "; ".join(running))
     if finished or stale:
         findings.append(f"Reste beendeter Läufe: {finished} mit Stopp-Ereignis, {stale} ohne (älter als ein Tag). Aufräumen mit --clean.")
-    for p in list(state_dir.glob("context-*.step")) + list(state_dir.glob("hilfe-*")):
+    for p in (list(state_dir.glob("context-*.step")) + list(state_dir.glob("hilfe-*"))
+              + list(state_dir.glob("briefing-*.json")) + list(state_dir.glob("adrstand-*.json"))):
         if now - p.stat().st_mtime > STALE_AGENT_SECONDS:
             cleanup.append(p)
     return findings, cleanup
