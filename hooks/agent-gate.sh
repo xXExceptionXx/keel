@@ -231,5 +231,8 @@ case "$role" in
 esac
 
 sd="$KEEL_PATH_STATE"
+# ADR state at the start: agent-stop.sh refuses an ADR written on a level not the role's own (System-ADR 0021)
+python3 "$PLUGIN_ROOT/scripts/adr.py" stand "$proj" "$sd/adrstand-$role.json" 2>"$ERRF" \
+  || deny "ADR-Stand nicht festhaltbar: $(tail -1 "$ERRF"). /keel:hilfe erklärt den Stand."
 printf '%s\n' "${task:-$plan}" > "$sd/pending-$role"
 keel_ok

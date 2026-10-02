@@ -64,7 +64,7 @@ if [ "$calls" -gt "$limit" ]; then
   case "$tool" in
     Edit|Write)
       case "$target" in
-        "$proj"/.keel/work/*) keel_ok ;;
+        "$proj"/.keel/work/*|"$proj"/.keel/adr/*) keel_ok ;;
       esac
       ;;
   esac

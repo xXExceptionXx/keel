@@ -24,9 +24,23 @@ plans="$proj/.keel/work/plans"
 finish() {  # record, drop this run's state files, allow stop. The model is what actually ran, for the Coach.
   local tr; tr="$(field '.agent_transcript_path')"
   record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$tr" --arg model "$(transcript_model "$tr")" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript,model:$model}')" || true
-  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.slow" "$sd/agent-$id.stopfail"
+  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.slow" "$sd/agent-$id.stopfail" "$sd/agent-$id.adrstand.json" "$sd/adrstand-$role.json"
   keel_ok
 }
+
+# ADRs only on the role's own level (System-ADR 0021). Before the budget shortcut: an exhausted budget must not
+# carry an ADR on a foreign level past this check; tool-gate lets the role still edit .keel/adr/ to repair it.
+if [ "$role" != "probe" ]; then
+  snap="$sd/agent-$id.adrstand.json"
+  [ -f "$snap" ] || snap="$sd/adrstand-$role.json"
+  [ -f "$snap" ] || gate_fail "ADR-Stand vom Rollenstart fehlt (agent-$id.adrstand.json)"
+  rc=0; out="$(python3 "$PLUGIN_ROOT/scripts/adr.py" stufe "$proj" "$snap" --role "$role" 2>"$ERRF")" || rc=$?
+  case $rc in
+    0) ;;
+    1) block_stop "ADR auf fremder Stufe: $(printf '%s' "$out" | tr '\n' ' ')" ;;
+    *) gate_fail "ADR-Stufe nicht prüfbar: $(tail -1 "$ERRF")" ;;
+  esac
+fi
 
 # Tool-call budget exhausted: force the state, allow the stop so the loop ends deterministically. Time only reports.
 if [ "$calls" -gt "$limit" ] && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
