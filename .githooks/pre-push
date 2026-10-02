@@ -1,0 +1,20 @@
+#!/bin/bash
+# Runs the unit and contract tests with the macOS system python 3.9 and bash 3.2 before a push.
+# CI covers Linux only, so this is where the macOS baseline gets tested.
+# Enable once per clone: git config core.hooksPath .githooks
+# Skip a single push:    git push --no-verify
+
+[ "$(uname -s)" = Darwin ] || exit 0
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+shim=$(mktemp -d)
+trap 'rm -rf "$shim"' EXIT
+ln -s /bin/bash "$shim/bash"
+ln -s /usr/bin/python3 "$shim/python3"
+export PATH="$shim:$PATH"
+export KEEL_TEST_BASH=/bin/bash
+
+echo "pre-push: tests with $(python3 --version), bash ${BASH_VERSION%%(*} (skip with --no-verify)"
+python3 -m unittest discover -s tests/unit -t . -q || exit 1
+python3 -m unittest discover -s tests/contract -q || exit 1

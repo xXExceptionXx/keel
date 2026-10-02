@@ -39,7 +39,7 @@ Jedes Skript hatte seine eigene Bedeutung für Exit-Codes, und kein Hook konnte 
 
 **Gemeinsame Dateien werden atomar geschrieben.** Ereignisse und Hook-Protokoll schreibt `scripts/jsonl.py` mit einem einzigen Schreibvorgang unter einer Sperre.
 
-**Belegt durch Vertragstests.** `tests/contract/` prüft Hooks und Skripte von außen: Payload oder Kommandozeile hinein, Exit-Code, Antwort und Ereignisse heraus. Eine CI führt sie auf Linux und macOS aus, auf macOS mit der System-Python 3.9 und Bash 3.2.
+**Belegt durch Vertragstests.** `tests/contract/` prüft Hooks und Skripte von außen: Payload oder Kommandozeile hinein, Exit-Code, Antwort und Ereignisse heraus. Eine CI führt sie auf einem Linux-Runner mit Python 3.9 aus. macOS mit der System-Python 3.9 und Bash 3.2 prüft der pre-push-Hook unter `.githooks/` lokal; macOS-Runner kosten auf GitHub das Zehnfache an Minuten und sind seit 2026-10-02 aus der CI genommen.
 
 ## Folgen
 
