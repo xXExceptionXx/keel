@@ -70,7 +70,9 @@ def main():
     os.chdir(REPO)
     ids = _discover()
     start = time.time()
-    with multiprocessing.Pool(max(args.jobs, 1), initializer=_setup_path) as pool:
+    # spawn, not fork: a forked worker inherits the harness temp folder of the parent, and all workers would build
+    # the same fixture in it at once (Linux forks by default, macOS spawns).
+    with multiprocessing.get_context("spawn").Pool(max(args.jobs, 1), initializer=_setup_path) as pool:
         results = []
         for r in pool.imap_unordered(_run, ids):
             results.append(r)
