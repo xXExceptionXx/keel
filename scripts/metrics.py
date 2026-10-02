@@ -166,13 +166,14 @@ def main():
     dec = project / ".keel" / "decisions"
     pending = list((dec / "pending").glob("*.md")) if (dec / "pending").exists() else []
     done_dec = [fields(p) for p in (dec / "done").glob("*.md")] if (dec / "done").exists() else []
-    all_dec = [fields(p) for p in pending] + done_dec
+    # Vorlagen passed on to the motor inbox are no decision of this project (System-ADR 0021): not counted, and
+    # their dates do not stretch the weeks either
+    all_dec = [d for d in [fields(p) for p in pending] + done_dec if d.get("status") != "weitergereicht"]
     weeks = 1.0
     dates = sorted(d for d in (as_date(x.get("datum")) for x in all_dec) if d)
     if len(dates) >= 2:
         weeks = max(1.0, (dates[-1] - dates[0]).days / 7)
-    # Vorlagen passed on to the motor inbox are no decision of the project's human (System-ADR 0021)
-    human_dec = [d for d in all_dec if d.get("status") != "weitergereicht" and (d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden"))]
+    human_dec = [d for d in all_dec if d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden")]
 
     # ---- follow-ups: no corridor in the first step, they never count as escalation or Vorlage
     followups = [f for _, f in agenda.followups(project) if f is not None and followup.is_open(f)]
