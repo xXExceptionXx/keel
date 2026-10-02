@@ -20,7 +20,9 @@ from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain import adr as adr_rules
+from keel.domain import followup
 from keel.domain.errors import KeelError
+from keel.services import agenda
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
 from keel.store.paths import Paths
@@ -169,7 +171,15 @@ def main():
     dates = sorted(d for d in (as_date(x.get("datum")) for x in all_dec) if d)
     if len(dates) >= 2:
         weeks = max(1.0, (dates[-1] - dates[0]).days / 7)
-    human_dec = [d for d in all_dec if d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden")]
+    # Vorlagen passed on to the motor inbox are no decision of the project's human (System-ADR 0021)
+    human_dec = [d for d in all_dec if d.get("status") != "weitergereicht" and (d.get("eskaliert") == "Supervisor" or d.get("von") == "Coach" or d.get("entscheider") == "Mensch" or (not d.get("entscheider") and not d.get("eskaliert") and d.get("status") == "entschieden"))]
+
+    # ---- follow-ups: no corridor in the first step, they never count as escalation or Vorlage
+    followups = [f for _, f in agenda.followups(project) if f is not None and followup.is_open(f)]
+    oldest = [as_date(f.get("datum")) for f in followups]
+    oldest = [d for d in oldest if d]
+    offene_wiedervorlagen = len(followups)
+    aelteste_wiedervorlage = (date.today() - min(oldest)).days if oldest else None
     vorlagen_pro_woche = round(len(human_dec) / weeks, 1)
     durations = []
     for d in done_dec:
@@ -263,6 +273,8 @@ def main():
         ("Übergaben", "blockierte_uebergaben_prozent", "Blockierte Übergaben (% der Rollenläufe)", round(100 * len(blocked) / len(stops)) if stops else None),
         ("Budget", "budget_verstoesse", "Budgetverstöße", len(budget)),
         ("Budget", "langsame_laeufe", "Läufe über der Minutenschwelle (Hinweis)", len(slow)),
+        ("Entscheidungen", "offene_wiedervorlagen", "Offene Wiedervorlagen", offene_wiedervorlagen),
+        ("Entscheidungen", "aelteste_wiedervorlage_tage", "Älteste offene Wiedervorlage (Tage)", aelteste_wiedervorlage),
         ("Kontext", "kontext_alarme", "Kontext-Alarme beim Lead", len(context_alarms)),
         ("Drift", "audit_abweichungen_pro_bericht", "Audit-Abweichungen pro Bericht (Ø)", audit_avg),
         ("Kosten", "tokens_pro_aufgabe_k", "Ausgabe-Tokens pro Aufgabe (k, Ø über Rollen)", tokens_per_task),

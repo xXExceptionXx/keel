@@ -129,3 +129,22 @@ class AgendaTest(ContractTest):
         p = project()
         r = self.needed(p)
         self.assertNotIn("0000-vorlage", str(r.json))
+
+
+class FollowupMetricsTest(ContractTest):
+    def figures(self, p):
+        r = self.script("metrics.py", p, "--json", proj=p)
+        self.assertIn(r.rc, (0, 3), r)
+        return {k["kennzahl"]: k["wert"] for k in r.json["kennzahlen"]}
+
+    def test_follow_ups_and_passed_on_vorlagen_leave_the_escalation_figures_alone(self):
+        p = project("briefing")
+        before = self.figures(p)
+        followup(p, "eins", faellig=day(2))
+        followup(p, "zwei")
+        write(p / ".keel" / "decisions" / "done" / "v-motor.md",
+              f"---\ntyp: vorlage\ntitel: M\nvon: Coach\nebene: motor\ndatum: {day(-3)}\nstatus: weitergereicht\n---\n")
+        after = self.figures(p)
+        for key in ("vorlagen_pro_woche", "eskalationsquote_prozent"):
+            self.assertEqual(before[key], after[key], key)
+        self.assertEqual(after["offene_wiedervorlagen"], 2)
