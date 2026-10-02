@@ -11,6 +11,11 @@ class AdrRulesTest(unittest.TestCase):
         self.assertEqual(adr.select(["0000-vorlage.md", "README.md", "0003-x.md", "entwurf-y.md", "notiz.md"]),
                          ["0003-x.md", "entwurf-y.md"])
 
+    def test_slugs(self):
+        self.assertEqual(adr.slug_of("0007-auth-flow.md"), "auth-flow")
+        self.assertEqual(adr.slug_of("entwurf-cache.md"), "cache")
+        self.assertIsNone(adr.slug_of("notiz.md"))
+
     def test_levels(self):
         self.assertEqual(adr.level("Supervisor"), adr.SUPERVISOR)
         self.assertEqual(adr.level("Ich"), adr.HUMAN)

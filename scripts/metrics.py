@@ -19,6 +19,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import _keel  # noqa: F401
+from keel.domain import adr as adr_rules
 from keel.domain.errors import KeelError
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
@@ -179,7 +180,8 @@ def main():
 
     # ---- ADRs
     adr_dir = project / ".keel" / "adr"
-    adrs = [fields(p) for p in adr_dir.glob("[0-9]*.md") if p.stem != "0000-vorlage"] if adr_dir.exists() else []
+    adr_files = [adr_dir / n for n in adr_rules.select(p.name for p in adr_dir.iterdir())] if adr_dir.exists() else []
+    adrs = [fields(p) for p in adr_files]
     delegated = [a for a in adrs if "delegiert" in str(a.get("status", "")) or (a.get("entscheider") == "PO")]
     kippt = [a for a in delegated if str(a.get("status", "")).startswith(("Rejected", "Superseded"))]
     gekippt_prozent = round(100 * len(kippt) / len(delegated)) if delegated else None
@@ -192,10 +194,9 @@ def main():
     sup_entschieden = [d for d in all_dec if d.get("entscheider") == "Supervisor"]
     eskalationsquote = round(100 * len(eskaliert) / (len(eskaliert) + len(sup_entschieden))) if (eskaliert or sup_entschieden) else None
     einwaende = 0
-    if adr_dir.exists():
-        for p in adr_dir.glob("[0-9]*.md"):
-            if "## Einwand des Supervisors" in text_of(p):
-                einwaende += 1
+    for p in adr_files:
+        if "## Einwand des Supervisors" in text_of(p):
+            einwaende += 1
 
     # ---- audits
     audit_dir = project / ".keel" / "work" / "audit"

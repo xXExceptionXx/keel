@@ -45,8 +45,11 @@ def number_of(name):
 
 
 def slug_of(name):
-    m = NUMBERED.match(name) or DRAFT.match(name)
-    return m.group(2) if m else None
+    m = NUMBERED.match(name)
+    if m:
+        return m.group(2)
+    m = DRAFT.match(name)
+    return m.group(1) if m else None
 
 
 def numbered_name(number, slug):
