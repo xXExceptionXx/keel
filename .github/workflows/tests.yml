@@ -42,12 +42,10 @@ jobs:
         run: python3 tests/run.py -j 3 -v
 
       # Differential test: lists every agent-gate call whose outcome changed against the base. Intended
-      # changes show up here too, so it informs the review instead of failing the build.
+      # changes show up here too, so it informs the review instead of failing the build. Pull requests only:
+      # after the merge nobody reads it, and the full run took over ten minutes.
+      # Full run locally: python3 tests/gate/run.py --against main
       - name: Gate regression test
+        if: github.event_name == 'pull_request'
         continue-on-error: true
-        run: |
-          if [ "${{ github.event_name }}" = pull_request ]; then
-            python3 tests/gate/run.py --quick --against "${{ github.event.pull_request.base.sha }}"
-          else
-            python3 tests/gate/run.py --against HEAD~1
-          fi
+        run: python3 tests/gate/run.py --quick --against "${{ github.event.pull_request.base.sha }}"
