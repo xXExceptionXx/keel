@@ -47,6 +47,7 @@ PASSED = [
     "rm -rf ./build",
     "find . -name '*.pyc' -delete",
     "cd src && rm -rf build",
+    "git push origin feature/x && echo --force",
     "npm test",
 ]
 
