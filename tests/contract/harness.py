@@ -165,6 +165,14 @@ class ContractTest(unittest.TestCase):
                               env=self.env(env, path), cwd=str(proj or self.tmp), timeout=timeout)
         return Result(proc, self.metrics, proj)
 
+    def adr_snapshot(self, proj, agent_id="a1"):
+        """The ADR state agent-gate notes at a role's start, bound to the agent as agent-start.sh does."""
+        out = self.runtime(proj) / "state" / f"agent-{agent_id}.adrstand.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        r = self.script("adr.py", "stand", proj, out, proj=proj)
+        self.assertEqual(r.rc, 0, r)
+        return out
+
     def assertBlocked(self, r, msg=None):
         self.assertTrue(r.blocked, msg or f"expected a block, got {r!r}")
 

@@ -47,6 +47,7 @@ class GateTimeoutTest(ContractTest):
         sd = self.runtime(p) / "state"
         sd.mkdir(parents=True)
         (sd / "agent-a1.ref").write_text("T-d\n")
+        self.adr_snapshot(p)
         r = self.hook("agent-stop", {"hook_event_name": "SubagentStop", "agent_type": "keel:entwickler",
                                      "agent_id": "a1", "cwd": str(p), "last_assistant_message": "fertig"}, proj=p)
         self.assertEqual((r.json or {}).get("decision"), "block", r)

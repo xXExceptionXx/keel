@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# PreToolUse on Skill and UserPromptSubmit (a typed "/keel:<skill>" never passes the Skill tool), three duties:
+# PreToolUse on Skill and UserPromptSubmit (a typed "/keel:<skill>" never passes the Skill tool), four duties:
 # 1. /keel:hilfe marks the session as a helper session; agent-gate then denies every role start in it.
 # 2. The briefing is a conversation with the Supervisor and must run on the Supervisor's model. When
 #    /keel:briefing or /keel:start (with a briefing due) is invoked, read the session's model from the
 #    transcript and refuse with instructions if it is not the configured one.
 # 3. The start commands start the flow monitor when monitor.autostart is true (System-ADR 0017).
+# 4. A briefing that may start leaves its starting state for briefing-stop.sh (System-ADR 0021).
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 keel_gate_init keel-only
@@ -48,8 +49,18 @@ case "$skill" in
   *) keel_ok ;;
 esac
 proj="$(project_dir)"
+# The briefing may start: note its state, so briefing-stop.sh can check the protocol at its end (System-ADR 0021).
+# Best effort: a missing marker only skips that check, it never stops the briefing.
+briefing_ok() {
+  local sid; sid="$(field '.session_id')"
+  if [ -n "$sid" ] && keel_paths 2>/dev/null; then
+    python3 "$PLUGIN_ROOT/scripts/wiedervorlage.py" stand "$proj" > "$KEEL_PATH_STATE/briefing-$sid.json" 2>"$ERRF" \
+      || { rm -f "$KEEL_PATH_STATE/briefing-$sid.json"; hook_error "Briefing-Stand nicht festgehalten: $(tail -1 "$ERRF")"; }
+  fi
+  keel_ok
+}
 required="$($CFG "$proj" supervisor.model claude-fable-5-1)"
 current="$(transcript_model "$(field '.transcript_path')")"
-[ -n "$current" ] || keel_ok
-[ "$current" != "$required" ] || keel_ok
+[ -n "$current" ] || briefing_ok
+[ "$current" != "$required" ] || briefing_ok
 deny "Das Briefing läuft mit dem Supervisor und braucht dessen Modell ($required); diese Session läuft auf $current. Stelle das Modell um (Modellwahl in der App oder /model $required) und rufe $skill erneut auf. Alternativ aus dem Terminal: bash <plugin>/scripts/keel.sh $proj. Unklar, was los ist: /keel:hilfe erklärt den Stand."

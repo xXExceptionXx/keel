@@ -1,13 +1,13 @@
 ---
-nummer: 0000
+nummer: offen   # die Nummer vergibt adr.py: auf der Basis sofort, auf einem Feature-Branch bei der Integration
 titel: <Kurzer Titel>
 status: Proposed   # Proposed | Accepted | Accepted (delegiert) | Superseded by 00XX
 datum: YYYY-MM-DD
-entscheider: <PO | Ich>
+entscheider: offen   # offen (Proposed) | PO | Supervisor | Mensch, nur die eigene Stufe
 supersedes:
 ---
 
-# <Nummer>: <Titel>
+# Entwurf: <Titel>
 
 ## Kontext
 

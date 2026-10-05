@@ -65,7 +65,7 @@ PHASES = [
     ("Umsetzung", ["geplant", "in-arbeit", "nacharbeit"], "Tester, Entwickler, Compliance, Reviewer"),
     ("Abnahme", ["abnahme-bereit", "abnahme-rot"], "PO"),
     ("Integration", ["abgenommen"], "Lead"),
-    ("Integriert", ["integriert", "abgeschlossen"], ""),
+    ("Integriert", ["integriert", "abgeschlossen", "verworfen"], ""),
 ]
 NEXT_PLAN = {
     "entwurf": "Architekt bewertet, PO stimmt ab (höchstens zwei Runden)",

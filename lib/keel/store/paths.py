@@ -83,3 +83,9 @@ class Paths:
 def lock_dir():
     """Lock files for files inside projects live here, so they never show up in a repository."""
     return metrics_root() / "locks"
+
+
+def motor_dir():
+    """Machine-wide inbox for motor proposals and findings of every project (System-ADR 0021). Outside every
+    repository, so nothing from a project reaches the public plugin repository by itself."""
+    return metrics_root() / "motor"

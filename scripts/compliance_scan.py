@@ -20,16 +20,9 @@ import sys
 from pathlib import Path
 
 import _keel  # noqa: F401
+from keel.domain.leakpatterns import SECRETS
 from keel.store import config
 
-SECRETS = [
-    (r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----", "private key"),
-    (r"\bAKIA[0-9A-Z]{16}\b", "AWS access key"),
-    (r"\bgh[pousr]_[A-Za-z0-9]{30,}\b", "GitHub token"),
-    (r"\bsk-[A-Za-z0-9]{20,}\b", "API secret key"),
-    (r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b", "Slack token"),
-    (r"(?i)\b(api[_-]?key|secret|password|passwd|token)\b\s*[:=]\s*['\"][^'\"\s]{8,}['\"]", "hard-coded credential"),
-]
 PII = [
     (r"(?i)\b(e-?mail|emailaddress|email_address)\b", "email address"),
     (r"(?i)\b(phone|telefon|mobile|handy)(number|_number|nummer)?\b", "phone number"),

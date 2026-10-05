@@ -12,7 +12,7 @@ role="$(keel_role "$type")"
 # Entry conditions (status and nonempty lists per role and occasion) and due-item roles come from
 # scripts/flow.py, the same table the monitor reads. Fail closed: without it no role starts.
 eval "$(python3 "$PLUGIN_ROOT/scripts/flow.py" shell 2>/dev/null)" || true
-[ -n "${KEEL_S_tester_aufgabe:-}" ] || deny "keel: Ablaufregeln (scripts/flow.py) nicht lesbar; keine Rolle startet. /keel:hilfe meldet den Motor-Befund."
+[ -n "${KEEL_S_tester_aufgabe:-}" ] || deny "keel: Ablaufregeln (scripts/flow.py) nicht lesbar; keine Rolle startet. /keel:hilfe legt den Motor-Befund ab."
 
 # keel roles run sequentially and in the foreground: the Lead must see the result before it continues,
 # and the reference parking below relies on one start at a time.
@@ -231,5 +231,8 @@ case "$role" in
 esac
 
 sd="$KEEL_PATH_STATE"
+# ADR state at the start: agent-stop.sh refuses an ADR written on a level not the role's own (System-ADR 0021)
+python3 "$PLUGIN_ROOT/scripts/adr.py" stand "$proj" "$sd/adrstand-$role.json" 2>"$ERRF" \
+  || deny "ADR-Stand nicht festhaltbar: $(tail -1 "$ERRF"). /keel:hilfe erklärt den Stand."
 printf '%s\n' "${task:-$plan}" > "$sd/pending-$role"
 keel_ok

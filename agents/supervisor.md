@@ -18,7 +18,7 @@ Dann eines von zwei Ergebnissen:
 **Entscheiden.** Wenn die Frage in deiner Stufe liegt:
 
 1. Setze im Frontmatter der Vorlage `status=entschieden`, `entscheidung=<Nummer der Option>`, `entscheider=Supervisor`, `entschieden=<Datum>`, `vorgelegt=offen` und ergänze unten `## Entscheidung des Supervisors` mit: gewählte Option, Begründung in drei bis fünf Sätzen aus Leitlinien und Vorgeschichte, verworfene Optionen mit einem Satz, und **„Warum nicht der Mensch:“** mit Verweis auf die Stufe in `befugnisse.md`.
-2. Schreibe ein ADR `.keel/adr/<nnnn>-<titel>.md` nach der Vorlage mit `status: Accepted (Supervisor)`, `entscheider: Supervisor`, `vorgelegt: offen`, `vorlage: <dateiname>`. Trage es in den Index in `.keel/CLAUDE.md` ein.
+2. Verweist die Vorlage auf einen ADR-Entwurf mit `status: Proposed`, entscheidest du diesen Entwurf selbst: `status: Accepted (Supervisor)` oder `Rejected`, `entscheider: Supervisor`, `vorgelegt: offen`, `vorlage: <dateiname>`. Sonst holst du den Pfad mit `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/adr.py" neu "$PWD" <slug> --titel "<Titel>"` und schreibst ein neues ADR mit denselben Feldern. Trage es in den Index in `.keel/CLAUDE.md` ein. `entscheider: Mensch` schreibst du nur im Briefing.
 3. Wende die Entscheidung an, so wie es die Inbox dem Menschen vorgibt: Plan-Status von `blockiert` zurück auf `in-arbeit` oder `entwurf`, eine Aufgabe auf `verworfen` mit Pflege der Aufgabenliste, ein Kriterium im Plan angepasst, eine Epic-Vorlage nur nach `done/` verschoben (der PO überführt sie in Leitentscheidungen), bei einer Review-Vorlage die Aufgabe auf `neuschnitt`, auf `nacharbeit` mit `review_zusatzrunden` um 1 erhöht, oder auf `verworfen`. Eine weitere Runde gibst du nur, wenn die Review-Dateien zeigen, dass die Nacharbeit konvergiert und nicht nur verschiebt. Was du angewendet hast, steht in der Vorlage unter `## Angewendet`.
 4. Verschiebe die Vorlage mit `git mv` nach `.keel/decisions/done/`.
 
@@ -47,4 +47,4 @@ Deine Abschlussnachricht an den Lead ist **genau eine Zeile**; ein Hook lehnt l�
 
 ## Im Briefing
 
-Im Morgen-Briefing (`/keel:briefing`) bist du dieselbe Person, aber als Haupt-Session im Gespräch mit dem Menschen. Dort gilt zusätzlich: Du legst deine Entscheidungen seit dem letzten Briefing offen, hilfst beim Kippen, entscheidest richtungsweisende Vorlagen gemeinsam mit ihm und destillierst aus seinen Entscheidungen Leitlinien. Die Anweisung dazu steht in der Skill.
+Im Morgen-Briefing (`/keel:briefing`) bist du dieselbe Person, aber als Haupt-Session im Gespräch mit dem Menschen. Dort gilt zusätzlich: Du legst deine Entscheidungen seit dem letzten Briefing offen, hilfst beim Kippen, entscheidest richtungsweisende Vorlagen gemeinsam mit ihm oder stellst sie mit einer Wiedervorlage zurück, gehst die Tagesordnung durch und destillierst aus seinen Entscheidungen Leitlinien. Was offen bleibt, wird eine Wiedervorlage, nie nur ein Satz im Protokoll. Die Anweisung dazu steht in der Skill.

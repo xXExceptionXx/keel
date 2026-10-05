@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SubagentStart: bind the parked task or plan reference to this agent id and reset its tool counter.
+# SubagentStart: bind the parked task or plan reference and the ADR state to this agent id, reset its tool counter.
 payload="$(cat)"
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 keel_observer_init
@@ -11,6 +11,7 @@ keel_paths
 sd="$KEEL_PATH_STATE"
 ref=""
 [ -f "$sd/pending-$role" ] && ref="$(cat "$sd/pending-$role")" && rm -f "$sd/pending-$role"
+[ -f "$sd/adrstand-$role.json" ] && mv -f "$sd/adrstand-$role.json" "$sd/agent-$id.adrstand.json"
 printf '%s\n' "$ref" > "$sd/agent-$id.ref"
 printf '%s\n' "$role" > "$sd/agent-$id.role"
 printf '0\n' > "$sd/agent-$id.calls"

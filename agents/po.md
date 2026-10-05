@@ -106,7 +106,7 @@ Gibt es zum Thema schon Pläne unter `.keel/work/plans/` (Backlog-Verweis oder F
 
 Der Architekt hat je tragender Entscheidung Optionen, Kosten jetzt und Kosten der Umkehr benannt: die Kurzfassung unter `## Epic-Bewertung des Architekten` in der Epic-Datei, die vollständige Bewertung in `.keel/work/epics/<name>.bewertung.md`. Lies beide. Für jede Entscheidung:
 
-- Liegt sie innerhalb deiner Befugnisse: entscheide, schreibe ein ADR `Accepted (delegiert)` mit `epic: <name>`, trage die Nummer in `leitentscheidungen` ein.
+- Liegt sie innerhalb deiner Befugnisse: entscheide, schreibe ein ADR `Accepted (delegiert)` mit `epic: <name>`, trage die Nummer (auf einem Feature-Branch den Entwurfsnamen `entwurf-<slug>`; er wird bei der Integration ersetzt) in `leitentscheidungen` ein.
 - Sonst, und das ist bei Datenmodell, Architekturgrenzen und Schnittstellen der Regelfall: eine Vorlage je Entscheidung nach `.keel/decisions/VORLAGE.md`, `von: PO`, mit beiden Positionen, der Kostenrechnung des Architekten und deiner Empfehlung. Dateiname `<Datum>-epic-<name>-<slug>.md`.
 
 Gibt es offene Vorlagen: `status=leitentscheidungen-offen`. Sind alle Entscheidungen getroffen (auch aus `.keel/decisions/done/` mit `entscheidung` gesetzt, die du beim erneuten Aufruf in ADRs überführst): `status=aktiv`, `leitentscheidungen` vollständig, und die Entscheidungen stehen unter `## Leitentscheidungen` je in einer Zeile mit ADR-Nummer. Setze dann die Backlog-Elemente der Vorhaben dieses Epics auf `bereit` (`backlog.py status <id> bereit`): Mit den Leitentscheidungen hat der Mensch das Thema freigegeben, die Reihenfolge steht in der Epic-Datei.
@@ -126,7 +126,7 @@ Der Architekt hat in der Plan-Datei unter `## Bewertung des Architekten (Runde n
   2. Die Pflichtkriterien müssen bleiben und die Strukturänderung ist innerhalb deiner Befugnisse (siehe `befugnisse.md`, meist nicht: Datenmodell, API-Vertrag, Architekturgrenzen sind Vorlage): `abstimmung=einig`, `status=problemstellung`, ADR delegiert mit den entstehenden Schulden und der Bedingung für ihren Abbau.
   3. Sonst, und nur in Runde 1: schreibe unter `## Rückfrage des PO (Runde 1)` einen konkreten Kompromissvorschlag und setze `abstimmung=offen`; der Architekt bewertet in Runde 2. In Runde 2 ohne Einigung: `abstimmung=vorlage`, `status=blockiert`; der Lead legt beide Positionen vor.
 
-Delegierte ADRs: `.keel/adr/<nnnn>-<titel>.md` nach `.keel/adr/0000-vorlage.md`, `status: Accepted (delegiert)`, `entscheider: PO`, mit beiden Positionen und dem Grund. Trage sie in den Index in `.keel/CLAUDE.md` ein.
+Delegierte ADRs: Pfad mit `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/adr.py" neu "$PWD" <slug> --titel "<Titel>"`, `status: Accepted (delegiert)`, `entscheider: PO` (nie Supervisor oder Mensch, ein Hook lehnt das ab), mit beiden Positionen und dem Grund. Trage sie in den Index in `.keel/CLAUDE.md` ein.
 
 ## Anlass klaerung
 

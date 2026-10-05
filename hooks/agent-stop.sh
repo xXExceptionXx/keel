@@ -24,12 +24,26 @@ plans="$proj/.keel/work/plans"
 finish() {  # record, drop this run's state files, allow stop. The model is what actually ran, for the Coach.
   local tr; tr="$(field '.agent_transcript_path')"
   record "agent_stop" "$(jq -n --arg role "$role" --arg id "$id" --arg ref "$ref" --argjson calls "$calls" --argjson lines "$lines" --arg result "$1" --arg transcript "$tr" --arg model "$(transcript_model "$tr")" '{role:$role,agent_id:$id,ref:$ref,calls:$calls,lines:$lines,result:$result,transcript:$transcript,model:$model}')" || true
-  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.timeout" "$sd/agent-$id.stopfail"
+  rm -f "$sd/agent-$id.ref" "$sd/agent-$id.role" "$sd/agent-$id.calls" "$sd/agent-$id.start" "$sd/agent-$id.slow" "$sd/agent-$id.stopfail" "$sd/agent-$id.adrstand.json" "$sd/adrstand-$role.json"
   keel_ok
 }
 
-# Budget exhausted (calls or time): force the state, allow the stop so the loop ends deterministically.
-if { [ "$calls" -gt "$limit" ] || [ -f "$sd/agent-$id.timeout" ]; } && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
+# ADRs only on the role's own level (System-ADR 0021). Before the budget shortcut: an exhausted budget must not
+# carry an ADR on a foreign level past this check; tool-gate lets the role still edit .keel/adr/ to repair it.
+if [ "$role" != "probe" ]; then
+  snap="$sd/agent-$id.adrstand.json"
+  [ -f "$snap" ] || snap="$sd/adrstand-$role.json"
+  [ -f "$snap" ] || gate_fail "ADR-Stand vom Rollenstart fehlt (agent-$id.adrstand.json)"
+  rc=0; out="$(python3 "$PLUGIN_ROOT/scripts/adr.py" stufe "$proj" "$snap" --role "$role" 2>"$ERRF")" || rc=$?
+  case $rc in
+    0) ;;
+    1) block_stop "ADR auf fremder Stufe: $(printf '%s' "$out" | tr '\n' ' ')" ;;
+    *) gate_fail "ADR-Stufe nicht prüfbar: $(tail -1 "$ERRF")" ;;
+  esac
+fi
+
+# Tool-call budget exhausted: force the state, allow the stop so the loop ends deterministically. Time only reports.
+if [ "$calls" -gt "$limit" ] && [ -n "$ref" ] && [ -f "$tasks/$ref.md" ]; then
   $FM set "$tasks/$ref.md" status=budget-erschoepft
   finish "budget-erschoepft"
 fi
@@ -219,6 +233,16 @@ case "$role" in
     rep="$proj/.keel/work/coach/$ref.md"
     $FM validate "$rep" --type coachbericht --require datum,kennzahlen_verletzt,vorschlaege 2>"$ERRF" \
       || block_stop "Coach-Bericht fehlt oder unvollständig ($rep): $(cat "$ERRF")"
+    # Every Vorlage of the Coach says whether it concerns the project or the motor (System-ADR 0021).
+    rc=0; mine="$($FM find "$proj/.keel/decisions/pending" von=Coach 2>"$ERRF")" || rc=$?
+    [ "$rc" -le 1 ] || gate_fail "Vorlagen nicht lesbar: $(cat "$ERRF")"
+    while IFS= read -r v; do
+      [ -n "$v" ] || continue
+      case "$(fm_get "$v" ebene)" in
+        projekt|motor) ;;
+        *) block_stop "Vorlage ${v#"$proj"/} ohne gültige ebene: setze ebene=projekt (alles unter .keel/) oder ebene=motor (Hooks, Skripte, Skills, Rollen, Standardwerte des Plugins); betrifft sie beides, teile sie." ;;
+      esac
+    done <<< "$mine"
     # A model switch with enough runs for a comparison must be assessed (System-ADR 0015).
     need="$($CFG "$proj" faelligkeiten.coach_nach_modellwechsel_rollenlaeufe 10)"
     is_number "$need" || need=10
