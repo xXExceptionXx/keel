@@ -1,4 +1,8 @@
-"""ADRs of a project (System-ADR 0021): level check at a role's end, drafts on branches, numbers at integration."""
+"""ADRs of a project (System-ADR 0021): level check at a role's end, drafts on branches, numbers at integration.
+
+Projects that kept ADRs before keel name those folders in `adr.weitere_ordner` (System-ADR 0024). keel numbers its
+own ADRs after the highest number found there too, and a role may not change a file in them: they belong to the
+human and follow the project's own format."""
 import hashlib
 import os
 from datetime import date
@@ -7,7 +11,7 @@ from pathlib import Path
 from keel.domain import adr
 from keel.domain.errors import KeelError
 from keel.integrations import git
-from keel.store import frontmatter, io
+from keel.store import config, frontmatter, io
 
 ADR_DIR = Path(".keel") / "adr"
 REWRITE_SUFFIXES = (".md", ".yaml", ".yml")
@@ -20,6 +24,42 @@ def _adr_dir(project):
 def _names(project):
     d = _adr_dir(project)
     return adr.select(os.listdir(d)) if d.is_dir() else []
+
+
+def external_dirs(project):
+    """The project's ADR folders outside .keel/adr from adr.weitere_ordner, relative to the project. A folder
+    outside the project is an error."""
+    value = config.get(config.load(project), "adr.weitere_ordner", [])
+    items = value if isinstance(value, list) else str(value).split(",")
+    root = Path(project).resolve()
+    out = []
+    for item in (str(i).strip() for i in items):
+        if not item:
+            continue
+        path = (root / item).resolve()
+        if path != root and root not in path.parents:
+            raise KeelError(f"adr.weitere_ordner: {item} liegt außerhalb des Projekts")
+        out.append(Path(os.path.relpath(path, root)))
+    return out
+
+
+def external_adrs(project):
+    """Numbered ADR files in the external folders: {path relative to the project: number}."""
+    out = {}
+    for folder in external_dirs(project):
+        d = Path(project) / folder
+        for name in sorted(os.listdir(d)) if d.is_dir() else []:
+            num = adr.number_of(name)
+            if num is not None and name not in adr.NOT_ADRS:
+                out[str(folder / name)] = num
+    return out
+
+
+def next_number(project, names=None):
+    """The next free ADR number across .keel/adr and the external folders."""
+    names = _names(project) if names is None else names
+    numbers = [adr.number_of(n) or 0 for n in names] + list(external_adrs(project).values())
+    return max(numbers + [0]) + 1
 
 
 def _entry(path):
@@ -41,8 +81,14 @@ def snapshot(project):
         branch, base = git.current_branch(project), git.base(project)
     except KeelError:
         branch, base = "", ""
+    extern = {}
+    for folder in external_dirs(project):
+        d = Path(project) / folder
+        for name in sorted(os.listdir(d)) if d.is_dir() else []:
+            if (d / name).is_file():
+                extern[str(folder / name)] = hashlib.sha256((d / name).read_bytes()).hexdigest()
     return {"version": 1, "branch": branch, "basis": base,
-            "adrs": {n: _entry(_adr_dir(project) / n) for n in _names(project)}}
+            "adrs": {n: _entry(_adr_dir(project) / n) for n in _names(project)}, "extern": extern}
 
 
 def compare(project, before, role):
@@ -63,6 +109,11 @@ def compare(project, before, role):
         if a is None and not on_base and not adr.is_draft(name):
             problems.append(f"{ADR_DIR / name}: auf einem Feature-Branch entstehen ADRs als Entwurf ohne Nummer; "
                             f"Pfad mit `adr.py neu <projekt> <slug>` holen")
+    old_ext, new_ext = before.get("extern", {}), after["extern"]
+    for rel in sorted(set(old_ext) | set(new_ext)):
+        if old_ext.get(rel) != new_ext.get(rel):
+            problems.append(f"{rel}: ADRs unter adr.weitere_ordner ändert nur der Mensch; neue Entscheidungen als "
+                            f"ADR mit `adr.py neu`, Änderungswünsche als Vorlage")
     return problems
 
 
@@ -72,7 +123,7 @@ def new_path(project, slug, titel=None):
     slug = adr.slugify(slug)
     on_base = git.on_base(project)
     if on_base:
-        number = max([adr.number_of(n) or 0 for n in _names(project)] + [0]) + 1
+        number = next_number(project)
         name, nummer, heading = adr.numbered_name(number, slug), f"{number:04d}", f"{number:04d}"
     else:
         name, nummer, heading = adr.draft_name(slug), "offen", "Entwurf"
@@ -123,7 +174,7 @@ def number(project, dry_run=False):
     def order(n):
         return (str(frontmatter.fields(folder / n).get("datum") or ""), n)
 
-    nxt = max([adr.number_of(n) or 0 for n in names] + [0]) + 1
+    nxt = next_number(project, names)
     plan = {}
     for n in sorted(drafts, key=order):
         plan[n] = adr.numbered_name(nxt, adr.slug_of(n))

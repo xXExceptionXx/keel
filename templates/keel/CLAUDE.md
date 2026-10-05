@@ -10,7 +10,7 @@ _Noch nicht ausgefüllt. Siehe `.keel/zielbild.md`._
 
 ## Aktive ADRs
 
-<!-- Nur der Index. Pflegen Architekt und Planer. Volltext unter .keel/adr/. -->
+<!-- Nur der Index. Pflegen Architekt und Planer. Volltext unter .keel/adr/ und in den Ordnern aus adr.weitere_ordner (.keel/config.yaml); diese ADRs des Projekts ändert nur der Mensch. -->
 
 | Nr. | Titel | Status |
 | --- | --- | --- |

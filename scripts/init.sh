@@ -48,6 +48,25 @@ link_skills() {
   fi
 }
 
+# Projects that kept ADRs before keel: name those folders in adr.weitere_ordner (System-ADR 0024), so keel numbers
+# after them, lists them in the index and leaves them to the human. Only on a fresh config with an empty list.
+detect_adr_folders() {
+  local cfg="$PROJECT/.keel/config.yaml" found=() d
+  for d in docs/adr docs/adrs docs/decisions doc/adr adr decisions; do
+    if [ -d "$PROJECT/$d" ] && ls "$PROJECT/$d" | grep -Eq '^[0-9]{4}-.+\.md$'; then found+=("$d"); fi
+  done
+  [ ${#found[@]} -gt 0 ] || return 0
+  grep -q '^  weitere_ordner: \[\]' "$cfg" || return 0
+  local list; list="$(printf '%s, ' "${found[@]}")"; list="${list%, }"
+  python3 - "$cfg" "$list" <<'PY'
+import sys
+p, items = sys.argv[1], sys.argv[2]
+s = open(p, encoding="utf-8").read().replace("  weitere_ordner: []", f"  weitere_ordner: [{items}]", 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+  created+=(".keel/config.yaml (adr.weitere_ordner: $list)")
+}
+
 merge_settings() {
   local settings="$PROJECT/.claude/settings.json"
   local deny="$PLUGIN_ROOT/templates/settings/permissions.json"
@@ -80,6 +99,7 @@ add_gitignore() {
 }
 
 copy_templates
+detect_adr_folders
 link_skills
 merge_settings
 add_import

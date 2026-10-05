@@ -21,7 +21,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_template_matches_schema(self):
         tpl = leaves(self.template)
-        schema = {k: config.text(v) for k, v in leaves(config.SCHEMA).items()
+        schema = {k: v if isinstance(v, list) else config.text(v) for k, v in leaves(config.SCHEMA).items()
                   if not any(k.startswith(o + ".") for o in config.OPTIONAL)}
         self.assertEqual(tpl, schema)
 

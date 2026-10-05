@@ -10,7 +10,7 @@ Die erste Zeile deines Auftrags lautet `Anlass: <anlass>`, danach je nach Anlass
 
 ## Anlass bewertung
 
-Der PO hat `.keel/work/plans/<name>.md` mit `status: entwurf` geschrieben, in Runde 2 zusätzlich eine `## Rückfrage des PO (Runde 1)`. Lies Plan, `.keel/architektur.md`, die ADRs unter `.keel/adr/` und den betroffenen Code. Schreibe in den Plan einen Abschnitt `## Bewertung des Architekten (Runde <n>)`:
+Der PO hat `.keel/work/plans/<name>.md` mit `status: entwurf` geschrieben, in Runde 2 zusätzlich eine `## Rückfrage des PO (Runde 1)`. Lies Plan, `.keel/architektur.md`, die ADRs unter `.keel/adr/` und in den Ordnern aus `adr.weitere_ordner` (`.keel/config.yaml`) und den betroffenen Code. Schreibe in den Plan einen Abschnitt `## Bewertung des Architekten (Runde <n>)`:
 
 ```markdown
 ## Bewertung des Architekten (Runde 1)
@@ -85,7 +85,8 @@ Einmalig in einem bestehenden Projekt. Lies die Codebasis auf Ebene von Paketen,
 
 1. `.keel/architektur.md` (ersetze die Vorlage): Komponenten und Grenzen als Ist-Zustand, Regeln, die der Code tatsächlich einhält, Orte für Aufgabentests, Abnahmetests und Regressionstests, eine Tabelle Muster → Referenzbeispiel im Code → Prüfregel, und das Warum, soweit es aus Doku oder Historie belegbar ist. Ein Referenzbeispiel ist eine konkrete, vorhandene Datei oder ein Ordner, kein Wunsch.
 2. Bestands-ADRs, je mit `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/adr.py" neu "$PWD" <slug> --titel "<Titel>"` angelegt, mit `status: Proposed`, `herkunft: bestand`, nur für tragende, nicht offensichtliche Entscheidungen, die ein Planer sonst neu stellen würde: Plattform, Auth, Datenhaltung, Modulgrenzen, bewusst Nichtgebautes. Fünf bis zehn, nicht mehr. Der Mensch nimmt sie an oder korrigiert sie.
-3. `.keel/work/architektur/bestand-<Datum>.md` mit Frontmatter `typ: architekturbericht`, `datum`, `modus: bestand`, `status: passt|abweichungen`: was du nicht belegen konntest, wo der Code seinen eigenen Regeln widerspricht, welche Prüfregeln als Code fehlen. Befunde im Format `- <Befund> – <Fundstelle> – wird Aufgabe | wird Vorlage`; sie werden am Tagesstart geroutet.
+3. Den ADR-Index in `.keel/CLAUDE.md`: je ADR eine Zeile mit Nummer, Titel und Status, auch für die ADRs des Projekts in den Ordnern aus `adr.weitere_ordner` (dann mit Pfad im Titel, etwa `Keine Vermittlung (docs/adr/0002)`). Die ADRs dort gehören dem Menschen, du änderst sie nicht; ein Hook lehnt das ab. Führt das Projekt ADRs in einem Ordner, der in `adr.weitere_ordner` fehlt, ist das ein Befund „wird Vorlage“. `adr.py neu` nummeriert nach der höchsten Nummer in allen Ordnern weiter.
+4. `.keel/work/architektur/bestand-<Datum>.md` mit Frontmatter `typ: architekturbericht`, `datum`, `modus: bestand`, `status: passt|abweichungen`: was du nicht belegen konntest, wo der Code seinen eigenen Regeln widerspricht, welche Prüfregeln als Code fehlen. Befunde im Format `- <Befund> – <Fundstelle> – wird Aufgabe | wird Vorlage`; sie werden am Tagesstart geroutet.
 
 ## Anlass wochenrunde
 

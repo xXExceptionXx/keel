@@ -41,6 +41,7 @@ def run(project, tools=True) -> List[Finding]:
         check_locks(paths),
         check_config(paths),
         check_artifacts(paths),
+        check_adr_folders(paths),
         check_brake(paths),
         check_pending(paths),
         check_activities(paths),
@@ -111,6 +112,21 @@ def check_artifacts(paths):
         return Finding("artefakte", ERROR, f"{len(broken)} Datei(en) nicht lesbar (sperren Rollen, wenn Fälligkeiten sie lesen): "
                        + "; ".join(broken[:10]) + (" …" if len(broken) > 10 else ""))
     return Finding("artefakte", OK, "alle Frontmatter lesbar")
+
+
+def check_adr_folders(paths):
+    """The project's ADR folders named in adr.weitere_ordner exist (System-ADR 0024)."""
+    from keel.services import adr
+    try:
+        folders = adr.external_dirs(paths.project)
+    except (ReadError, ParseError):
+        return Finding("adr-ordner", OK, "Konfiguration siehe oben")
+    except Exception as exc:  # noqa: BLE001 - a wrong entry is a finding, not a crash
+        return Finding("adr-ordner", ERROR, str(exc))
+    missing = [str(f) for f in folders if not (paths.project / f).is_dir()]
+    if missing:
+        return Finding("adr-ordner", WARNING, "adr.weitere_ordner nennt Ordner, die es nicht gibt: " + ", ".join(missing))
+    return Finding("adr-ordner", OK, ", ".join(str(f) for f in folders) if folders else "nur .keel/adr")
 
 
 def check_brake(paths):
