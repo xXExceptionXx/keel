@@ -39,3 +39,7 @@ Ablehnungen gehen vor: Guard, Werkzeug-Gate und alle anderen Gates des Ereigniss
 - Ein Entwickler, der Tests einzeln laufen lassen will, braucht dafür ein Präfix in `freigaben.befehle`; sonst nur `test.command`. Bis der Mensch entscheidet, steht die Anfrage auf der Tagesordnung.
 - keel enthält keine Liste von Sprachen oder Werkzeugen; was ein Projekt braucht, steht in seiner Konfiguration.
 - Neue Befehle in Skills und Rollen brauchen einen Eintrag in `services/hooks/allow.py` und einen Vertragstest, sonst halten sie unbeaufsichtigte Läufe an.
+
+## Ergänzt 2026-10-05 nach dem ersten Vorhaben im Beispielprojekt
+
+Der erste volle Vorhaben-Lauf protokollierte 40 fehlende Freigaben. Fast alle waren erlaubte Befehle, an die ein lesender Teil gehängt war (`pnpm verify 2>&1 | tail -30`, `…; cat .keel/config.yaml`). Erlaubt sind deshalb zusätzlich lesende Textbefehle (`cat`, `head`, `tail`, `ls`, `grep`, `wc`, `sort`, `uniq`, `cut`, `diff`, `echo`, `pwd`, `sed -n`, `find` ohne Aktionen), deren Pfade im Projekt oder im Plugin liegen, dazu `$?`, `mkdir -p` im Projekt und das Löschen gemergter Feature- und Fix-Branches (`git branch -d`, `git push <remote> --delete`; der Guard lehnt ungemergte vorher ab). Weiter nicht erlaubt: Heredocs, Inline-Skripte (`python3 -`) und Variablenzuweisungen; Dateien schreiben die Rollen mit den Datei-Werkzeugen.
