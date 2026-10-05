@@ -72,7 +72,8 @@ def run(hook):
         fp = hook.cfg("git.feature_prefix", "feature/")
         xp = hook.cfg("git.fix_prefix", "fix/")
         base = hook.cfg("git.base_branch", "main")
-        allowed = rf"^git{S}+push{S}+([^ \t\r\f\v]+){S}+(--delete{S}+|:)(({re.escape(fp)}|{re.escape(xp)})[A-Za-z0-9._/-]+)$"
+        allowed = (rf"^git{S}+push{S}+(?:(?:-q|--quiet|-v|--verbose){S}+)*([^ \t\r\f\v-][^ \t\r\f\v]*)"
+                   rf"{S}+(?:(?:-q|--quiet|-v|--verbose){S}+)*(--delete{S}+|:)(({re.escape(fp)}|{re.escape(xp)})[A-Za-z0-9._/-]+)$")
         for seg in segs:
             if not re.search(rf"git{S}+push\b.*({S}:[^ \t\r\f\v]|--delete)", seg):
                 continue

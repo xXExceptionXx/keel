@@ -32,6 +32,11 @@ ALLOWED = [
     "mkdir -p tests/regression && git mv a.py tests/regression/a.py",
     "git branch -d feature/x",
     "git push origin --delete feature/x",
+    "git push -q origin --delete feature/x; git status -sb | head -1",
+    "git branch --list 'feature/*'",
+    "git -C \"$PWD\" branch -r --merged staging",
+    "sed -n '/## Entscheidungen/,/^## [A-Z]/p' .keel/work/tasks/T-tb.md",
+    'grep -n -A40 "DuplicateEventInput" src/a.ts | head -90',
 ]
 NOT_ALLOWED = [
     "rm -rf build",
@@ -65,6 +70,9 @@ NOT_ALLOWED = [
     "mkdir -p /tmp/x",
     "git push origin --delete main",
     "git branch -d main",
+    "git branch feature/neu",
+    "git branch -m alt neu",
+    "grep -r x /etc",
 ]
 
 
