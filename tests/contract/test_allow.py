@@ -22,6 +22,9 @@ ALLOWED = [
     "git pull --ff-only",
     "date +%F",
     'python3 "${CLAUDE_PLUGIN_ROOT}/scripts/due.py" "$PWD" --json 2>/dev/null',
+    'git -C "$PWD" commit -q -m "Route audit findings" -m "Co-Authored-By: Claude <noreply@anthropic.com>"',
+    'git commit -m "fix: a; b && c"',
+    "git status\ngit log -1",
 ]
 NOT_ALLOWED = [
     "rm -rf build",
@@ -45,6 +48,10 @@ NOT_ALLOWED = [
     "git log; rm -rf build",
     "echo $HOME",
     "git commit -F- <<EOF\nx\nEOF",
+    "git status &",
+    "(git status)",
+    "git status\nrm -rf build",
+    "git log < /etc/passwd",
 ]
 
 

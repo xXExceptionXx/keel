@@ -14,14 +14,12 @@ first: its refusal wins.
 An allowed call outside a keel project (no .keel/config.yaml) does not exist: the step only answers there.
 """
 import os
-import re
 import shlex
 
 from keel.services.hooks import legacy
 from keel.services.hooks.base import Allow
 
 VARIABLES = ("${CLAUDE_PLUGIN_ROOT}", "$CLAUDE_PLUGIN_ROOT", "${PWD}", "$PWD")
-SAFE_REDIRECTS = re.compile(r"(^|\s)(2>&1|[12]?>\s*/dev/null)(?=\s|$)")
 GIT_READ = {"status", "diff", "log", "show", "rev-parse", "rev-list", "ls-files", "ls-tree", "merge-base",
             "describe", "remote", "fetch", "config"}
 GIT_WRITE = {"add", "commit", "switch", "merge", "mv", "tag", "pull", "push", "branch"}
@@ -32,8 +30,14 @@ REFUSED = {"push": {"--delete", "-d", "--mirror", "--all", "--tags", "--prune"},
            "mv": {"-f", "--force"}}
 
 
+SEPARATORS = {"&&", "||", ";", "|", "\n"}
+SAFE_REDIRECTS = (["2", ">&", "1"], ["2", ">", "/dev/null"], ["1", ">", "/dev/null"], [">", "/dev/null"])
+
+
 def _parts(cmd):
-    """Command parts split at && || ; | and newlines; None when the command uses anything not allowed in a part."""
+    """The command as parts of tokens, split at && || ; | and newlines outside quotes; None when it uses anything
+    not allowed: command substitution, other variables, heredocs, redirections other than to /dev/null or 2>&1,
+    subshells, background jobs. Quoted text stays one token, so a commit message may contain < or ;."""
     if any(x in cmd for x in ("$(", "`", "<(", ">(", "<<")):
         return None
     rest = cmd
@@ -41,10 +45,36 @@ def _parts(cmd):
         rest = rest.replace(v, "")
     if "$" in rest:
         return None
-    cmd = SAFE_REDIRECTS.sub(" ", cmd)
-    if re.search(r"[<>]", cmd):
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars="();<>|&\n")
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    try:
+        tokens = list(lex)
+    except ValueError:
         return None
-    return [p.strip() for p in re.split(r"&&|\|\||;|\||\n", cmd) if p.strip()]
+    parts, current = [], []
+    for tok in tokens:
+        if tok in SEPARATORS:
+            if current:
+                parts.append(current)
+            current = []
+        else:
+            current.append(tok)
+    if current:
+        parts.append(current)
+    out = []
+    for part in parts:
+        for safe in SAFE_REDIRECTS:
+            n = len(safe)
+            while True:
+                hit = next((i for i in range(len(part) - n + 1) if part[i:i + n] == safe), None)
+                if hit is None:
+                    break
+                part = part[:hit] + part[hit + n:]
+        if not part or any(set(t) <= set("();<>|&") for t in part):
+            return None
+        out.append(part)
+    return out
 
 
 def _expand(token, root, project):
@@ -97,8 +127,15 @@ def _git(tokens, project):
     return True
 
 
-def _project_prefix(part, prefixes):
-    return any(p and (part == p or part.startswith(p + " ")) for p in prefixes)
+def _project_prefix(tokens, prefixes):
+    for p in prefixes:
+        try:
+            want = shlex.split(p)
+        except ValueError:
+            continue
+        if want and tokens[:len(want)] == want:
+            return True
+    return False
 
 
 def run(hook):
@@ -117,14 +154,9 @@ def run(hook):
     extra = config.get(hook.config, "freigaben.befehle", [])
     prefixes += [str(x).strip() for x in (extra if isinstance(extra, list) else str(extra).split(","))]
     for part in parts:
-        if _project_prefix(part, prefixes):
+        tokens = [_expand(t, root, project) for t in part]
+        if _project_prefix(tokens, prefixes):
             continue
-        try:
-            tokens = [_expand(t, root, project) for t in shlex.split(part)]
-        except ValueError:
-            return None
-        if not tokens:
-            return None
         if tokens[0] == "cd" and len(tokens) == 2 and _inside(tokens[1] if os.path.isabs(tokens[1])
                                                              else os.path.join(project, tokens[1]), project):
             continue
