@@ -28,6 +28,7 @@ EVENTS = {
     "session-end": "SessionEnd",
     "notification": "Notification",
     "user-prompt-submit": "UserPromptSubmit",
+    "permission-request": "PermissionRequest",
 }
 
 
@@ -57,6 +58,7 @@ STEPS = {
     "SessionEnd": [("log", OBSERVER, _any, "observe")],
     "Notification": [("log", OBSERVER, _any, "observe")],
     "UserPromptSubmit": [("log", OBSERVER, _any, "observe"), ("skill-gate", GATE, _any, "skill_gate")],
+    "PermissionRequest": [("freigabe", OBSERVER, _any, "freigabe")],
 }
 
 # Function of a step module when it is not run(): observe.py holds two steps.

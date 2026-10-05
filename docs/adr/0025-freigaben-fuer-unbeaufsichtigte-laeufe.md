@@ -25,6 +25,8 @@ Ein Schritt `allow` im Dispatcher (`PreToolUse` auf `Bash`, System-ADR 0022) gib
 
 Befehlsersetzung, andere Variablen als `$PWD` und `${CLAUDE_PLUGIN_ROOT}`, Heredocs und Umleitungen in Dateien werden nie erlaubt. Alles andere bekommt keine Antwort und läuft durch die normale Freigabe. Der Schritt antwortet nur in einem Projekt mit `.keel/config.yaml`.
 
+**Fehlende Freigaben erreichen den Menschen.** Ein Beobachter auf `PermissionRequest` protokolliert jede Freigabe, die keine Regel und kein Allow-Schritt gibt, als `freigabe_fehlt` (Rolle, Werkzeug, Befehl, Regelvorschlag von Claude Code). Laut Hook-Doku feuert das Ereignis auch, wenn ein unbeaufsichtigter Lauf den Aufruf sonst still ablehnt; dann sieht ihn nur die Rolle, und ob sie ihn dem Lead meldet, hinge am Modell. Die Tagesordnung des nächsten Briefings fasst die Anfragen seit dem letzten Briefing nach Befehl zusammen; was ein Präfix in `freigaben.befehle` inzwischen erlaubt, fällt heraus. Der Lead eskaliert nichts von Hand. In der Bestandsaufnahme schlägt der Architekt die Startliste für `freigaben.befehle` aus den Werkzeugen des Projekts als Vorlage vor. Freigaben stehen in `befugnisse.md` auf der Stufe des Menschen; der Supervisor empfiehlt nur.
+
 Ablehnungen gehen vor: Guard, Werkzeug-Gate und alle anderen Gates des Ereignisses verweigern weiter, und Deny- und Ask-Regeln der Settings wertet Claude Code laut Hook-Doku unabhängig von der Antwort des Hooks aus. Fällt der Schritt aus, ist das ein `hook_error` und keine Erlaubnis.
 
 ## Verworfen
@@ -34,5 +36,6 @@ Ablehnungen gehen vor: Guard, Werkzeug-Gate und alle anderen Gates des Ereigniss
 
 ## Folgen
 
-- Ein Entwickler, der Tests einzeln laufen lassen will, braucht dafür ein Präfix in `freigaben.befehle`; sonst nur `test.command`.
+- Ein Entwickler, der Tests einzeln laufen lassen will, braucht dafür ein Präfix in `freigaben.befehle`; sonst nur `test.command`. Bis der Mensch entscheidet, steht die Anfrage auf der Tagesordnung.
+- keel enthält keine Liste von Sprachen oder Werkzeugen; was ein Projekt braucht, steht in seiner Konfiguration.
 - Neue Befehle in Skills und Rollen brauchen einen Eintrag in `services/hooks/allow.py` und einen Vertragstest, sonst halten sie unbeaufsichtigte Läufe an.

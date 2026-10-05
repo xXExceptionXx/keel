@@ -8,7 +8,8 @@ from harness import BASH, REPO, ContractTest, Result, path_without, project, too
 
 STEPS_OF = {"PreToolUse": "pre-tool-use", "PostToolUse": "post-tool-use", "SubagentStart": "subagent-start",
             "SubagentStop": "subagent-stop", "Stop": "stop", "SessionStart": "session-start",
-            "SessionEnd": "session-end", "Notification": "notification", "UserPromptSubmit": "user-prompt-submit"}
+            "SessionEnd": "session-end", "Notification": "notification", "UserPromptSubmit": "user-prompt-submit",
+            "PermissionRequest": "permission-request"}
 
 
 class DispatcherTest(ContractTest):

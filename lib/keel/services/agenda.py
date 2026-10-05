@@ -128,7 +128,44 @@ def collect(project, today=None, backlog_items=None):
     agenda += _audit_backlog(backlog_items, today)
     agenda += _proposed_on_base(project)
     agenda += _motor_returning(project, today)
+    agenda += _missing_permissions(project, cfg)
     return {"gruende": blocking, "tagesordnung": agenda}
+
+
+def _last_briefing(project):
+    dates = [_as_date(frontmatter.fields_tolerant(p).get("datum")) for p in _md(project / ".keel" / "work" / "briefing")]
+    dates = [d for d in dates if d]
+    return max(dates) if dates else None
+
+
+def _missing_permissions(project, cfg):
+    """Permissions roles were missing since the last briefing (freigabe_fehlt, System-ADR 0025), grouped by the
+    first two words of the command; commands a configured prefix now allows are left out."""
+    from keel.store import events
+    from keel.store.paths import Paths
+    since = _last_briefing(project)
+    allowed = config.get(cfg, "freigaben.befehle", [])
+    allowed = [str(a).strip() for a in (allowed if isinstance(allowed, list) else str(allowed).split(",")) if str(a).strip()]
+    groups = {}
+    for e in events.read(Paths(project).events).events:
+        if e.get("event") != "freigabe_fehlt" or (since and e["_ts"].date() <= since):
+            continue
+        cmd = str(e.get("befehl") or "")
+        if any(cmd == a or cmd.startswith(a + " ") for a in allowed):
+            continue
+        key = f"{e.get('tool', '')}: " + " ".join(cmd.split()[:2])
+        g = groups.setdefault(key, {"n": 0, "rollen": set(), "vorschlag": e.get("vorschlag") or []})
+        g["n"] += 1
+        if e.get("role"):
+            g["rollen"].add(e["role"])
+    if not groups:
+        return []
+    ranked = sorted(groups.items(), key=lambda kv: -kv[1]["n"])
+    text = "; ".join(f"{k} ({g['n']}×, {', '.join(sorted(g['rollen'])) or '?'})" for k, g in ranked[:8])
+    return [{"art": "fehlende-freigaben", "datei": "", "titel": "Fehlende Freigaben"
+             + (f" seit dem Briefing vom {since.isoformat()}" if since else ""),
+             "grund": f"{text}. In freigaben.befehle aufnehmen oder ablehnen (Stufe Mensch)",
+             "befehle": [k for k, _ in ranked]}]
 
 
 def _audit_backlog(items, today):
