@@ -227,3 +227,36 @@ def run(hook):
             continue
         return None
     return Allow("keel: eigener Befehl, Testbefehl des Projekts oder sicheres git (System-ADR 0025)")
+
+
+def writes_files(cmd):
+    """Whether a Bash command writes files the way the file tools should: a heredoc, a redirection into a file
+    (not /dev/null, not to another stream), tee, sed -i or perl -i, or an inline script (python3 -, python3 -c,
+    node -e). Quote-aware: a > inside a commit message is text."""
+    # posix=False keeps the quotes on a token, so a quoted ">" stays text and only bare operators count
+    lex = shlex.shlex(cmd, posix=False, punctuation_chars="();<>|&\n")
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    try:
+        tokens = list(lex)
+    except ValueError:
+        return False
+    for i, tok in enumerate(tokens):
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
+        if tok.startswith("<<"):
+            return True
+        if tok in (">", ">>", "&>", ">|") and nxt not in ("/dev/null", "&") and not nxt.startswith("&"):
+            return True
+        start = i == 0 or tokens[i - 1] in SEPARATORS
+        if not start:
+            continue
+        if tok == "tee" and any(t != "/dev/null" and not t.startswith("-") for t in tokens[i + 1:i + 3]):
+            return True
+        if tok in ("sed", "perl") and any(t.startswith(("-i", "--in-place", "-pi")) for t in tokens[i + 1:i + 4]):
+            return True
+        if tok in ("python3", "python") and nxt in ("-", "-c"):
+            return True
+        if tok == "node" and nxt in ("-e", "--eval"):
+            return True
+    return False
+
