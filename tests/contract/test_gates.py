@@ -1,7 +1,12 @@
 """Error contract of the gates (System-ADR 0019): a gate that cannot check blocks, it never lets a call through."""
 import unittest
 
-from harness import ContractTest, agent_call, path_without, project, tool_call
+from harness import REPO, ContractTest, agent_call, path_without, project, tool_call
+
+
+def in_bash(hook):
+    """Whether hooks/<hook>.sh still holds its own logic (sources lib.sh) instead of forwarding to bin/keel."""
+    return "lib.sh" in (REPO / "hooks" / f"{hook}.sh").read_text(encoding="utf-8")
 
 
 def gate_calls(p):
@@ -19,13 +24,26 @@ def gate_calls(p):
 
 
 class MissingToolsTest(ContractTest):
-    def test_every_gate_blocks_without_jq(self):
+    def test_bash_gates_block_without_jq(self):
+        # Gates still written in Bash need jq; the ones in the dispatcher (System-ADR 0022) do not.
         p = project()
         for name, payload in gate_calls(p):
+            if not in_bash(name):
+                continue
             with self.subTest(hook=name, event=payload["hook_event_name"]):
                 r = self.hook(name, payload, proj=p, path=path_without("jq"))
                 self.assertEqual(r.rc, 2, r)
                 self.assertIn("keel", r.err)
+
+    def test_dispatcher_gates_do_not_need_jq(self):
+        p = project()
+        for name, payload in gate_calls(p):
+            if in_bash(name):
+                continue
+            with self.subTest(hook=name, event=payload["hook_event_name"]):
+                with_jq = self.hook(name, payload, proj=project())
+                without = self.hook(name, payload, proj=project(), path=path_without("jq"))
+                self.assertEqual((without.rc, without.blocked), (with_jq.rc, with_jq.blocked), without)
 
     def test_every_gate_blocks_without_python(self):
         p = project()

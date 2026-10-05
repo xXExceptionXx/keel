@@ -66,9 +66,9 @@ class Runtime:
     def _a(self, agent_id, suffix):
         return self.state / f"agent-{agent_id}.{suffix}"
 
-    def start_agent(self, agent_id, role, ref):
-        """Register a started role run: ref, role, zero calls, start time; the ADR state parked by the gate
-        moves to the agent."""
+    def start_agent(self, agent_id, role, ref, start=None):
+        """Register a started role run: ref, role, zero calls, start time (now unless given); the ADR state parked
+        by the gate moves to the agent."""
         self.state.mkdir(parents=True, exist_ok=True)
         parked = self.state / f"adrstand-{role}.json"
         if parked.exists():
@@ -76,7 +76,7 @@ class Runtime:
         atomic_write(self._a(agent_id, "ref"), f"{ref}\n")
         atomic_write(self._a(agent_id, "role"), f"{role}\n")
         atomic_write(self._a(agent_id, "calls"), "0\n")
-        atomic_write(self._a(agent_id, "start"), f"{int(time.time())}\n")
+        atomic_write(self._a(agent_id, "start"), f"{int(time.time() if start is None else start)}\n")
 
     def agent(self, agent_id):
         """Known state of an agent: dict with role, ref, start, calls, slow. Values that are missing or cannot be
