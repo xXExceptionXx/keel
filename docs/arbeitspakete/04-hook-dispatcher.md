@@ -2,6 +2,8 @@
 
 2026-10-05 · Schritt M2 aus `docs/kern-architektur.md`. Grundlage: offene Befunde in `docs/kern-befunde.md` (U1 bis U4, N1, N2, Leistung), System-ADR 0019 (Fehlervertrag), 0020 (Paket und Ablage), 0021 (Wiedervorlagen). Geplant am 2026-10-05 im Plan-Modus, Umsetzung auf `feature/hook-dispatcher`.
 
+**Stand 2026-10-05: umgesetzt**, System-ADR 0022, Version 0.17.0. Messung: `Edit` einer Rolle 102 ms statt 315 ms, `Bash` des Leads 99 ms statt 178 ms. Abweichungen vom Entwurf stehen unter „Entscheidungen“; dazu: Der Briefing-Stand liegt als eigene Datei neben dem Session-Merker, weil `wiedervorlage.py` ihn umschreibt. Der Guard prüft je Befehlsteil, weil Pythons Regex-Engine bei sehr langen Befehlen quadratisch wurde. `tests/gate/hooks.py` vergleicht die übrigen Gates mit dem vorigen Stand. Ein Probelauf `/keel:vorhaben` bis zur Abnahme steht aus, weil es kein Testprojekt gibt; ein Lauf von Claude Code 2.1.285 im Fixture-Projekt (Bash, abgelehnte und erlaubte Agent-Aufrufe, Stop, SessionEnd) lief ohne `hook_error`.
+
 ## Ausgangslage
 
 Arbeitspaket 2 hat das Paket `lib/keel` mit der Schicht `store` gebaut, Arbeitspaket 3 hat `domain/adr.py`, `domain/followup.py`, `services/agenda.py` und `integrations/git.py` ergänzt (PR #2, Version 0.16.0). Die Hooks sind aber weiter elf Bash-Skripte mit rund 1100 Zeilen, die ihre Regeln selbst tragen und je Aufruf viele Prozesse starten:

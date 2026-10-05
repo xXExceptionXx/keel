@@ -17,7 +17,7 @@ Arbeitspaket 1 (`docs/arbeitspakete/01-sicherheitsnetz.md`, System-ADR 0019, Ver
 | F4 | geklärt und behoben: Der lexikografische Vergleich war in ADR 0018 bewusst festgelegt. Ergänzt um die Bedingung, dass die Summe aus blockierend und wichtig nicht steigt; das ADR-Beispiel 4/0 → 0/2 bleibt Fortschritt, 1/0 → 0/9 nicht mehr |
 | N3, N5 | behoben; dazu neu N7: getippte `/keel:`-Befehle erreichten das Hook-Protokoll nie, obwohl der Monitor sie dort sucht |
 | Beim Umsetzen zusätzlich gefunden | `guard.sh` ließ wegen SIGPIPE unter `pipefail` lange Befehle durch; ungebundene Variablen und Abbrüche innerhalb von Funktionen endeten ohne Exit 2; `deny` protokollierte vor der Ausgabe der Entscheidung; `guard.sh` protokollierte seine Ablehnungen nicht. Alles behoben |
-| U1 bis U4, N1, N2 | offen, gehören zu M2 in `docs/kern-architektur.md` |
+| U1 bis U4, N1, N2 | behoben in Arbeitspaket 4, siehe unten |
 
 Arbeitspaket 2 (`docs/arbeitspakete/02-kern-fundament.md`, System-ADR 0020, Version 0.15.0), 2026-10-01:
 
@@ -52,6 +52,17 @@ Zwei Reviews (Fable, Opus 5.5) des Pakets. Alle Befunde sind auf demselben Branc
 | `bin/keel` ließ sich von einem Ordner `keel/` im Projekt verdecken | behoben, Start über `lib/keel_main.py` |
 | Werte mit führendem `*`, `!`, `&` wurden abgelehnt | als Text gelesen (Entscheidung des Menschen) |
 | Sperren je Metrics-Wurzel | bewusst so, in System-ADR 0020 beschrieben; `keel doctor` prüft Schreibrechte |
+
+Arbeitspaket 4 (`docs/arbeitspakete/04-hook-dispatcher.md`, System-ADR 0022, Version 0.17.0), 2026-10-05:
+
+| Befund | Stand |
+| --- | --- |
+| U1, U3 | behoben: Testschutz und Budget-Ausnahme vergleichen Pfade nach `realpath`; Vertragstest `test_tool_gate.py`. Schreibzugriffe über Bash auf Testdateien bleiben eine dokumentierte Lücke |
+| U2 | behoben als Leitplanke: auch `~/.keel-metrics`, `$KEEL_METRICS_DIR`, `$HOME/…`; Vertragstest `test_tool_gate.py` |
+| U4 | behoben: Refspec-Force-Push, `rm` mit langen Optionen oder `"$HOME"`, `find -delete`, `cd /` mit `rm -rf`, Löschen nur gemergter Remote-Branches; Vertragstest `test_guard.py`. Der Guard bleibt das zweite Netz |
+| N1 | behoben: Zähler unter Sperre in `lib/keel/store/runtime.py`; 50 parallele Aufrufe ergeben 50 (`test_tool_gate.py`) |
+| N2 | behoben: Startmarke exklusiv angelegt, verwaist nach 30 s ohne laufenden Agenten der Rolle (`test_pending.py`) |
+| Beim Umsetzen zusätzlich gefunden | Pythons Regex-Engine wurde bei Befehlen mit Tausenden Teilen quadratisch (40 s je Aufruf im Test); der Guard prüft jetzt je Befehlsteil. `budget.<rolle>_<schlüssel>` aus dem Schema greift weiter nur, wenn die Datei ihn setzt (wie in Bash, im Template stehen alle) |
 
 ## 1. Sicherheitsnetz: Gates, die bei Fehlern durchlassen
 
@@ -110,6 +121,8 @@ Claude Code blockiert nur bei Exit-Code 2 oder einer ausdrücklichen Ablehnung (
 - Das Supervisor-Modell `claude-fable-5-1` steht hart an drei Stellen: `hooks/skill-gate.sh:41`, `hooks/session-gate.sh:13`, `scripts/keel.sh:13`.
 
 ## 6. Leistung
+
+**Stand 2026-10-05:** Mit dem Dispatcher (System-ADR 0022) braucht ein `Edit` einer Rolle über alle Hooks 102 ms statt 315 ms Wartezeit (622 ms Rechenzeit), ein `Bash` des Leads 99 ms statt 178 ms; gemessen mit `tests/perf/hooks.py`. Der Stand vorher:
 
 Gemessen, sequenziell:
 

@@ -2,7 +2,7 @@
 
 2026-10-01 · Konzeptentwurf. Grundlage: Bestandsaufnahme des Kerns auf dem Branch `review-threshold` (Plugin 0.13.0), die Befunde in `kern-befunde.md` und die Konzeptentwürfe `kontext-scope.md` (PR #4) und `ablauf-beschleunigen.md` (PR #5).
 
-**Stand 2026-10-02:** M0 ist umgesetzt (Arbeitspaket 1, System-ADR 0019, 0.14.0), M1 ebenso (Arbeitspaket 2, System-ADR 0020, 0.15.0). Abweichungen vom Entwurf stehen jeweils am Ort, die beantworteten Fragen unter „Offene Fragen“. Ab M2 gilt der Text weiter als Entwurf.
+**Stand 2026-10-05:** M0 ist umgesetzt (Arbeitspaket 1, System-ADR 0019, 0.14.0), M1 ebenso (Arbeitspaket 2, System-ADR 0020, 0.15.0), M2 ebenso (Arbeitspaket 4, System-ADR 0022, 0.17.0). Abweichungen vom Entwurf stehen jeweils am Ort, die beantworteten Fragen unter „Offene Fragen“. Ab M3 gilt der Text weiter als Entwurf.
 
 ## Kurzfassung
 
@@ -156,7 +156,7 @@ tests/
   domain/  store/  integrations/  services/  hooks/  cli/  fixtures/
 ```
 
-Umgesetzt in M1: `domain/errors.py`; `store/` mit `paths.py`, `codec.py`, `frontmatter.py`, `config.py`, `events.py`, `io.py`; `services/doctor.py`; `interfaces/cli.py`; Tests unter `tests/unit/` statt der Unterordner oben. `store/runtime.py` (Laufzeitzustand der Agenten mit Sperren) und `store/artifacts.py` fehlen noch; sie gehören zu M2 (Sperren für Zähler und `pending`) und M3.
+Umgesetzt in M1: `domain/errors.py`; `store/` mit `paths.py`, `codec.py`, `frontmatter.py`, `config.py`, `events.py`, `io.py`; `services/doctor.py`; `interfaces/cli.py`; Tests unter `tests/unit/` statt der Unterordner oben. `store/runtime.py` (Laufzeitzustand der Agenten mit Sperren) kam in M2 dazu, ebenso `store/transcripts.py`, `services/artifacts.py` (Prüfung von Übergaben), `services/hooks/` und `interfaces/hooks.py`; `store/artifacts.py` gehört zu M3.
 
 `agents/`, `skills/` und `hooks/hooks.json` bleiben am Ort, weil Claude Code sie dort erwartet. `scripts/` wird zum Übergangsordner mit Weiterleitungen und verschwindet am Ende.
 
@@ -222,6 +222,8 @@ Für das Agent-Ende, das die Testsuite startet, gibt es ein ausdrückliches, lä
 
 `guard.sh` darf zunächst in Bash bleiben, weil es nur Muster prüft. Er wird aber ehrlich als zweites Netz dokumentiert. Die Hauptsperren für gefährliche Befehle sind die Deny-Regeln in den Settings.
 
+**Umgesetzt in M2 (System-ADR 0022), mit Abweichungen:** Die Schritte liegen unter `services/hooks/` und tragen die Regeln je Rolle als Funktionen, eins zu eins aus Bash; Tabellen in `domain` folgen in M3. Der Guard ist mit nach Python gezogen. Der Dispatcher führt alle Schritte eines Ereignisses nacheinander aus, auch nach einer Ablehnung (die erste gewinnt), weil die Hooks vorher parallel liefen. `due.py`, `compliance_scan.py`, `review.py`, `pflege.py`, `models.py`, `wiedervorlage.py` und `gate.sh` laufen bis M3/M4 als Unterprozess. Ohne `python3` entscheidet `bin/keel` in Bash. Der Laufzeitzustand liegt in `store/runtime.py` mit eigener Ablage je Agent, Startmarke und Session; die verwaiste Startmarke wird über Zeit und laufende Agenten erkannt, weil `SubagentStart` keine `tool_use_id` liefert.
+
 ### Monitor
 
 Der Monitor ist schon gut abgesichert: nur `127.0.0.1`, Host-Prüfung, `safe_under`, nur lesend. Er zieht in `interfaces/server/` und bekommt seine Daten nur aus `services/reports.py`, demselben Lesemodell, das `/keel:hilfe` nutzt. Damit legt er nichts mehr selbst aus: Phase, nächster Schritt und Rollenzustände kommen aus `domain/flow.py`. Das HTML bleibt eine statische Datei. Später können Graph und Kennzahlen aus dem Architektur-Strang dort erscheinen.
@@ -285,6 +287,8 @@ keel ● arbeitet · Session 3f2a (Lead auf Fable) · Prüftor seit 1:20 für T0
 | rot | abgebrochen, verwaister Marker oder interner Fehler |
 
 Dieselben Zustände liefert `services/reports.py` auch an `/keel:hilfe`, damit Hilfe und Monitor dasselbe sagen.
+
+**Umgesetzt in M2:** Ebene 1 protokolliert `SessionEnd` und `Notification` (ohne Prozess-ID, sie ist in der Hook-Doku nicht beschrieben), Ebene 2 die Marker von Prüftor und Compliance-Scan; `keel doctor` meldet verwaiste Marker. Anzeige und Runner folgen in M6.
 
 **Einordnung in den Umbau.** Ebene 1 und der Runner sind klein und ließen sich auch im Bestand vorziehen: zwei Hook-Einträge, ein paar Zeilen im Runner, eine Auswertung im Monitor. Ebene 2 und die Gesundheitsanzeige bauen auf `store/runtime.py` und dem Fehlervertrag auf und gehören zu M1 und M2. Die Anzeige im Monitor gehört zu M6.
 
