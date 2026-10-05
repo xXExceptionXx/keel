@@ -57,6 +57,10 @@ pflege:
   max_aufgaben_pro_runde: 2   # Pflegeaufgaben, die eine Wochenrunde höchstens vorschlägt
   verfall_tage: 42            # offene Einträge verfallen danach
 
+adr:
+  weitere_ordner: []       # ADR-Ordner des Projekts außerhalb von .keel/adr/, z. B. [docs/adr]. keel nummeriert
+                           # danach weiter, nimmt sie in den Index auf, und nur der Mensch ändert sie (System-ADR 0024)
+
 supervisor:
   model: claude-fable-5-1   # Modell des Supervisors; das Briefing muss auf diesem Modell laufen, ein Hook prüft es
 

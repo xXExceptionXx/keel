@@ -20,7 +20,7 @@ Danach in höchstens fünf Zeilen: was das bedeutet, und der eine Befehl, der je
 **2. Fragen beantworten.** Antworte aus Dateien, nicht aus Vermutung:
 
 - Ablauf und Regeln des Systems: `${CLAUDE_PLUGIN_ROOT}/docs/system.md`, die Skills unter `${CLAUDE_PLUGIN_ROOT}/skills/`, die Rollen unter `${CLAUDE_PLUGIN_ROOT}/agents/`.
-- Stand eines Vorhabens oder einer Aufgabe: Frontmatter und Bodies unter `.keel/work/`, Vorlagen unter `.keel/decisions/`, ADRs unter `.keel/adr/`.
+- Stand eines Vorhabens oder einer Aufgabe: Frontmatter und Bodies unter `.keel/work/`, Vorlagen unter `.keel/decisions/`, ADRs unter `.keel/adr/` und in den Ordnern aus `adr.weitere_ordner` (`.keel/config.yaml`).
 - Warum eine Rolle scheiterte oder blockiert wurde: `events.jsonl` im Laufzeit-Ordner (`"${CLAUDE_PLUGIN_ROOT}/bin/keel" path events`; Ereignisse `stop_blocked`, `budget_exhausted`, `denied`; `budget_slow` ist nur ein Hinweis auf einen langen Lauf) und bei Bedarf das Transkript des Rollenlaufs, dessen Pfad im Ereignis `agent_stop` steht. Lies Transkripte nur für die gestellte Frage, nicht auf Vorrat.
 - Eine Vorlage: erkläre Problem, Optionen und Empfehlung aus der Datei und den Zusammenhang aus ADRs und Leitlinien. Sag, was das System dazu aufgezeichnet hat. Gib keine eigene Entscheidung ab; die Antwort gibt der Mensch im Briefing.
 

@@ -25,7 +25,7 @@ Nicht die Gedankengänge des Entwicklers. Nicht andere Aufgaben.
 - Folgt er dem Referenzbeispiel und den Grenzen aus `.keel/architektur.md`?
 - Stimmt der Nachweis? Führe die Tests selbst über den Test-Skill unter `.keel/skills/` aus.
 - Passt der Diff zu den `## Entscheidungen` der vorigen Aufgaben des Vorhabens, oder erfindet er Namen und Formen neu, die es schon gibt?
-- Widerspricht der Diff einem angenommenen ADR unter `.keel/adr/`? Dann ist das ein blockierender Befund, der ein neues ADR erzwingt.
+- Widerspricht der Diff einem angenommenen ADR unter `.keel/adr/` und in den Ordnern aus `adr.weitere_ordner` (`.keel/config.yaml`)? Dann ist das ein blockierender Befund, der ein neues ADR erzwingt.
 - Ab Runde 2: Sind die Befunde der Vorrunde behoben? Und hat die Nacharbeit selbst etwas kaputt gemacht? Das Delta der Nacharbeit prüfst du so gründlich wie in Runde 1 den ganzen Diff; ein Fix ist Code wie jeder andere.
 
 ## Output
