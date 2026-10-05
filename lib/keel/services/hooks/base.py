@@ -23,6 +23,13 @@ class Refuse:
         self.reason = reason
 
 
+class Allow:
+    """Skip the permission prompt (PreToolUse). Deny and ask rules of the settings still apply."""
+
+    def __init__(self, reason):
+        self.reason = reason
+
+
 class Context:
     """Text added to the model's context (additionalContext)."""
 
