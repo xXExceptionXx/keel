@@ -191,6 +191,17 @@ class ContractTest(unittest.TestCase):
         """A running role as SubagentStart registers it."""
         self.state(proj, "start_agent", agent_id, role, ref, start=start)
 
+    def age_state(self, proj, seconds):
+        """Make every runtime state file of proj look `seconds` older (timestamps only, layout unknown)."""
+        state = self.runtime(proj) / "state"
+        for f in state.rglob("*") if state.exists() else []:
+            st = f.stat()
+            os.utime(f, (st.st_atime - seconds, st.st_mtime - seconds))
+
+    def pending_of(self, proj, role):
+        """(ref, age) of a parked start of the role, or None."""
+        return self.state(proj, "pending", role)
+
     def agent_state(self, proj, agent_id="a1"):
         return self.state(proj, "agent", agent_id)
 

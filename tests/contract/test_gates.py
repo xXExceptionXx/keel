@@ -36,13 +36,13 @@ class MissingToolsTest(ContractTest):
                 self.assertIn("keel", r.err)
 
     def test_dispatcher_gates_do_not_need_jq(self):
-        p = project()
-        for name, payload in gate_calls(p):
+        a, b = project(), project()
+        for (name, with_payload), (_, without_payload) in zip(gate_calls(a), gate_calls(b)):
             if in_bash(name):
                 continue
-            with self.subTest(hook=name, event=payload["hook_event_name"]):
-                with_jq = self.hook(name, payload, proj=project())
-                without = self.hook(name, payload, proj=project(), path=path_without("jq"))
+            with self.subTest(hook=name, event=with_payload["hook_event_name"]):
+                with_jq = self.hook(name, with_payload, proj=a)
+                without = self.hook(name, without_payload, proj=b, path=path_without("jq"))
                 self.assertEqual((without.rc, without.blocked), (with_jq.rc, with_jq.blocked), without)
 
     def test_every_gate_blocks_without_python(self):
@@ -109,12 +109,13 @@ class ObserverTest(ContractTest):
                 self.assertEqual(r.events[-1]["event"], "hook_error", r)
                 self.assertEqual(r.events[-1]["hook"], name)
 
-    def test_observers_let_go_without_jq(self):
+    def test_observers_work_without_jq(self):
+        # The dispatcher (System-ADR 0022) does not need jq; an observer runs as with it.
         p = project()
         payload = {"hook_event_name": "SubagentStart", "agent_type": "keel:entwickler", "agent_id": "a1", "cwd": str(p)}
         r = self.hook("agent-start", payload, proj=p, path=path_without("jq"), env={"CLAUDE_PROJECT_DIR": str(p)})
         self.assertEqual(r.rc, 0, r)
-        self.assertEqual(r.events[-1]["event"], "hook_error", r)
+        self.assertEqual(r.events[-1]["event"], "agent_start", r)
 
 
 class TempFilesTest(ContractTest):
