@@ -18,30 +18,7 @@ import _keel  # noqa: F401
 from keel.store import events
 from keel.store.paths import Paths
 
-HEAD = ("hook_event_name", "session_id", "agent_id", "agent_type", "tool_name", "tool_use_id", "cwd", "source",
-        "transcript_path", "agent_transcript_path", "permission_mode", "stop_hook_active")
-TOOL_INPUT = {"skill": 200, "args": 200, "command": 2000, "subagent_type": 200, "description": 200, "file_path": 500,
-              "prompt": 500, "run_in_background": None}
-PROMPT_CHARS = 500
-
-
-def cut(value, limit):
-    if limit is None or not isinstance(value, str):
-        return value
-    return value if len(value) <= limit else value[:limit - 1] + "…"
-
-
-def trim(payload):
-    """The parts of a hook payload that the monitor and the Coach read; no tool responses, no file contents."""
-    out = {k: payload[k] for k in HEAD if k in payload}
-    if "prompt" in payload:
-        out["prompt"] = cut(payload["prompt"], PROMPT_CHARS)
-    tool_input = payload.get("tool_input")
-    if isinstance(tool_input, dict):
-        out["tool_input"] = {k: cut(tool_input[k], n) for k, n in TOOL_INPUT.items() if k in tool_input}
-    if "duration_ms" in payload:
-        out["duration_ms"] = payload["duration_ms"]
-    return out
+from keel.services.hooks.observe import trim  # noqa: E402  (one place for what the hook log keeps)
 
 
 def main():
