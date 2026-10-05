@@ -64,7 +64,16 @@ class HookLogTest(ContractTest):
     def test_typed_keel_commands_reach_the_log(self):
         hooks = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
         commands = [h["command"] for entry in hooks["UserPromptSubmit"] for h in entry["hooks"]]
-        self.assertTrue(any("log.sh" in c for c in commands), commands)
+        self.assertTrue(any("hook user-prompt-submit" in c for c in commands), commands)
+        # the dispatcher runs the log step on this event (System-ADR 0022)
+        p = project()
+        r = subprocess.run([BASH, str(REPO / "bin" / "keel"), "hook", "user-prompt-submit"], text=True,
+                           input=json.dumps({"hook_event_name": "UserPromptSubmit", "prompt": "/keel:hilfe",
+                                             "cwd": str(p), "session_id": "s1"}),
+                           capture_output=True, env=self.env(), cwd=str(p))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = (self.runtime(p) / "hooks.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(json.loads(lines[-1])["prompt"], "/keel:hilfe")
 
     def test_skill_and_prompt_are_kept(self):
         p = project()

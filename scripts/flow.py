@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """The flow rules of keel in one place: when a role may start, and who acts next.
 
-Usage: flow.py shell               shell assignments for hooks/agent-gate.sh
-       flow.py bereit <project>    JSON: per role the objects it could start on now (for the monitor)
+Usage: flow.py bereit <project>    JSON: per role the objects it could start on now (for the monitor)
 
 The tables (GATES, DUE_ROLES, PHASES, NEXT_*) live in keel.domain.flow; this script adds what reads the
 project: which objects a role could start on now (for the monitor).
@@ -16,23 +15,6 @@ import _keel  # noqa: F401
 from keel.domain.flow import (BY_DUE, DUE_ROLES, GATES, NEXT_AFTER_REVIEW, NEXT_PLAN, NEXT_TASK,  # noqa: F401
                               PHASES, ROLES, next_task)
 from keel.store.frontmatter import load_tolerant
-
-
-def shell_name(key):
-    return re.sub(r"[^A-Za-z0-9]", "_", key)
-
-
-def shell():
-    """KEEL_S_<rolle_anlass>=<status,...> and KEEL_N_<rolle_anlass>=<fields,...>, KEEL_DUE_<art>=<roles>."""
-    out = []
-    for key, g in GATES.items():
-        if g.get("status"):
-            out.append(f"KEEL_S_{shell_name(key)}='{','.join(g['status'])}'")
-        if g.get("nonempty"):
-            out.append(f"KEEL_N_{shell_name(key)}='{','.join(g['nonempty'])}'")
-    for art, roles in DUE_ROLES.items():
-        out.append(f"KEEL_DUE_{shell_name(art)}='{' '.join(roles)}'")
-    return "\n".join(out)
 
 
 def _objects(keel, kind, unreadable=None):
@@ -95,9 +77,7 @@ def bereit(project):
 
 
 def main():
-    if len(sys.argv) >= 2 and sys.argv[1] == "shell":
-        print(shell())
-    elif len(sys.argv) >= 3 and sys.argv[1] == "bereit":
+    if len(sys.argv) >= 3 and sys.argv[1] == "bereit":
         print(json.dumps(bereit(sys.argv[2]), ensure_ascii=False, indent=2))
     else:
         print(__doc__)

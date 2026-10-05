@@ -65,7 +65,7 @@ class GateTimeoutTest(ContractTest):
 
     def test_hook_timeout_is_longer_than_the_test_limit(self):
         hooks = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
-        stop = [h for entry in hooks["SubagentStop"] for h in entry["hooks"] if "agent-stop" in h["command"]][0]
+        stop = [h for entry in hooks["SubagentStop"] for h in entry["hooks"] if "hook subagent-stop" in h["command"]][0]
         limit = config_default("test.timeout")
         self.assertIsNotNone(limit, "test.timeout fehlt im Template")
         self.assertGreater(stop.get("timeout", 0), int(limit) + 60)
