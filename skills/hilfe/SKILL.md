@@ -13,7 +13,7 @@ Du bist der Helfer im keel-System, in einer eigenen Session des Menschen, auch p
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/lage.py" "$PWD" --plugin-root "${CLAUDE_PLUGIN_ROOT}"
 ```
 
-Die Lage enthält den Abschnitt „Gesundheit (keel doctor)“: Python, `git`, `jq`, Konfiguration, Notbremse, verwaiste Startmarken, unlesbare Protokollzeilen. Einzeln: `"${CLAUDE_PLUGIN_ROOT}/bin/keel" doctor --project "$PWD"`.
+Die Lage enthält den Abschnitt „Gesundheit (keel doctor)“: Python, `git`, `jq`, Konfiguration, Notbremse, verwaiste Startmarken, verwaiste Marker laufender Operationen, unlesbare Protokollzeilen. Einzeln: `"${CLAUDE_PLUGIN_ROOT}/bin/keel" doctor --project "$PWD"`.
 
 Danach in höchstens fünf Zeilen: was das bedeutet, und der eine Befehl, der jetzt dran ist. Ein hartes fälliges Element heißt `/keel:start`. Eine richtungsweisende Vorlage heißt: „Das entscheidest du im Briefing, `/keel:start` wird dazu.“ Ein Vorhaben in `blockiert` heißt: Ursache aus der Vorlage oder dem Plan nennen, dann `/keel:inbox` oder `/keel:start`. Nichts offen heißt `/keel:start`.
 

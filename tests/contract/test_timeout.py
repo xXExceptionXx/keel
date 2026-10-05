@@ -44,9 +44,7 @@ class GateTimeoutTest(ContractTest):
             f.write("\ntest:\n  command: sleep 30\n  timeout: 2\n")
         (p / ".keel" / "work" / "tasks" / "T-d.md").write_text(
             "---\ntyp: aufgabe\nid: T-d\nvorhaben: V9\ntitel: D\nstatus: fertig-gemeldet\nnachweis: grün\ntests: []\n---\n")
-        sd = self.runtime(p) / "state"
-        sd.mkdir(parents=True)
-        (sd / "agent-a1.ref").write_text("T-d\n")
+        self.seed_agent(p, ref="T-d")
         self.adr_snapshot(p)
         r = self.hook("agent-stop", {"hook_event_name": "SubagentStop", "agent_type": "keel:entwickler",
                                      "agent_id": "a1", "cwd": str(p), "last_assistant_message": "fertig"}, proj=p)
@@ -65,7 +63,7 @@ class GateTimeoutTest(ContractTest):
 
     def test_hook_timeout_is_longer_than_the_test_limit(self):
         hooks = json.loads((REPO / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
-        stop = [h for entry in hooks["SubagentStop"] for h in entry["hooks"] if "agent-stop" in h["command"]][0]
+        stop = [h for entry in hooks["SubagentStop"] for h in entry["hooks"] if "hook subagent-stop" in h["command"]][0]
         limit = config_default("test.timeout")
         self.assertIsNotNone(limit, "test.timeout fehlt im Template")
         self.assertGreater(stop.get("timeout", 0), int(limit) + 60)

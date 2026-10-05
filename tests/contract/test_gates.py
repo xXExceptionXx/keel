@@ -1,7 +1,12 @@
 """Error contract of the gates (System-ADR 0019): a gate that cannot check blocks, it never lets a call through."""
 import unittest
 
-from harness import ContractTest, agent_call, path_without, project, tool_call
+from harness import REPO, ContractTest, agent_call, path_without, project, tool_call
+
+
+def in_bash(hook):
+    """Whether hooks/<hook>.sh still holds its own logic (sources lib.sh) instead of forwarding to bin/keel."""
+    return "lib.sh" in (REPO / "hooks" / f"{hook}.sh").read_text(encoding="utf-8")
 
 
 def gate_calls(p):
@@ -19,13 +24,26 @@ def gate_calls(p):
 
 
 class MissingToolsTest(ContractTest):
-    def test_every_gate_blocks_without_jq(self):
+    def test_bash_gates_block_without_jq(self):
+        # Gates still written in Bash need jq; the ones in the dispatcher (System-ADR 0022) do not.
         p = project()
         for name, payload in gate_calls(p):
+            if not in_bash(name):
+                continue
             with self.subTest(hook=name, event=payload["hook_event_name"]):
                 r = self.hook(name, payload, proj=p, path=path_without("jq"))
                 self.assertEqual(r.rc, 2, r)
                 self.assertIn("keel", r.err)
+
+    def test_dispatcher_gates_do_not_need_jq(self):
+        a, b = project(), project()
+        for (name, with_payload), (_, without_payload) in zip(gate_calls(a), gate_calls(b)):
+            if in_bash(name):
+                continue
+            with self.subTest(hook=name, event=with_payload["hook_event_name"]):
+                with_jq = self.hook(name, with_payload, proj=a)
+                without = self.hook(name, without_payload, proj=b, path=path_without("jq"))
+                self.assertEqual((without.rc, without.blocked), (with_jq.rc, with_jq.blocked), without)
 
     def test_every_gate_blocks_without_python(self):
         p = project()
@@ -60,10 +78,7 @@ class BrokenStateTest(ContractTest):
         if config:
             with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as c:
                 c.write(config)
-        sd = self.runtime(p) / "state"
-        sd.mkdir(parents=True, exist_ok=True)
-        (sd / "agent-a1.ref").write_text("T-x\n")
-        return sd
+        self.seed_agent(p, ref="T-x")
 
     def test_unreadable_task_file_does_not_unlock_the_testers_files(self):
         p = project()
@@ -74,8 +89,8 @@ class BrokenStateTest(ContractTest):
 
     def test_budget_that_is_not_a_number_blocks(self):
         p = project()
-        sd = self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")
-        (sd / "agent-a1.calls").write_text("500\n")
+        self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")
+        self.seed_agent(p, ref="T-x", calls=500)
         r = self.hook("tool-gate", tool_call(p, "Read", {"file_path": str(p / "a.py")}, agent_type="keel:entwickler"),
                       proj=p)
         self.assertBlocked(r)
@@ -91,12 +106,13 @@ class ObserverTest(ContractTest):
                 self.assertEqual(r.events[-1]["event"], "hook_error", r)
                 self.assertEqual(r.events[-1]["hook"], name)
 
-    def test_observers_let_go_without_jq(self):
+    def test_observers_work_without_jq(self):
+        # The dispatcher (System-ADR 0022) does not need jq; an observer runs as with it.
         p = project()
         payload = {"hook_event_name": "SubagentStart", "agent_type": "keel:entwickler", "agent_id": "a1", "cwd": str(p)}
         r = self.hook("agent-start", payload, proj=p, path=path_without("jq"), env={"CLAUDE_PROJECT_DIR": str(p)})
         self.assertEqual(r.rc, 0, r)
-        self.assertEqual(r.events[-1]["event"], "hook_error", r)
+        self.assertEqual(r.events[-1]["event"], "agent_start", r)
 
 
 class TempFilesTest(ContractTest):

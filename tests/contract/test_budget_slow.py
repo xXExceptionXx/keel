@@ -10,14 +10,11 @@ class BudgetSlowTest(ContractTest):
         (p / ".keel" / "work" / "tasks" / "T-x.md").write_text("---\ntyp: aufgabe\nid: T-x\n---\n")
         with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as c:
             c.write("\nbudget:\n  minutes: 1\n")
-        sd = self.runtime(p) / "state"
-        sd.mkdir(parents=True, exist_ok=True)
-        (sd / "agent-a1.ref").write_text("T-x\n")
-        (sd / "agent-a1.start").write_text(f"{int(time.time()) - 600}\n")
-        return p, sd
+        self.seed_agent(p, ref="T-x", start=int(time.time()) - 600)
+        return p
 
     def test_a_run_over_the_limit_reports_once_and_is_not_refused(self):
-        p, sd = self.run_over_time()
+        p = self.run_over_time()
         call = tool_call(p, "Edit", {"file_path": str(p / "src" / "a.js")}, agent_type="keel:entwickler")
         first = self.hook("tool-gate", call, proj=p)
         second = self.hook("tool-gate", call, proj=p)
@@ -30,9 +27,9 @@ class BudgetSlowTest(ContractTest):
         self.assertFalse([e for e in second.events if e.get("event") in ("budget_exhausted", "denied")])
 
     def test_the_marker_keeps_the_report_to_one_and_the_task_stays_untouched(self):
-        p, sd = self.run_over_time()
+        p = self.run_over_time()
         self.hook("tool-gate", tool_call(p, "Read", {"file_path": str(p / "a.js")}, agent_type="keel:entwickler"),
                   proj=p)
-        self.assertTrue((sd / "agent-a1.slow").exists())
+        self.assertTrue(self.agent_state(p)["slow"])
         task = (p / ".keel" / "work" / "tasks" / "T-x.md").read_text()
         self.assertNotIn("budget-erschoepft", task)

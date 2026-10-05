@@ -95,3 +95,10 @@ jobs:
         if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python == '3.9'
         continue-on-error: true
         run: python3 tests/gate/run.py --quick --against "${{ github.event.pull_request.base.sha }}"
+
+      # The same for agent-stop, tool-gate, skill-gate and guard (System-ADR 0022). Intended changes are listed
+      # in tests/gate/hooks.py and reported as such. Full run locally: python3 tests/gate/hooks.py --against main
+      - name: Hook regression test
+        if: github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.python == '3.9'
+        continue-on-error: true
+        run: python3 tests/gate/hooks.py --against "${{ github.event.pull_request.base.sha }}"

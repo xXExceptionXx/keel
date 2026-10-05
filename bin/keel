@@ -3,6 +3,35 @@
 # the package itself refuses older versions with exit 2.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if ! command -v python3 >/dev/null 2>&1; then
+  if [ "${1:-}" = hook ]; then
+    # Without python3 no hook can check (System-ADR 0019, 0022). Claude Code lets everything but exit 2 through,
+    # so the gates close here: guard for every Bash call, the other gates for calls that concern keel.
+    # Observers let go.
+    payload="$(cat)"
+    shift
+    event=""; only=""
+    while [ $# -gt 0 ]; do
+      case "$1" in --only) only="${2:-}"; shift 2 ;; *) event="$1"; shift ;; esac
+    done
+    gate=""
+    case "$only" in
+      guard) gate=guard ;;
+      agent-gate|skill-gate|tool-gate|agent-stop) gate=keel ;;
+      "")
+        case "$event" in
+          pre-tool-use)
+            if printf '%s' "$payload" | grep -Eq '"tool_name"[[:space:]]*:[[:space:]]*"Bash"'; then gate=guard; else gate=keel; fi ;;
+          subagent-stop|user-prompt-submit) gate=keel ;;
+        esac ;;
+    esac
+    case "$gate" in
+      guard) ;;
+      keel) case "$payload" in *keel:*) ;; *) exit 0 ;; esac ;;
+      *) exit 0 ;;
+    esac
+    echo "keel: ${only:-$event} konnte nicht prüfen (python3 fehlt im PATH, gebraucht: 3.9 oder neuer). Aus Sicherheitsgründen abgelehnt." >&2
+    exit 2
+  fi
   echo "keel: python3 fehlt im PATH (gebraucht: 3.9 oder neuer)" >&2
   exit 2
 fi

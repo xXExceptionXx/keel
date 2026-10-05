@@ -7,7 +7,7 @@ from harness import ContractTest, project, write
 
 class FrontmatterLookupTest(ContractTest):
     def stop(self, p, role, ref):
-        write(self.runtime(p) / "state" / "agent-a1.ref", ref + "\n")
+        self.seed_agent(p, ref=ref)
         self.adr_snapshot(p)
         payload = {"hook_event_name": "SubagentStop", "agent_type": f"keel:{role}", "agent_id": "a1", "cwd": str(p),
                    "last_assistant_message": "fertig"}

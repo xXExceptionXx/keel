@@ -2,41 +2,10 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.sh\""
-          }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-gate.sh\""
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/skill-gate.sh\""
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/tool-gate.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook pre-tool-use"
           }
         ]
       }
@@ -46,11 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/context-alarm.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook post-tool-use"
           }
         ]
       }
@@ -60,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-start.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook subagent-start"
           }
         ]
       }
@@ -70,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/agent-stop.sh\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook subagent-stop",
             "timeout": 600
           }
         ]
@@ -81,11 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/briefing-stop.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook stop"
           }
         ]
       }
@@ -95,11 +56,28 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
-          },
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook session-start"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-gate.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook session-end",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook notification"
           }
         ]
       }
@@ -109,11 +87,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/log.sh\""
-          },
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/skill-gate.sh\""
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/bin/keel\" hook user-prompt-submit",
+            "timeout": 30
           }
         ]
       }

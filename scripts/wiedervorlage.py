@@ -10,7 +10,7 @@ Usage:
       open follow-ups and Vorlagen that exist only on that branch, not on the base branch: before a Vorhaben is
       discarded, each of them is carried over to the base or discarded on purpose
   wiedervorlage.py stand <project>
-      the state at the start of a briefing as JSON (skill-gate writes it to state/briefing-<session>.json)
+      the state at the start of a briefing as JSON (skill-gate writes it to the session's briefing file, keel.store.runtime)
   wiedervorlage.py protokoll <project> --stand <file>
       checks the briefing protocol written since that start; JSON {"ergebnis": offen | ok | fehler | aufgegeben}
       offen: no protocol yet, the briefing is still a conversation. fehler counts up in the state file; from the

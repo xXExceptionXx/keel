@@ -6,8 +6,9 @@ from harness import CRASH_PY, REPO, ContractTest, agent_call, plugin_copy, proje
 
 class AgentStopTest(ContractTest):
     def stop(self, p, role, ref, root=REPO, env=None):
-        write(self.runtime(p) / "state" / "agent-a1.ref", ref + "\n")
-        if not (self.runtime(p) / "state" / "agent-a1.adrstand.json").exists():
+        if not self.agent_state(p)["role"]:  # once per agent: a new start would reset its failure count
+            self.seed_agent(p, ref=ref)
+        if not self.has_adr_snapshot(p):
             self.adr_snapshot(p)
         payload = {"hook_event_name": "SubagentStop", "agent_type": f"keel:{role}", "agent_id": "a1", "cwd": str(p),
                    "last_assistant_message": "fertig"}

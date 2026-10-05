@@ -37,6 +37,20 @@ def runtime_dir(root, proj, mdir):
     return Path(out.stdout.strip())
 
 
+def parked(sd):
+    """Parked starts per role, whatever layout the plugin copy uses: pending-<role> files before 0.17.0,
+    pending/<role>.json since (System-ADR 0022)."""
+    out = {}
+    if not sd.exists():
+        return out
+    for f in sorted(sd.glob("pending-*")):
+        out[f.name[len("pending-"):]] = f.read_text().strip()
+    for f in sorted(sd.glob("pending/*.json")):
+        if not f.name.endswith(".adr.json"):
+            out[f.stem] = json.loads(f.read_text()).get("ref", "")
+    return out
+
+
 def run(root, proj, mdir, t, p, bg):
     shutil.rmtree(mdir, ignore_errors=True)
     payload = {"hook_event_name": "PreToolUse", "tool_name": "Agent", "cwd": str(proj), "session_id": "s1",
@@ -45,7 +59,7 @@ def run(root, proj, mdir, t, p, bg):
                        text=True, env={**os.environ, "KEEL_METRICS_DIR": str(mdir)}, cwd=proj)
     rt = runtime_dir(root, proj, mdir)
     sd = rt / "state"
-    pend = {f.name: f.read_text() for f in sorted(sd.glob("pending-*"))} if sd.exists() else {}
+    pend = parked(sd)
     ev = rt / "events.jsonl"
     evs = [re.sub(r'"ts":"[^"]*",?', "", line) for line in ev.read_text().splitlines()] if ev.exists() else []
     return {"rc": r.returncode, "out": r.stdout, "err": r.stderr.strip(), "pending": pend, "events": evs}

@@ -22,11 +22,11 @@ keel ist der **Motor** und für alle Projekte gleich. Alles Projektspezifische l
 .claude-plugin/   Manifest und Marketplace
 agents/           Rollen: supervisor, po, architekt, planer, tester, entwickler, reviewer, compliance, auditor, coach
 skills/           Befehle, siehe Tagesrhythmus
-hooks/            Übergabeprüfung, Budget, Prüftor, Schutzhooks, Rohdaten
-bin/keel          Kommandozeile des Kerns: keel doctor, keel path, keel motor (lokale Motor-Ablage), keel --version
+hooks/            hooks.json: je Ereignis ein Aufruf von bin/keel hook (System-ADR 0022); <schritt>.sh leitet weiter
+bin/keel          Kommandozeile des Kerns: keel hook, keel doctor, keel path, keel motor (lokale Motor-Ablage), keel --version
 lib/keel/         Kern als Python-Paket (System-ADR 0020): domain (Regeln), store (einzige Stelle für Pfade,
-                  Frontmatter, Konfiguration, Ereignisse, atomares Schreiben), integrations (git), services
-                  (doctor, agenda, adr, motor), interfaces (Kommandozeile)
+                  Frontmatter, Konfiguration, Ereignisse, atomares Schreiben, Laufzeitzustand), integrations (git),
+                  services (Hook-Schritte, doctor, agenda, adr, motor), interfaces (Kommandozeile, Hook-Dispatcher)
 scripts/          Übergang bis zum Umbau-Schritt M7: dünne Skripte auf lib/keel, z. B. frontmatter.py, config.py,
                   gate.sh, due.py, flow.py, lage.py, monitor.py, metrics.py, backlog.py, adr.py, wiedervorlage.py
 templates/keel/   Vorlagen für den Ordner .keel/ eines Projekts
@@ -35,7 +35,8 @@ docs/             Konzept, System-ADRs, Konzeptentwürfe und Arbeitspakete
 tests/contract/   Vertragstests für Hooks und Skripte: python3 -m unittest discover -s tests/contract
 tests/unit/       Unit-Tests für lib/keel, Schichtrichtung, alte Muster: python3 -m unittest discover -s tests/unit -t .
 tests/run.py      Unit- und Vertragstests parallel, je Testmethode ein Job: python3 tests/run.py [-j N]
-tests/gate/       Regressionstest für das Gate: python3 tests/gate/run.py --against main
+tests/gate/       Regressionstests gegen einen früheren Stand: run.py (Agent-Freigabe), hooks.py (übrige Gates)
+tests/perf/       Latenz der Hooks je Werkzeugaufruf: python3 tests/perf/hooks.py --against main
 .githooks/        pre-commit und pre-push: Leak-Prüfung (tests/leak_check.py); Tests vor dem Push auf Wunsch: git config keel.prePushTests true
 ```
 
@@ -84,11 +85,11 @@ Die Haupt-Session ist der Lead. Der PO macht aus dem Backlog-Element eine Proble
 
 Rohdaten für die Lernschleife landen außerhalb des Repos unter `~/.keel-metrics/<projekt>-<hash>/` (`bin/keel path runtime` nennt den Ordner).
 
-`bin/keel doctor` prüft, ob Projekt und Rechner für keel taugen: Python, `git`, `jq`, Konfiguration, lesbare Frontmatter aller Artefakte, Notbremse, verwaiste Startmarken, Protokolle, Sperrordner. `/keel:hilfe` und der Monitor zeigen dieselben Befunde.
+`bin/keel doctor` prüft, ob Projekt und Rechner für keel taugen: Python, `git`, `jq`, Konfiguration, lesbare Frontmatter aller Artefakte, Notbremse, verwaiste Startmarken, verwaiste Marker laufender Operationen, Protokolle, Sperrordner. `/keel:hilfe` und der Monitor zeigen dieselben Befunde.
 
 ## Installation in einem Projekt
 
-Voraussetzungen: `git`, `python3` (ab 3.9, nur Standardbibliothek) und `jq`. Auf macOS kommen `git` und `python3` mit den Command Line Tools (`xcode-select --install`), `jq` liegt ab macOS 15 unter `/usr/bin/jq`, auf älteren Versionen über Homebrew. Auf Linux kommen alle drei aus der Paketverwaltung. Fehlt `jq` oder `python3`, blockieren die keel-Hooks, statt ungeprüft durchzulassen (System-ADR 0019).
+Voraussetzungen: `git`, `python3` (ab 3.9, nur Standardbibliothek) und `jq`. Auf macOS kommen `git` und `python3` mit den Command Line Tools (`xcode-select --install`), `jq` liegt ab macOS 15 unter `/usr/bin/jq`, auf älteren Versionen über Homebrew. Auf Linux kommen alle drei aus der Paketverwaltung. Fehlt `python3`, blockieren die keel-Hooks, statt ungeprüft durchzulassen (System-ADR 0019, 0022). `jq` brauchen die Hooks nicht mehr, aber `scripts/keel.sh`, `scripts/keel-run.sh` und `/keel:inbox`.
 
 ```bash
 claude plugin marketplace add xXExceptionXx/keel

@@ -14,8 +14,7 @@ def adr(p, name, entscheider="", status="Proposed"):
 
 class AdrLevelTest(ContractTest):
     def stop(self, p, role):
-        sd = self.runtime(p) / "state"
-        write(sd / "agent-a1.ref", "T-x\n")
+        self.seed_agent(p, role=role, ref="T-x")
         payload = {"hook_event_name": "SubagentStop", "agent_type": f"keel:{role}", "agent_id": "a1", "cwd": str(p),
                    "last_assistant_message": "fertig"}
         return self.hook("agent-stop", payload, proj=p)
@@ -92,19 +91,16 @@ class AdrLevelTest(ContractTest):
 
     def test_agent_start_binds_the_state_to_the_agent(self):
         p = project()
-        sd = self.runtime(p) / "state"
-        write(sd / "adrstand-planer.json", "{}")
+        self.park_adr_snapshot(p, "planer", {})
         r = self.hook("agent-start", {"hook_event_name": "SubagentStart", "agent_type": "keel:planer",
                                       "agent_id": "a7", "cwd": str(p)}, proj=p)
         self.assertEqual(r.rc, 0, r)
-        self.assertTrue((sd / "agent-a7.adrstand.json").exists())
-        self.assertFalse((sd / "adrstand-planer.json").exists())
+        self.assertEqual(self.state(p, "adr_snapshot", "a7", "_none"), {})
+        self.assertIsNone(self.state(p, "adr_snapshot", "_none", "planer"))
 
     def test_an_adr_may_be_repaired_over_the_call_budget(self):
         p = project()
-        sd = self.runtime(p) / "state"
-        write(sd / "agent-a1.ref", "T-x\n")
-        write(sd / "agent-a1.calls", "999\n")
+        self.seed_agent(p, role="planer", ref="T-x", calls=999)
         ok = self.hook("tool-gate", tool_call(p, "Edit", {"file_path": str(p / ".keel" / "adr" / "entwurf-x.md")},
                                               agent_type="keel:planer"), proj=p)
         self.assertPassed(ok)

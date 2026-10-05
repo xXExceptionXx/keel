@@ -8,6 +8,7 @@ Environment:
   KEEL_TEST_BASH  bash to run the hooks with (CI and .githooks/pre-push set /bin/bash on macOS to cover bash 3.2)
 """
 import atexit
+import contextlib
 import json
 import os
 import shutil
@@ -19,6 +20,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 FIXTURE = REPO / "tests" / "gate" / "fixture.sh"
+sys.path.insert(0, str(REPO / "lib"))
 BASH = shutil.which(os.environ.get("KEEL_TEST_BASH", "bash")) or "bash"
 
 _session = Path(tempfile.mkdtemp(prefix="keel-contract-"))
@@ -165,13 +167,54 @@ class ContractTest(unittest.TestCase):
                               env=self.env(env, path), cwd=str(proj or self.tmp), timeout=timeout)
         return Result(proc, self.metrics, proj)
 
+    @contextlib.contextmanager
+    def _metrics_env(self):
+        old = os.environ.get("KEEL_METRICS_DIR")
+        os.environ["KEEL_METRICS_DIR"] = str(self.metrics)
+        try:
+            yield
+        finally:
+            if old is None:
+                os.environ.pop("KEEL_METRICS_DIR", None)
+            else:
+                os.environ["KEEL_METRICS_DIR"] = old
+
+    def state(self, proj, method, *args, **kwargs):
+        """Call keel.store.runtime.Runtime.<method> for proj under this test's metrics root. The layout of the
+        runtime state is the plugin's business (System-ADR 0022); tests read and seed it only through here."""
+        from keel.store.paths import Paths
+        from keel.store.runtime import Runtime
+        with self._metrics_env():
+            return getattr(Runtime(Paths(proj).ensure()), method)(*args, **kwargs)
+
+    def seed_agent(self, proj, agent_id="a1", role="entwickler", ref="", start=None, calls=None):
+        """A running role as SubagentStart registers it; calls sets the tool counter."""
+        self.state(proj, "start_agent", agent_id, role, ref, start=start, calls=calls or 0)
+
+    def has_adr_snapshot(self, proj, agent_id="a1"):
+        return self.state(proj, "adr_snapshot", agent_id, "_none") is not None
+
+    def park_adr_snapshot(self, proj, role, snapshot):
+        self.state(proj, "park_adr_snapshot", role, snapshot)
+
+    def age_state(self, proj, seconds):
+        """Make every runtime state file of proj look `seconds` older (timestamps only, layout unknown)."""
+        state = self.runtime(proj) / "state"
+        for f in state.rglob("*") if state.exists() else []:
+            st = f.stat()
+            os.utime(f, (st.st_atime - seconds, st.st_mtime - seconds))
+
+    def pending_of(self, proj, role):
+        """(ref, age) of a parked start of the role, or None."""
+        return self.state(proj, "pending", role)
+
+    def agent_state(self, proj, agent_id="a1"):
+        return self.state(proj, "agent", agent_id)
+
     def adr_snapshot(self, proj, agent_id="a1"):
-        """The ADR state agent-gate notes at a role's start, bound to the agent as agent-start.sh does."""
-        out = self.runtime(proj) / "state" / f"agent-{agent_id}.adrstand.json"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        r = self.script("adr.py", "stand", proj, out, proj=proj)
-        self.assertEqual(r.rc, 0, r)
-        return out
+        """The ADR state agent-gate notes at a role's start, bound to the agent as agent-start does."""
+        from keel.services import adr
+        self.state(proj, "bind_adr_snapshot", agent_id, adr.snapshot(proj))
 
     def assertBlocked(self, r, msg=None):
         self.assertTrue(r.blocked, msg or f"expected a block, got {r!r}")

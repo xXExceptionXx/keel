@@ -43,15 +43,13 @@ class DoctorTest(ContractTest):
 
     def test_emergency_brake(self):
         p = project()
-        write(self.runtime(p) / "state" / "kern-gesperrt", "Notbremse seit gestern\n")
+        self.state(p, "pull_brake", "Notbremse seit gestern")
         self.assertEqual(self.finding(p, "notbremse")["stufe"], "fehler")
 
     def test_stale_pending_marker(self):
         p = project()
-        f = self.runtime(p) / "state" / "pending-entwickler"
-        write(f, "T-tb\n")
-        old = time.time() - 3600
-        os.utime(f, (old, old))
+        self.state(p, "park", "entwickler", "T-tb")
+        self.age_state(p, 3600)
         self.finding(p, "pending")
 
     def test_broken_log_lines(self):

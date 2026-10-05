@@ -21,6 +21,7 @@ from pathlib import Path
 
 import _keel  # noqa: F401
 from keel.domain.errors import KeelError, ParseError, ReadError
+from keel.services import artifacts
 from keel.store import codec, frontmatter
 
 
@@ -71,23 +72,15 @@ def cmd_set(args):
 def cmd_validate(args):
     path = args[0]
     opts = _opts(args[1:])
-    data, _ = load(path)
-    errors = []
-    typ = opts.get("type")
-    if typ and data.get("typ") != typ:
-        errors.append(f"typ is '{data.get('typ')}', expected '{typ}'")
-    if "status" in opts:
-        allowed = opts["status"].split(",")
-        if data.get("status") not in allowed:
-            errors.append(f"status is '{data.get('status')}', expected one of {', '.join(allowed)}")
-    for key in opts.get("require", "").split(","):
-        if key and key not in data:
-            errors.append(f"missing field '{key}'")
-    for key in opts.get("nonempty", "").split(","):
-        if key and not data.get(key):
-            errors.append(f"field '{key}' is empty")
-    if errors:
-        fail(f"{path}: " + "; ".join(errors), 1)
+    load(path)  # unreadable is exit 2, missing frontmatter exit 1, as for get
+    try:
+        problem = artifacts.validate(path, typ=opts.get("type"), status=opts.get("status"),
+                                     require=opts.get("require", "").split(","),
+                                     nonempty=opts.get("nonempty", "").split(","))
+    except (ReadError, ParseError) as exc:
+        fail(str(exc), 2)
+    if problem:
+        fail(problem, 1)
 
 
 def cmd_dump(args):

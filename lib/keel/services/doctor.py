@@ -12,6 +12,7 @@ from typing import List, NamedTuple
 from keel.domain.errors import ParseError, ReadError
 from keel.store import config, events, frontmatter
 from keel.store.paths import Paths, lock_dir
+from keel.store.runtime import Runtime
 
 STALE_PENDING_SECONDS = 600
 OK, WARNING, ERROR = "ok", "warnung", "fehler"
@@ -35,13 +36,14 @@ def run(project, tools=True) -> List[Finding]:
     found = [check_python()]
     if tools:
         found += [check_tool("git", "git fehlt im PATH; Review, Fälligkeiten und Compliance-Scan brauchen es"),
-                  check_tool("jq", "jq fehlt im PATH; ohne jq sperren die Gates jeden Aufruf (System-ADR 0019)")]
+                  check_tool("jq", "jq fehlt im PATH; keel.sh, keel-run.sh und /keel:inbox brauchen es (die Hooks nicht mehr, System-ADR 0022)")]
     return found + [
         check_locks(paths),
         check_config(paths),
         check_artifacts(paths),
         check_brake(paths),
         check_pending(paths),
+        check_activities(paths),
         check_logs(paths),
     ]
 
@@ -112,7 +114,7 @@ def check_artifacts(paths):
 
 
 def check_brake(paths):
-    if paths.brake.exists():
+    if paths.brake.exists():  # the brake stays a plain file the human deletes (System-ADR 0019)
         try:
             text = paths.brake.read_text(encoding="utf-8", errors="replace").strip()
         except OSError:
@@ -122,20 +124,22 @@ def check_brake(paths):
 
 
 def check_pending(paths):
-    now = time.time()
-    stale = []
-    if paths.state.exists():
-        for p in sorted(paths.state.glob("pending-*")):
-            try:
-                age = now - p.stat().st_mtime
-            except OSError:
-                continue
-            if age > STALE_PENDING_SECONDS:
-                stale.append(f"{p.name} seit {int(age // 60)} Minuten")
+    stale = [f"{p['role']} seit {p['seit_sekunden'] // 60} Minuten" for p in Runtime(paths).pendings()
+             if p["seit_sekunden"] > STALE_PENDING_SECONDS]
     if stale:
         return Finding("pending", WARNING, "verwaiste Startmarken (Start abgebrochen?): " + ", ".join(stale)
                        + ". Aufräumen mit lage.py --clean")
     return Finding("pending", OK, "keine verwaisten Startmarken")
+
+
+def check_activities(paths):
+    """Markers of long operations whose process is gone: the hook was killed (timeout?) in the middle."""
+    orphaned = [f"{a['name']}" + (f" ({a['ref']})" if a["ref"] else "") for a in Runtime(paths).activities()
+                if a["verwaist"]]
+    if orphaned:
+        return Finding("laufend", WARNING, "verwaiste Marker laufender Operationen (Prozess beendet, Hook abgebrochen?): "
+                       + ", ".join(orphaned) + ". Aufräumen mit lage.py --clean")
+    return Finding("laufend", OK, "keine verwaisten Marker")
 
 
 def check_logs(paths):

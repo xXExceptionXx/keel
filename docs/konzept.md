@@ -581,7 +581,7 @@ Für den sequenziellen Ablauf reichen Subagents. Agent Teams sind nicht nötig u
 | Rollen | Je eine Agent-Definition im Plugin, mit eigenem Prompt und erlaubten Tools, z. B. Reviewer nur lesend. Jede Rolle endet mit einer Abschlussnachricht von höchstens drei Zeilen |
 | Lead | Haupt-Session, die alle Subagents flach und der Reihe nach aufruft, auch den PO |
 | Planer | Subagent mit Lesewerkzeugen und Schreibrecht nur auf die Plan-Datei. Das ersetzt den Plan-Modus, der für die Haupt-Session gedacht ist |
-| Prüftore | Hooks im Plugin: Tests, Compliance-Checks, Frontmatter-Prüfung und Budget beim Abschluss einer Aufgabe. Die Startbedingungen der Rollen stehen als Tabelle in `scripts/flow.py`; `tests/gate/` prüft das Gate gegen den vorigen Stand |
+| Prüftore | Hooks im Plugin: Tests, Compliance-Checks, Frontmatter-Prüfung und Budget beim Abschluss einer Aufgabe. Die Startbedingungen der Rollen stehen als Tabelle in `lib/keel/domain/flow.py`; `tests/gate/` prüft die Gates gegen den vorigen Stand. Seit System-ADR 0022 läuft je Hook-Ereignis ein Python-Prozess (`bin/keel hook`) |
 | Sichtbarkeit | `/keel:hilfe` erklärt den Stand auf Abruf, `/keel:monitor` zeigt ihn laufend als lokale Webseite; beide lesen nur |
 | Sicherheit | Deny-Regeln in `.claude/settings.json` für destruktive Befehle, Produktions-Credentials nicht in der Umgebung |
 | Kennzahlen-Sperre | Agent-Definitionen können nur Werkzeuge einschränken, keine Pfade. Pfad-Deny-Regeln gelten sessionweit. Die Sperre des Kennzahlen-Ordners für arbeitende Rollen ist deshalb ein PreToolUse-Hook, der Agent-Typ und Pfad prüft und alles außer dem Coach abweist |
