@@ -21,7 +21,7 @@ SCHEMA = {
         "auditor_tool_calls": 150, "auditor_minutes": 45,
         "coach_tool_calls": 150, "coach_minutes": 45,
         "po_tool_calls": 100, "planer_tool_calls": 100,
-        "context_window": 200000, "context_percent": 50,
+        "context_tokens": 100000,
     },
     "korridore": {
         "vorlagen_pro_woche": "2-5",
@@ -29,7 +29,7 @@ SCHEMA = {
         "gekippte_delegierte_adrs_prozent": "0-10",
         "gekippte_supervisor_entscheidungen_prozent": "0-15",
         "eskalationsquote_prozent": "10-40",
-        "einwaende_supervisor": "1-10",
+        "einwaende_bei_abweichung_prozent": "50-100",
         "review_runden_pro_aufgabe": "1-2",
         "ruecklaufquote_review_prozent": "0-30",
         "fix_befunde_prozent": "0-20",

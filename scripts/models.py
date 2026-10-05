@@ -3,7 +3,8 @@
 
 Usage: models.py <project-dir> [--json]
 
-Source: agent_stop events in the runtime folder of the project (keel path events). Each carries `model` since
+Source: agent_stop events in the runtime folder of the project (keel path events), and the end of each briefing
+(briefing_geprueft, briefing_protokoll_offen with model), which counts as a run of the Supervisor. Each carries `model` since
 System-ADR 0015; older events fall back to the model in their subagent transcript while it exists.
 A switch is per role: the model of the role's latest run differs from the model it mostly ran on before;
 a single run on another model in between (fallback on overload) is not a switch.
@@ -46,10 +47,18 @@ def load_events(project):
     return events.read(Paths(project).events).events
 
 
+BRIEFING_ENDS = ("briefing_geprueft", "briefing_protokoll_offen")
+
+
 def runs(events):
     """Role runs with a known model, oldest first: dicts with role, model, ts, agent_id, ref, result."""
     out = []
     for e in events:
+        if e.get("event") in BRIEFING_ENDS and e.get("model"):
+            # A briefing is the Supervisor in the main session; it counts as one of its runs (kern-befunde P2)
+            out.append({"role": "supervisor", "model": e["model"], "ts": e["_ts"], "agent_id": e.get("session_id"),
+                        "ref": "briefing", "result": "ok", "transcript": None})
+            continue
         if e.get("event") != "agent_stop":
             continue
         model = e.get("model") or (transcript_model(e["transcript"]) if isinstance(e.get("transcript"), str) else "")

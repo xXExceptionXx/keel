@@ -204,10 +204,11 @@ def main():
     eskaliert = [d for d in all_dec if d.get("eskaliert") == "Supervisor"]
     sup_entschieden = [d for d in all_dec if d.get("entscheider") == "Supervisor"]
     eskalationsquote = round(100 * len(eskaliert) / (len(eskaliert) + len(sup_entschieden))) if (eskaliert or sup_entschieden) else None
-    einwaende = 0
-    for p in adr_files:
-        if "## Einwand des Supervisors" in text_of(p):
-            einwaende += 1
+    # Objections count only where the human did not follow the Supervisor's recommendation; without such a case
+    # the figure is n/a, an objection without cause would be made up (kern-befunde P1)
+    einwaende = sum(1 for p in adr_files if "## Einwand des Supervisors" in text_of(p))
+    abweichungen = [d for d in done_dec if d.get("entscheider") == "Mensch" and d.get("abweichung") == "ja"]
+    einwaende_bei_abweichung = round(100 * min(einwaende, len(abweichungen)) / len(abweichungen)) if abweichungen else None
 
     # ---- audits
     audit_dir = project / ".keel" / "work" / "audit"
@@ -264,7 +265,7 @@ def main():
         ("PO-Kalibrierung", "gekippte_delegierte_adrs_prozent", "Gekippte delegierte ADRs (%)", gekippt_prozent),
         ("Supervisor", "gekippte_supervisor_entscheidungen_prozent", "Gekippte Supervisor-Entscheidungen (%)", sup_gekippt_prozent),
         ("Supervisor", "eskalationsquote_prozent", "Eskalationsquote an den Menschen (%)", eskalationsquote),
-        ("Supervisor", "einwaende_supervisor", "Einwände des Supervisors gegen Entscheidungen des Menschen", einwaende),
+        ("Supervisor", "einwaende_bei_abweichung_prozent", "Einwände, wenn der Mensch von der Empfehlung abweicht (%)", einwaende_bei_abweichung),
         ("Planung", "diff_zeilen_pro_aufgabe", "Diff-Zeilen pro Aufgabe (Ø)", diff_avg),
         ("Planung", "neuschnitt_quote_prozent", "Neu geschnittene Aufgaben (%)", round(100 * len(neuschnitt) / len(tasks)) if tasks else None),
         ("Umsetzung", "review_runden_pro_aufgabe", "Review-Runden pro Aufgabe (Ø)", review_rounds),

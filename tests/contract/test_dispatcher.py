@@ -64,7 +64,7 @@ class DispatcherTest(ContractTest):
 
     def test_an_observer_failure_does_not_block_the_gates(self):
         p = project()
-        (p / ".keel" / "config.yaml").write_text("budget:\n  context_window: kaputt\n")
+        (p / ".keel" / "config.yaml").write_text("budget:\n  context_tokens: kaputt\n")
         payload = {"hook_event_name": "PostToolUse", "tool_name": "Read", "cwd": str(p), "session_id": "s1",
                    "transcript_path": str(self.tmp / "t.jsonl"), "tool_input": {"file_path": "/x"}}
         (self.tmp / "t.jsonl").write_text(json.dumps({"type": "assistant", "message": {

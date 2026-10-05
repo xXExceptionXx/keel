@@ -40,31 +40,30 @@ def log(hook):
 
 
 def context_alarm(hook):
-    """PostToolUse of the main session (the Lead): above the configured share of the window, tell the Lead to
-    finish the task, write a handoff and stop. Once per 10-percent step. Subagents have budgets instead."""
+    """PostToolUse of the main session (the Lead): from budget.context_tokens on, tell the Lead to finish the task,
+    write a handoff and stop. The limit is absolute, not a share of the model's window: context care starts at the
+    same size whatever the model can hold. Again at every further 10 percent of the limit. Subagents have budgets
+    instead."""
     if hook.text("agent_type"):
         return None
     transcript = hook.text("transcript_path")
     if not transcript:
         return None
-    window = int(hook.cfg("budget.context_window", "200000"))
-    threshold = int(hook.cfg("budget.context_percent", "50"))
+    limit = int(hook.cfg("budget.context_tokens", "100000"))
     _, used = transcripts.tail(transcript)
-    if used <= 0:
-        return None
-    percent = used * 100 // window
-    if percent < threshold:
+    if used <= 0 or used < limit:
         return None
     sid = hook.text("session_id")
-    step = percent // 10
+    step = used * 10 // limit
     if step <= hook.runtime.context_step(sid):
         return None
-    msg = (f"keel Kontext-Alarm: Der Kontext dieser Session ist zu {percent} % gefüllt (Schwelle {threshold} %). "
+    msg = (f"keel Kontext-Alarm: Der Kontext dieser Session umfasst {used // 1000}k Tokens (Grenze {limit // 1000}k, "
+           "budget.context_tokens). "
            "Schließe die aktuelle Aufgabe sauber ab, schreibe eine Zwischenübergabe nach .keel/work/handoff/ und "
            "beende dich. Ein frischer Lead setzt aus der Übergabe fort.")
     try:
         hook.runtime.set_context_step(sid, step)
     except OSError:
         pass
-    hook.try_record("context_alarm", {"session_id": sid, "used": used, "percent": percent})
+    hook.try_record("context_alarm", {"session_id": sid, "used": used, "limit": limit})
     return Context(msg)
