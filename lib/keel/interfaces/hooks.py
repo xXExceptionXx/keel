@@ -28,6 +28,7 @@ EVENTS = {
     "session-end": "SessionEnd",
     "notification": "Notification",
     "user-prompt-submit": "UserPromptSubmit",
+    "permission-request": "PermissionRequest",
 }
 
 
@@ -43,6 +44,7 @@ def _any(_payload):
 STEPS = {
     "PreToolUse": [
         ("guard", GATE, _tool("Bash"), "guard"),
+        ("allow", OBSERVER, _tool("Bash"), "allow"),
         ("agent-gate", GATE, _tool("Agent"), "agent_gate"),
         ("skill-gate", GATE, _tool("Skill"), "skill_gate"),
         ("tool-gate", GATE, _any, "tool_gate"),
@@ -56,6 +58,7 @@ STEPS = {
     "SessionEnd": [("log", OBSERVER, _any, "observe")],
     "Notification": [("log", OBSERVER, _any, "observe")],
     "UserPromptSubmit": [("log", OBSERVER, _any, "observe"), ("skill-gate", GATE, _any, "skill_gate")],
+    "PermissionRequest": [("freigabe", OBSERVER, _any, "freigabe")],
 }
 
 # Function of a step module when it is not run(): observe.py holds two steps.
@@ -99,12 +102,17 @@ def _brake(hook, detail):
     return True
 
 
-def _answer(event, refusal, contexts):
+def _answer(event, refusal, contexts, allowed=None):
     if refusal is not None:
         if event == "PreToolUse":
             return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                            "permissionDecisionReason": refusal.reason}}
         return {"decision": "block", "reason": refusal.reason}
+    if allowed is not None and event == "PreToolUse":
+        out = {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": allowed.reason}
+        if contexts:
+            out["additionalContext"] = "\n\n".join(contexts)
+        return {"hookSpecificOutput": out}
     if contexts:
         return {"hookSpecificOutput": {"hookEventName": event, "additionalContext": "\n\n".join(contexts)}}
     return None
@@ -112,7 +120,7 @@ def _answer(event, refusal, contexts):
 
 def run(event_arg, only=None, raw=None):
     """Run the hook steps; returns the exit code. Prints the answer to stdout, messages to stderr."""
-    from keel.services.hooks.base import CannotCheck, Context, Hook, Refuse
+    from keel.services.hooks.base import Allow, CannotCheck, Context, Hook, Refuse
 
     raw = sys.stdin.read() if raw is None else raw
     try:
@@ -135,7 +143,7 @@ def run(event_arg, only=None, raw=None):
         _say(f"keel hook: kein Schritt {only!r} für {event_arg or event}")
         return 2
 
-    refusal, contexts, failed = None, [], None
+    refusal, contexts, failed, allowed = None, [], None, None
     for name, kind, matcher, module in steps:
         hook = Hook(payload or {}, event, name)
         try:
@@ -162,10 +170,12 @@ def run(event_arg, only=None, raw=None):
             refusal = result
         elif isinstance(result, Context):
             contexts.append(result.text)
+        elif isinstance(result, Allow) and allowed is None:
+            allowed = result
     if failed:
         _say(failed)
         return 2
-    answer = _answer(event, refusal, contexts)
+    answer = _answer(event, refusal, contexts, allowed)
     if answer is not None:
         try:
             sys.stdout.write(json.dumps(answer, ensure_ascii=False, indent=2) + "\n")

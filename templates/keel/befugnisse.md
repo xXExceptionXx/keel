@@ -34,6 +34,7 @@ Der PO und der Supervisor lesen diese Liste wörtlich. Was hier steht, entscheid
 - Datenmodell: neue Tabellen, neue Spalten, geänderte Beziehungen, Migrationen
 - Architekturgrenzen: neue Schicht, neues Feature-Verzeichnis, neue Abhängigkeitsrichtung zwischen Features
 - Neue Laufzeitabhängigkeit, externe Dienste, Kosten, Verträge
+- Freigaben: `freigaben.befehle` in `.keel/config.yaml` und Allow-Regeln in `.claude/settings.json`, also welche Befehle ohne Rückfrage laufen
 - Alles, was Beträge, Rundung oder Berechnungsergebnisse verändert
 - Personenbezogene Daten: neue Felder, neue Verarbeitung, neue Empfänger
 - Verhalten, das Nutzer sehen und das nicht in der Problemstellung stand
