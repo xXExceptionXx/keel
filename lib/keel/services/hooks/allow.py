@@ -121,8 +121,12 @@ def _git(tokens, project):
         return False
     if sub == "remote" and flags and flags[0] not in ("-v", "get-url", "show"):
         return False
-    if sub == "branch" and any(not f.startswith("--") and f not in ("-a", "-r", "-v", "-vv") for f in flags):
-        return False  # listing only; creating and deleting branches goes through switch -c or the human
+    if sub == "branch":  # listing only; creating, renaming and deleting go through switch -c, _merged_branch_delete
+        listing = {"--list", "-l", "-r", "-a", "--merged", "--no-merged", "--contains", "--points-at", "--show-current"}
+        if any(f.startswith("-") and f not in listing | {"-v", "-vv", "--remotes", "--all"} for f in flags):
+            return False
+        if any(not f.startswith("-") for f in flags) and not any(f in listing for f in flags):
+            return False
     if sub == "push" and ("main" in flags or any(":" in f for f in flags)):
         return False
     if sub == "pull" and "--ff-only" not in flags:
@@ -150,6 +154,11 @@ def _read_only(tokens, project, root):
     cmd, args = tokens[0], tokens[1:]
     if cmd not in READ_ONLY:
         return False
+    if cmd in ("grep", "sed"):
+        # the first argument that is no option is the pattern or the script, not a path
+        first = next((i for i, a in enumerate(args) if not a.startswith("-")), None)
+        if first is not None:
+            args = args[:first] + args[first + 1:]
     if cmd == "sed" and ("-n" not in args or any(a.startswith(("-i", "--in-place")) for a in args)):
         return False
     if cmd == "find" and any(a in FIND_ACTIONS for a in args):
@@ -161,10 +170,12 @@ def _merged_branch_delete(tokens, hook):
     """git branch -d <feature/fix branch> (git itself refuses an unmerged branch) and git push <remote> --delete
     <feature/fix branch> (the guard runs first and refuses an unmerged one, System-ADR 0022)."""
     prefixes = (hook.cfg("git.feature_prefix", "feature/"), hook.cfg("git.fix_prefix", "fix/"))
-    if tokens[:3] == ["git", "branch", "-d"] and len(tokens) == 4:
-        return tokens[3].startswith(prefixes)
-    if tokens[:2] == ["git", "push"] and len(tokens) == 5 and tokens[3] == "--delete":
-        return tokens[4].startswith(prefixes)
+    quiet = {"-q", "--quiet", "-v", "--verbose"}
+    rest = [t for t in tokens if t not in quiet]
+    if rest[:3] == ["git", "branch", "-d"] and len(rest) == 4:
+        return rest[3].startswith(prefixes)
+    if rest[:2] == ["git", "push"] and len(rest) == 5 and rest[3] == "--delete":
+        return rest[4].startswith(prefixes)
     return False
 
 

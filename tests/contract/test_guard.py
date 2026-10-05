@@ -43,6 +43,7 @@ PASSED = [
     "git push origin feature/x",
     "git push origin --delete feature/x",
     "git push origin :fix/y",
+    "git push -q origin --delete feature/x",
     "rm -rf build",
     "rm -rf ./build",
     "find . -name '*.pyc' -delete",
