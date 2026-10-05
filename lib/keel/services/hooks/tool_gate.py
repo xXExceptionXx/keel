@@ -1,5 +1,6 @@
 """PreToolUse for every tool inside a keel role (gate): tool-call budget, test protection, metrics folder protection,
-a report when a run takes longer than its minutes (System-ADR 0021: time only reports).
+a report when a run takes longer than its minutes (System-ADR 0021: time only reports), and file changes through
+Bash refused with a pointer to Edit and Write (System-ADR 0027).
 
 Paths are compared after normalising (U1, U3): `tests/./a.test.js`, `tests//a.test.js` and
 `.keel/work/../../src/app.js` are what they point to. The metrics folder protection is a guard rail, not a
@@ -64,6 +65,15 @@ def run(hook):
         tool_input = json.dumps(hook.get("tool_input"), ensure_ascii=False, separators=(",", ":"))
         if any(s in tool_input for s in metrics_spellings(hook.paths.root)):
             return hook.deny("Der Kennzahlen-Ordner ist für arbeitende Rollen gesperrt")
+
+    # Roles change files with the file tools (System-ADR 0027): a Bash detour through a heredoc, tee, sed -i or an
+    # inline script is not allowed in unattended runs anyway, and the role would only learn that from a silent denial.
+    if tool == "Bash":
+        from keel.services.hooks.allow import writes_files
+        if writes_files(hook.text("tool_input.command")):
+            return hook.deny("keel-Rollen ändern Dateien mit Edit oder Write, nicht über Bash (Heredoc, Umleitung in "
+                             "eine Datei, tee, sed -i, python3 -/-c). Lies mit Read, ändere mit Edit, lege neu an mit "
+                             "Write; Befehle wie Tests und git bleiben in Bash.")
 
     target = hook.text("tool_input.file_path") or hook.text("tool_input.notebook_path")
 
