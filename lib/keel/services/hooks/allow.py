@@ -17,6 +17,7 @@ first: its refusal wins.
 An allowed call outside a keel project (no .keel/config.yaml) does not exist: the step only answers there.
 """
 import os
+import re
 import shlex
 
 from keel.services.hooks import legacy
@@ -43,7 +44,7 @@ def _parts(cmd):
     subshells, background jobs. Quoted text stays one token, so a commit message may contain < or ;."""
     if any(x in cmd for x in ("$(", "`", "<(", ">(", "<<")):
         return None
-    rest = cmd
+    rest = re.sub(r"'[^']*'", "", cmd)  # inside single quotes $ is text, e.g. sed -n '/x/,$p'
     for v in VARIABLES:
         rest = rest.replace(v, "")
     if "$" in rest:

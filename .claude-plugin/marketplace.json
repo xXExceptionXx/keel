@@ -9,7 +9,7 @@
       "name": "keel",
       "source": "./",
       "description": "Schlankes Agentensystem für autonome Softwareentwicklung.",
-      "version": "0.21.0",
+      "version": "0.21.1",
       "license": "MIT",
       "homepage": "https://github.com/xXExceptionXx/keel"
     }

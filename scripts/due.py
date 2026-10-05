@@ -97,7 +97,7 @@ def main():
     runs = sum(1 for e in events.read(paths.events, since=since).events if e.get("event") == "agent_stop")
     days = (today - last_coach).days if last_coach else None
     if (days is None or days >= th["coach_tage"]) and runs >= th["coach_min_rollenlaeufe"]:
-        items.append({"art": "coach", "hart": True, "rolle": "coach", "grund": f"{days if days is not None else 'noch kein'} Tage seit dem letzten Coach-Lauf, {runs} Rollenläufe seitdem", "befehl": "/keel:start führt ihn aus"})
+        items.append({"art": "coach", "hart": True, "rolle": "coach", "grund": (f"{days} Tage seit dem letzten Coach-Lauf, {runs} Rollenläufe seitdem" if days is not None else f"noch kein Coach-Lauf, {runs} Rollenläufe bisher"), "befehl": "/keel:start führt ihn aus"})
     elif runs >= th["coach_min_rollenlaeufe"] and days is not None:
         items.append({"art": "coach", "hart": False, "rolle": "coach", "grund": f"{runs} Rollenläufe seit dem letzten Lauf, fällig in {th['coach_tage'] - days} Tagen", "befehl": "/keel:coach"})
 
@@ -123,7 +123,7 @@ def main():
     commits = len([l for l in sh(["git", "log", "--all", "--format=%h", since_arg, "--", ".", ":(exclude).keel"], project).split("\n") if l])
     adays = (today - last_arch).days if last_arch else None
     if (adays is None or adays >= th["architektur_tage"]) and commits >= th["architektur_min_commits"]:
-        items.append({"art": "architektur", "hart": True, "rolle": "architekt", "grund": f"{adays if adays is not None else 'noch keine'} Tage seit der letzten Wochenrunde, {commits} Commits seitdem", "befehl": "/keel:start führt sie aus"})
+        items.append({"art": "architektur", "hart": True, "rolle": "architekt", "grund": (f"{adays} Tage seit der letzten Wochenrunde, {commits} Commits seitdem" if adays is not None else f"noch keine Wochenrunde, {commits} Commits bisher"), "befehl": "/keel:start führt sie aus"})
 
     # soft: inbox items
     pending = project / ".keel" / "decisions" / "pending"
