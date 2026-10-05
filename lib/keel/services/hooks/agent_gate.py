@@ -15,7 +15,6 @@ from keel.domain import flow
 from keel.services import adr
 from keel.services.hooks import files, legacy
 from keel.services.hooks.base import keel_role, prompt_field
-from keel.store.io import atomic_write
 
 STARTING_SECONDS = 600
 ORPHAN_SECONDS = 30
@@ -80,7 +79,7 @@ def _check(hook, role):
     proj = hook.project
     # ADR state at the start: agent-stop refuses an ADR written on a level not the role's own (System-ADR 0021)
     try:
-        atomic_write(rt.park_adr_snapshot_path(role), json.dumps(adr.snapshot(proj), ensure_ascii=False))
+        rt.park_adr_snapshot(role, adr.snapshot(proj))
     except Exception as exc:  # noqa: BLE001
         _deny(f"ADR-Stand nicht festhaltbar: {exc}. /keel:hilfe erklärt den Stand.")
     if orphan is not None:

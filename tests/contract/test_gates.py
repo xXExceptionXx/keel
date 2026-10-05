@@ -78,10 +78,7 @@ class BrokenStateTest(ContractTest):
         if config:
             with open(p / ".keel" / "config.yaml", "a", encoding="utf-8") as c:
                 c.write(config)
-        sd = self.runtime(p) / "state"
-        sd.mkdir(parents=True, exist_ok=True)
-        (sd / "agent-a1.ref").write_text("T-x\n")
-        return sd
+        self.seed_agent(p, ref="T-x")
 
     def test_unreadable_task_file_does_not_unlock_the_testers_files(self):
         p = project()
@@ -92,8 +89,8 @@ class BrokenStateTest(ContractTest):
 
     def test_budget_that_is_not_a_number_blocks(self):
         p = project()
-        sd = self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")
-        (sd / "agent-a1.calls").write_text("500\n")
+        self.developer(p, b"---\ntyp: aufgabe\nid: T-x\n---\n", config="\nbudget:\n  tool_calls: sechzig\n")
+        self.seed_agent(p, ref="T-x", calls=500)
         r = self.hook("tool-gate", tool_call(p, "Read", {"file_path": str(p / "a.py")}, agent_type="keel:entwickler"),
                       proj=p)
         self.assertBlocked(r)

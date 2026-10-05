@@ -187,9 +187,15 @@ class ContractTest(unittest.TestCase):
         with self._metrics_env():
             return getattr(Runtime(Paths(proj).ensure()), method)(*args, **kwargs)
 
-    def seed_agent(self, proj, agent_id="a1", role="entwickler", ref="", start=None):
-        """A running role as SubagentStart registers it."""
-        self.state(proj, "start_agent", agent_id, role, ref, start=start)
+    def seed_agent(self, proj, agent_id="a1", role="entwickler", ref="", start=None, calls=None):
+        """A running role as SubagentStart registers it; calls sets the tool counter."""
+        self.state(proj, "start_agent", agent_id, role, ref, start=start, calls=calls or 0)
+
+    def has_adr_snapshot(self, proj, agent_id="a1"):
+        return self.state(proj, "adr_snapshot", agent_id, "_none") is not None
+
+    def park_adr_snapshot(self, proj, role, snapshot):
+        self.state(proj, "park_adr_snapshot", role, snapshot)
 
     def age_state(self, proj, seconds):
         """Make every runtime state file of proj look `seconds` older (timestamps only, layout unknown)."""
@@ -206,12 +212,9 @@ class ContractTest(unittest.TestCase):
         return self.state(proj, "agent", agent_id)
 
     def adr_snapshot(self, proj, agent_id="a1"):
-        """The ADR state agent-gate notes at a role's start, bound to the agent as agent-start.sh does."""
-        out = self.runtime(proj) / "state" / f"agent-{agent_id}.adrstand.json"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        r = self.script("adr.py", "stand", proj, out, proj=proj)
-        self.assertEqual(r.rc, 0, r)
-        return out
+        """The ADR state agent-gate notes at a role's start, bound to the agent as agent-start does."""
+        from keel.services import adr
+        self.state(proj, "bind_adr_snapshot", agent_id, adr.snapshot(proj))
 
     def assertBlocked(self, r, msg=None):
         self.assertTrue(r.blocked, msg or f"expected a block, got {r!r}")

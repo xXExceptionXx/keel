@@ -24,6 +24,7 @@ from keel.services import agenda, doctor
 from keel.store import config, events
 from keel.store.frontmatter import fields_tolerant as fields
 from keel.store.paths import Paths
+from keel.store.runtime import Runtime
 
 ACTIVE_PLAN = {"integriert", "verworfen", "abgeschlossen"}
 STALE_AGENT_SECONDS = 24 * 3600
@@ -221,63 +222,52 @@ def read_text(p):
         return ""
 
 
-def agent_runs(state_dir, stops, now=None):
-    """Per-agent state files grouped by agent id. zustand: laeuft (no stop event, younger than a day),
-    beendet (stop event recorded) or liegengeblieben (no stop event, older than a day or no start time)."""
-    now = now or time.time()
-    agents = defaultdict(list)
-    if state_dir.exists():
-        for p in state_dir.glob("agent-*.*"):
-            agents[p.name.split(".")[0][len("agent-"):]].append(p)
+def agent_runs(paths, stops, now=None):
+    """Running roles by agent id. zustand: laeuft (no stop event, younger than a day), beendet (stop event
+    recorded) or liegengeblieben (no stop event, older than a day or no start time)."""
     out = []
-    for aid, files in agents.items():
-        try:
-            started = int(read_text(state_dir / f"agent-{aid}.start"))
-        except ValueError:
-            started = None
-        age = int(now - started) if started else None
-        if aid in stops:
+    for a in Runtime(paths).agents():
+        age = a["seit_sekunden"]
+        if a["id"] in stops:
             zustand = "beendet"
         elif age is None or age > STALE_AGENT_SECONDS:
             zustand = "liegengeblieben"
         else:
             zustand = "laeuft"
         out.append({
-            "agent_id": aid,
-            "rolle": read_text(state_dir / f"agent-{aid}.role") or "?",
-            "ref": read_text(state_dir / f"agent-{aid}.ref"),
-            "start": started,
+            "agent_id": a["id"],
+            "rolle": a["role"] or "?",
+            "ref": a["ref"],
+            "start": a["start"],
             "seit_sekunden": age,
-            "werkzeugaufrufe": read_text(state_dir / f"agent-{aid}.calls") or None,
-            "langsam": (state_dir / f"agent-{aid}.slow").exists(),
+            "werkzeugaufrufe": str(a["calls"]) if a["calls"] is not None else None,
+            "langsam": a["slow"],
             "zustand": zustand,
-            "_files": files,
+            "_files": a["dateien"],
         })
     return out
 
 
-def state_files(state_dir, starts, stops):
-    """Leftover state: pending markers, per-agent files, context markers. Returns findings and cleanup candidates."""
-    now = time.time()
+def state_files(paths, starts, stops):
+    """Leftover runtime state: parked starts, agent records, session marks, markers of operations. Returns
+    findings and cleanup candidates."""
+    rt = Runtime(paths)
     findings = []
     cleanup = []
-    if not state_dir.exists():
-        return findings, cleanup
-    brake = state_dir / "kern-gesperrt"
-    if brake.exists():
+    brake = rt.brake()
+    if brake is not None:
         # never cleaned up automatically: the human fixes the cause and removes the lock (System-ADR 0019)
-        text = brake.read_text(encoding="utf-8", errors="replace").strip()
-        findings.append(f"NOTBREMSE, alle Rollen gesperrt: {text}")
-    for p in state_dir.glob("pending-*"):
-        age = now - p.stat().st_mtime
-        role = p.name[len("pending-"):]
+        findings.append(f"NOTBREMSE, alle Rollen gesperrt: {brake}")
+    for p in rt.pendings():
+        age = p["seit_sekunden"]
         if age > STALE_PENDING_SECONDS:
-            findings.append(f"pending-{role}: geparkte Referenz seit {int(age // 60)} Minuten ohne Start der Rolle (Start abgebrochen?)")
-            cleanup.append(p)
+            findings.append(f"Startmarke {p['role']}: geparkte Referenz seit {age // 60} Minuten ohne Start der "
+                            "Rolle (Start abgebrochen?)")
+            cleanup.append(p["datei"])
         else:
-            findings.append(f"pending-{role}: Rolle startet gerade ({int(age)} s)")
+            findings.append(f"Startmarke {p['role']}: Rolle startet gerade ({age} s)")
     running, stale, finished = [], 0, 0
-    for a in agent_runs(state_dir, stops, now):
+    for a in agent_runs(paths, stops):
         if a["zustand"] == "laeuft":
             running.append(f"{a['rolle']} {a['ref']} seit {a['seit_sekunden'] // 60} Minuten (kein Stopp-Ereignis)")
             continue
@@ -290,10 +280,13 @@ def state_files(state_dir, starts, stops):
         findings.append("Läuft oder liegengeblieben: " + "; ".join(running))
     if finished or stale:
         findings.append(f"Reste beendeter Läufe: {finished} mit Stopp-Ereignis, {stale} ohne (älter als ein Tag). Aufräumen mit --clean.")
-    for p in (list(state_dir.glob("context-*.step")) + list(state_dir.glob("hilfe-*"))
-              + list(state_dir.glob("briefing-*.json")) + list(state_dir.glob("adrstand-*.json"))):
-        if now - p.stat().st_mtime > STALE_AGENT_SECONDS:
-            cleanup.append(p)
+    for act in rt.activities():
+        if act["verwaist"]:
+            findings.append(f"Verwaister Marker: {act['name']} {act['ref']} (Prozess {act['pid']} beendet)")
+            cleanup.append(act["datei"])
+    for f, age in rt.session_files() + rt.parked_adr_files():
+        if age is not None and age > STALE_AGENT_SECONDS:
+            cleanup.append(f)
     return findings, cleanup
 
 
@@ -333,7 +326,7 @@ def build_report(project, hours=24, plugin_root=None, fast=False):
         cfg = {}  # reported by the health section
 
     ev = grouped_events(paths, hours)
-    findings, cleanup = state_files(paths.state, ev.pop("_starts"), ev.pop("_stops"))
+    findings, cleanup = state_files(paths, ev.pop("_starts"), ev.pop("_stops"))
 
     report = {
         "projekt": project.name,

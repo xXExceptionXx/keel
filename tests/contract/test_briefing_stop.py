@@ -17,7 +17,7 @@ class BriefingStopTest(ContractTest):
         r = self.hook("skill-gate", {"hook_event_name": "UserPromptSubmit", "prompt": prompt, "session_id": "s1",
                                      "cwd": str(p), "transcript_path": ""}, proj=p)
         self.assertPassed(r)
-        return self.runtime(p) / "state" / "briefing-s1.json"
+        return self.state(p, "briefing_path", "s1")
 
     def stop(self, p):
         return self.hook("briefing-stop", {"hook_event_name": "Stop", "session_id": "s1", "cwd": str(p),

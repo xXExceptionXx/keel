@@ -43,6 +43,7 @@ from keel.store import config, events as event_log
 from keel.store.frontmatter import load_tolerant
 from keel.store.io import atomic_write
 from keel.store.paths import Paths
+from keel.store.runtime import Runtime
 from lage import agent_runs, build_report  # noqa: E402
 
 PAGE = Path(__file__).parent / "monitor.html"
@@ -109,7 +110,7 @@ def state(project, plugin_root, hours):
     cmds = commands(paths)
 
     active = []
-    for a in agent_runs(paths.state, stops):
+    for a in agent_runs(paths, stops):
         if a["zustand"] != "laeuft":
             continue
         a.pop("_files")
@@ -121,13 +122,8 @@ def state(project, plugin_root, hours):
         a["befehl"] = before[-1]["befehl"] if before else None
         active.append(a)
 
-    starting = []
-    sd = paths.state
-    if sd.exists():
-        for p in sd.glob("pending-*"):
-            age = time.time() - p.stat().st_mtime
-            if age < 600:
-                starting.append({"rolle": p.name[len("pending-"):], "ref": p.read_text(encoding="utf-8").strip(), "seit_sekunden": int(age)})
+    starting = [{"rolle": p["role"], "ref": p["ref"], "seit_sekunden": p["seit_sekunden"]}
+                for p in Runtime(paths).pendings() if p["seit_sekunden"] < 600]
 
     stream = sorted(events[-EVENT_TAIL:] + cmds[-50:], key=lambda e: e.get("ts") or "")
     roles, unreadable = role_states(project, report.get("faellig") or {}, [a["rolle"] for a in active] + [p["rolle"] for p in starting])

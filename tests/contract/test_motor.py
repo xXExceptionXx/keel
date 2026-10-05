@@ -66,7 +66,7 @@ class MotorTest(ContractTest):
               "---\ntyp: coachbericht\ndatum: 2026-10-02\nkennzahlen_verletzt: 0\nvorschlaege: 1\n---\n")
         write(p / ".keel" / "decisions" / "pending" / "2026-10-02-coach-x.md",
               "---\ntyp: vorlage\ntitel: X\nvon: Coach\nstatus: offen\nhypothese: h\n---\n")
-        write(self.runtime(p) / "state" / "agent-a1.ref", "c1\n")
+        self.seed_agent(p, role="coach", ref="c1")
         self.adr_snapshot(p)
         payload = {"hook_event_name": "SubagentStop", "agent_type": "keel:coach", "agent_id": "a1", "cwd": str(p),
                    "last_assistant_message": "fertig"}

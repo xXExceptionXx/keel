@@ -87,11 +87,13 @@ class _AgentStop:
         # ADRs only on the role's own level (System-ADR 0021). Before the budget shortcut: an exhausted budget must
         # not carry an ADR on a foreign level past this check; tool-gate lets the role still edit .keel/adr/.
         if self.role != "probe":
-            snap = self.rt.adr_snapshot_path(self.id, self.role)
-            if snap is None:
-                raise CannotCheck(f"ADR-Stand vom Rollenstart fehlt (agent-{self.id}.adrstand.json)")
             try:
-                before = json.loads(Path(snap).read_text(encoding="utf-8"))
+                before = self.rt.adr_snapshot(self.id, self.role)
+            except Exception as exc:  # noqa: BLE001
+                raise CannotCheck(f"ADR-Stufe nicht prüfbar: {exc}") from exc
+            if before is None:
+                raise CannotCheck(f"ADR-Stand vom Rollenstart fehlt (Agent {self.id})")
+            try:
                 problems = adr.compare(self.proj, before, self.role)
             except Exception as exc:  # noqa: BLE001 - any failure here means the level cannot be checked
                 raise CannotCheck(f"ADR-Stufe nicht prüfbar: {exc}") from exc
