@@ -6,6 +6,7 @@ import json
 
 from keel.services.hooks import legacy
 from keel.services.hooks.base import Refuse
+from keel.store import transcripts
 
 
 def run(hook):
@@ -33,12 +34,15 @@ def run(hook):
         return None
     if result == "ok":
         marker.unlink(missing_ok=True)
-        hook.try_record("briefing_geprueft", {"protokoll": answer.get("protokoll")})
+        hook.try_record("briefing_geprueft", {"protokoll": answer.get("protokoll"), "session_id": hook.text("session_id"),
+                                              "model": transcripts.last_model(hook.text("transcript_path"))})
         return None
     if result == "aufgegeben":
         marker.unlink(missing_ok=True)
         hook.try_record("briefing_protokoll_offen", {"protokoll": answer.get("protokoll"),
-                                                     "gruende": answer.get("gruende")})
+                                                     "gruende": answer.get("gruende"),
+                                                     "session_id": hook.text("session_id"),
+                                                     "model": transcripts.last_model(hook.text("transcript_path"))})
         return None
     if result == "fehler":
         reason = ("Das Briefing-Protokoll lässt offene Punkte zurück. Jeder offene Punkt wird eine Wiedervorlage "

@@ -21,7 +21,7 @@ class ContextAlarmTest(ContractTest):
         r = self.hook("context-alarm", {"hook_event_name": "PostToolUse", "transcript_path": str(t), "session_id": "s1",
                                         "cwd": str(p), "tool_name": "Read"}, proj=p)
         self.assertEqual(r.rc, 0, r)
-        self.assertIn("75 %", r.json["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("150k Tokens (Grenze 100k", r.json["hookSpecificOutput"]["additionalContext"])
 
     def test_no_alarm_below_the_threshold(self):
         p = project()
