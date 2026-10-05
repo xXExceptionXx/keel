@@ -8,7 +8,6 @@ U4 (kern-befunde.md): force push by refspec (+main), rm with long options or a q
 the working directory, cd to / or home followed by a recursive rm, and deleting a remote branch that is not merged.
 """
 import re
-import subprocess
 
 S = r"[ \t\r\f\v]"  # [[:space:]] inside one line
 DANGER = r"""["']?(/|~|\$\{?HOME\}?|\.\.)"""
@@ -32,6 +31,8 @@ def segments(cmd):
 
 def _merged(hook, remote, branch, base):
     """Whether remote/branch is contained in the base branch (remote/base, else the local base)."""
+    import subprocess
+
     proj = str(hook.project)
 
     def git(*args):

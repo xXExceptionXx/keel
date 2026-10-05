@@ -4,7 +4,6 @@ import fcntl
 import hashlib
 import os
 import stat
-import tempfile
 from pathlib import Path
 
 from keel.store.paths import lock_dir
@@ -17,6 +16,8 @@ def atomic_write(path, text, encoding="utf-8"):
     A symlink is followed: the file it points to is replaced, the link stays (e.g. .claude/settings.json from a
     dotfiles repository).
     """
+    import tempfile  # here, not at the top: every hook imports this module and most never replace a file
+
     path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     data = text.encode(encoding) if isinstance(text, str) else text

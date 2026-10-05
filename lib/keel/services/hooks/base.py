@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from keel.domain.errors import KeelError
-from keel.store import config, events
+from keel.store import events
 from keel.store.paths import Paths
 from keel.store.runtime import Runtime
 
@@ -85,12 +85,14 @@ class Hook:
     @property
     def config(self):
         if self._config is None:
+            from keel.store import config
             self._config = config.load_file(Paths(self.project).config)
         return self._config
 
     def cfg(self, key, given=None):
         """A text value as scripts/config.py gives it: the file's value; else the given default; else the
         schema default. A list or section gives the default."""
+        from keel.store import config
         value = config.lookup(self.config, key)
         if value is None or value == "":
             value = given if given is not None else config.default(key)
