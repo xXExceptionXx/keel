@@ -1,6 +1,6 @@
 {
   "name": "keel",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "Schlankes Agentensystem für autonome Softwareentwicklung: Rollen, Übergaben als Dateien, Prüftore und Lernschleife.",
   "author": {
     "name": "xXExceptionXx"
