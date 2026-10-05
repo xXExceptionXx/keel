@@ -25,6 +25,13 @@ ALLOWED = [
     'git -C "$PWD" commit -q -m "Route audit findings" -m "Co-Authored-By: Claude <noreply@anthropic.com>"',
     'git commit -m "fix: a; b && c"',
     "git status\ngit log -1",
+    "npm test --silent 2>&1 | tail -30",
+    f'python3 "{R}/scripts/due.py" "$PWD" --json; echo "EXIT $?"; grep -E "base|model" .keel/config.yaml',
+    "cat .keel/config.yaml; ls .keel/work/epics/",
+    "sed -n 1,20p .keel/work/tasks/T-tb.md",
+    "mkdir -p tests/regression && git mv a.py tests/regression/a.py",
+    "git branch -d feature/x",
+    "git push origin --delete feature/x",
 ]
 NOT_ALLOWED = [
     "rm -rf build",
@@ -33,7 +40,6 @@ NOT_ALLOWED = [
     "git push origin main",
     "git push --force origin feature/x",
     "git push origin +feature/x",
-    "git push origin --delete feature/x",
     "git commit --amend -m x",
     "git branch -D feature/x",
     "git reset --hard HEAD",
@@ -52,6 +58,13 @@ NOT_ALLOWED = [
     "(git status)",
     "git status\nrm -rf build",
     "git log < /etc/passwd",
+    "cat ~/.ssh/id_rsa",
+    "cat /etc/passwd",
+    "sed -i s/a/b/ src/a.ts",
+    "find . -name x -delete",
+    "mkdir -p /tmp/x",
+    "git push origin --delete main",
+    "git branch -d main",
 ]
 
 

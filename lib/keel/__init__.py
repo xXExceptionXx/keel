@@ -9,4 +9,4 @@ if sys.version_info < (3, 9):
     sys.stderr.write("keel: Python 3.9 oder neuer wird gebraucht, gefunden %d.%d\n" % sys.version_info[:2])
     raise SystemExit(2)
 
-__version__ = "0.20.1"
+__version__ = "0.20.2"

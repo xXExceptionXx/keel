@@ -5,7 +5,10 @@ Allowed is only a command whose every part is on a fixed list:
 - keel's scripts and command line from this plugin's folder (also written as ${CLAUDE_PLUGIN_ROOT}),
 - the project's test.command and test.acceptance, and the prefixes in freigaben.befehle (.keel/config.yaml),
 - git with a fixed set of subcommands and no force; push not to main,
-- cd into the project, date.
+- cd into the project, date, mkdir -p inside the project,
+- read-only text commands (cat, head, tail, ls, grep, wc, sort, uniq, cut, diff, echo, pwd, sed -n, find without
+  actions) whose path arguments lie inside the project or the plugin; they appear chained to the commands above
+  (`pnpm verify 2>&1 | tail -30`), and one such part used to turn the whole command into a prompt.
 Command substitution, other variables, heredocs and redirections into files are never allowed. Anything else gets
 no answer from this step and goes through Claude Code's permission flow as before. Deny and ask rules in the
 settings still apply to an allowed call (Claude Code evaluates them regardless of the hook), and the guard runs
@@ -19,7 +22,7 @@ import shlex
 from keel.services.hooks import legacy
 from keel.services.hooks.base import Allow
 
-VARIABLES = ("${CLAUDE_PLUGIN_ROOT}", "$CLAUDE_PLUGIN_ROOT", "${PWD}", "$PWD")
+VARIABLES = ("${CLAUDE_PLUGIN_ROOT}", "$CLAUDE_PLUGIN_ROOT", "${PWD}", "$PWD", "$?")
 GIT_READ = {"status", "diff", "log", "show", "rev-parse", "rev-list", "ls-files", "ls-tree", "merge-base",
             "describe", "remote", "fetch", "config"}
 GIT_WRITE = {"add", "commit", "switch", "merge", "mv", "tag", "pull", "push", "branch"}
@@ -127,6 +130,44 @@ def _git(tokens, project):
     return True
 
 
+READ_ONLY = {"cat", "head", "tail", "ls", "grep", "wc", "sort", "uniq", "cut", "diff", "echo", "pwd", "sed", "find",
+             "true"}
+FIND_ACTIONS = {"-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint", "-fprintf", "-fls"}
+
+
+def _paths_inside(tokens, folders):
+    """Every argument that looks like a path lies inside one of the folders; ~ is never allowed."""
+    for t in tokens:
+        if t.startswith("~"):
+            return False
+        if "/" in t and not t.startswith("-") and not any(_inside(t, f) for f in folders):
+            if t.startswith("/") or os.path.exists(t):
+                return False
+    return True
+
+
+def _read_only(tokens, project, root):
+    cmd, args = tokens[0], tokens[1:]
+    if cmd not in READ_ONLY:
+        return False
+    if cmd == "sed" and ("-n" not in args or any(a.startswith(("-i", "--in-place")) for a in args)):
+        return False
+    if cmd == "find" and any(a in FIND_ACTIONS for a in args):
+        return False
+    return _paths_inside(args, (project, root))
+
+
+def _merged_branch_delete(tokens, hook):
+    """git branch -d <feature/fix branch> (git itself refuses an unmerged branch) and git push <remote> --delete
+    <feature/fix branch> (the guard runs first and refuses an unmerged one, System-ADR 0022)."""
+    prefixes = (hook.cfg("git.feature_prefix", "feature/"), hook.cfg("git.fix_prefix", "fix/"))
+    if tokens[:3] == ["git", "branch", "-d"] and len(tokens) == 4:
+        return tokens[3].startswith(prefixes)
+    if tokens[:2] == ["git", "push"] and len(tokens) == 5 and tokens[3] == "--delete":
+        return tokens[4].startswith(prefixes)
+    return False
+
+
 def _project_prefix(tokens, prefixes):
     for p in prefixes:
         try:
@@ -161,6 +202,13 @@ def run(hook):
                                                              else os.path.join(project, tokens[1]), project):
             continue
         if tokens[0] == "date" and all(t.startswith(("+", "-u")) for t in tokens[1:]):
+            continue
+        if tokens[:2] == ["mkdir", "-p"] and len(tokens) > 2 and all(
+                _inside(t if os.path.isabs(t) else os.path.join(project, t), project) for t in tokens[2:]):
+            continue
+        if _read_only(tokens, project, root):
+            continue
+        if _merged_branch_delete(tokens, hook):
             continue
         if tokens[0] == "git" and _git(tokens, project):
             continue
